@@ -11,7 +11,5 @@ TraySetIcon("imageres.dll", 109)
     else
         TrayTip("ARCYN not found at:" exePath)
 }
-Esc::
-{
-    WinClose("ahk_exe ARCYN.exe")
-}
+
+#F12::WinClose("ahk_exe ARCYN.exe")

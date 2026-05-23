@@ -16,26 +16,27 @@
         ResizeMode="NoResize"
         SnapsToDevicePixels="True"
         FontFamily="{StaticResource UIFont}"
-        KeyDown="Window_KeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Triggers>
         <EventTrigger RoutedEvent="Loaded">
             <BeginStoryboard>
                 <Storyboard>
                     <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                     From="0" To="1" Duration="0:0:0.25" />
+                                     From="0" To="1" Duration="0:0:0.3" />
                 </Storyboard>
             </BeginStoryboard>
         </EventTrigger>
     </Window.Triggers>
 
-    <Grid>
+    <Grid x:Name="RootGrid" Background="Transparent" MouseDown="RootGrid_MouseDown">
         <Canvas x:Name="MatrixCanvas" IsHitTestVisible="False" />
-
         <Rectangle Style="{StaticResource Scanlines}" />
+        <Rectangle Style="{StaticResource Vignette}" />
 
-        <Border CornerRadius="8" Background="#F0080808" Padding="0"
-                Margin="20" BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}">
+        <Border x:Name="MainBorder" CornerRadius="8" Background="#F0080808"
+                Margin="20" BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}"
+                Effect="{StaticResource GlowTeal}">
             <Grid Margin="28,20">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -51,10 +52,21 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="ARCYN"
+                    <TextBlock x:Name="TitleText" Grid.Column="0" Text="A R C Y N"
                                FontSize="13" FontWeight="Light"
-                               Foreground="{StaticResource TextDimBrush}"
-                               VerticalAlignment="Center" />
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               VerticalAlignment="Center">
+                        <TextBlock.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                        From="0.55" To="1" Duration="0:0:2.5" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </TextBlock.Triggers>
+                    </TextBlock>
 
                     <TextBlock Grid.Column="2" Text="v1.0"
                                FontSize="11" FontWeight="Light"
@@ -62,8 +74,13 @@
                                VerticalAlignment="Center" />
                 </Grid>
 
-                <Border Grid.Row="1" Height="1" Background="{StaticResource BorderSubtleBrush}"
-                        Margin="0,0,0,18" />
+                <Border x:Name="SeparatorTop" Grid.Row="1" Height="1"
+                        Background="{StaticResource BorderSubtleBrush}"
+                        Margin="0,0,0,18" RenderTransformOrigin="0.5,0.5">
+                    <Border.RenderTransform>
+                        <ScaleTransform ScaleX="0" />
+                    </Border.RenderTransform>
+                </Border>
 
                 <Border Grid.Row="2" CornerRadius="4"
                         BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}"
@@ -76,6 +93,11 @@
                                 <UniformGrid Columns="3" Rows="2" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Opacity" Value="0" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Content="{Binding Label}"
@@ -94,10 +116,17 @@
                     </ItemsControl>
                 </Border>
 
-                <Border Grid.Row="3" Height="1" Background="{StaticResource BorderSubtleBrush}"
-                        Margin="0,14,0,0" />
-                <TextBlock Grid.Row="4" Text="[↑↓ ← →]  [Enter]  [Esc]"
-                           FontSize="10"
+                <Border x:Name="SeparatorBottom" Grid.Row="3" Height="1"
+                        Background="{StaticResource BorderSubtleBrush}"
+                        Margin="0,14,0,0" RenderTransformOrigin="0.5,0.5">
+                    <Border.RenderTransform>
+                        <ScaleTransform ScaleX="0" />
+                    </Border.RenderTransform>
+                </Border>
+
+                <TextBlock x:Name="FooterHint" Grid.Row="4"
+                           Text="[↑↓ ← →] navigate  ·  [Enter] select  ·  [1–6] quick  ·  click bg → close"
+                           FontSize="10" Opacity="0"
                            Foreground="{StaticResource TextDimBrush}"
                            HorizontalAlignment="Center"
                            Margin="0,8,0,0" />

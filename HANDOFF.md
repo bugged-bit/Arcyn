@@ -1,149 +1,74 @@
-# ARCYN — Handoff
+# ARCYN
 
-Windows desktop HUD launcher. Alt+Shift+D → overlay → pick mode → launches apps with loading telemetry.
+Windows desktop HUD launcher. Alt+Shift+D → cinematic overlay → pick mode (1-6) → launches apps with loading telemetry. Auto-closes after 15s idle. TARS × Nothing OS × Mr. Robot aesthetic.
 
----
+## Build
+`dotnet build -c Release` = **0 errors** (framework-dependent, needs .NET 8 runtime)
 
-## Current State — BUILDING CLEAN
-
-- .NET 8 WPF, framework-dependent publish (148KB exe + 2.4MB dll)
-- NuGet: `System.Management` 9.0.0 (CPU/RAM telemetry)
-- Font: JetBrainsMono Nerd Font (embedded in Assets/)
-- `dotnet build -c Release` = 0 errors
-
-## Project Structure
-
+## Structure
 ```
 D:\protocoll\
-  HANDOFF.md             ← YOU ARE HERE
-  .gitignore             ← excludes bin/, obj/, *.dll, etc.
-
-  ARCYN\
-    ARCYN.sln            VS solution
-    protocoll.json       6 modes (STUDY/CODE/DESIGN/BROWSE/TERM/FILES)
+  HANDOFF.md
+  .gitignore
+  ARCYN/
+    ARCYN.sln
+    protocoll.json                6 modes
     scripts/
-      launch.ahk         Alt+Shift+D (AHK v2, tray icon)
-      launch.bat         Batch fallback
-      launch.ps1         PowerShell fallback
-
-    ARCYN.UI/            Source project
-      App.xaml(.cs)       Hides console, launches MainWindow
-      MainWindow.xaml(.cs) 800x480 HUD, acrylic, matrix BG, 3×2 button grid
-      LoadingWindow.xaml(.cs) Spinner + CPU/RAM telemetry (500ms), fade transitions
-      MatrixOverlay.cs      Scrolling hex columns (80ms tick)
-      ParticleEngine.cs     25 floating teal particles (30ms tick)
-      NativeMethods.cs      DWM acrylic blur, Win32 styles (topmost, toolwindow)
-      Models/ModeConfig.cs  JSON config model
-      Styles/Theme.xaml     Teal palette, HudButton style, scanlines, vignette
-      Assets/Fonts/         JetBrainsMonoNerd.ttf
+      launch.ahk                  Alt+Shift+D. Win+F12 kills.
+      launch.bat / launch.ps1
+    ARCYN.UI/
+      App.xaml(.cs)               Hides console
+      MainWindow.xaml(.cs)        800×480 HUD, acrylic, matrix + particles BG
+      LoadingWindow.xaml(.cs)     Spinner + CPU/RAM + progress bar
+      MatrixOverlay.cs            Hex columns (80ms), random brightness cascades
+      ParticleEngine.cs           40 teal/cyan floating particles (30ms)
+      NativeMethods.cs            DWM acrylic, Win32 styles
+      Models/ModeConfig.cs
+      Styles/Theme.xaml           Teal palette, button style, scanlines, vignette
+      Assets/Fonts/               JetBrainsMonoNerd.ttf
 ```
 
-## UI Theme: Teal Cinematic
+## UI — Cinematic Teal
 
-Palette: `#5FA3B3` (teal) on near-black `#080808`
+**Palette:** `#5FA3B3` on near-black `#080808`. Pulsing ARCYN title, glowing border, staggered button entrance (300ms → fade in one by one), scanlines + vignette overlay, 40 floating particles, hex matrix with random cascades.
 
-| Token | Value |
-|-------|-------|
-| Teal | `#5FA3B3` |
-| TealBright | `#8ECCDB` |
-| TealLight | `#B8E6F2` |
-| TealDark | `#2A5C6E` |
-| BgSurface | `#F7080808` |
-| TextPrimary | `#F8FFFFFF` |
-| TextSecondary | `#CCF0FFFF` |
-| TextDim | `#775FA3B3` |
-| BorderSubtle | `#225FA3B3` |
+**Dismiss:** 15s idle auto-close, click background, or press `1-6` to launch a mode. No Esc needed.
 
-Layers (back to front):
-1. Matrix hex digits (`MatrixOverlay`, Z=-10, ~57 columns)
-2. Floating particles (`ParticleEngine`, 25 dots, Z=0)
-3. Scanlines (3px repeating pattern, 15% opacity)
-4. Semi-transparent surface border
-5. Button grid (3×2 UniformGrid)
-6. Vignette (radial gradient, dark edges)
+## Fixes This Session
+- **Launch fix:** Args joined with spaces (`string.Join`) instead of spawning per-arg — apps now actually open
+- **BorderSubtleBrush:** Missing resource added (`#225FA3B3`) — would crash at runtime
+- **.gitignore:** Excludes bin/, obj/, *.dll — build artifacts removed from tracking
+- **Esc removed:** No Esc handler in WPF. AHK hotkey changed to `Win+F12`.
 
-Animations:
-- Matrix hex scrolls down, fades in/out by vertical position
-- Particles float upward with sine-wave drift, fade in/out over life
-- Buttons scale 1.0→1.04 on hover, border glow, color shift (0.12-0.15s)
-- Window fade in/out 0.25s
+## Session Changes
+- **Idle timer:** 15s inactivity → fade out. Resets on mouse/key.
+- **1-6 keys:** Quick-select modes. Arrow keys + Enter navigate.
+- **Staggered entrance:** Separator lines draw from center → buttons fade in (70ms stagger) → footer
+- **Pulsing elements:** ARCYN title breathes opacity. Border glow breathes (DropShadowEffect).
+- **More particles:** 40 particles (was 25), 2-4px, teal/cyan variation, per-particle drift
+- **Matrix cascades:** Random columns flash bright teal every ~2s
+- **LoadingWindow:** Mode label, animated dots `"Launching..."`, animated progress bar on "Ready"
+- **AHK:** `launch.ahk` — removed Esc (conflict), added `Win+F12` as kill switch
 
 ## Config
-
-Search order:
-1. `%LOCALAPPDATA%\ARCYN\protocoll.json`
-2. Same dir as ARCYN.exe
-3. Parent dir of ARCYN.exe
-
+`%LOCALAPPDATA%\ARCYN\protocoll.json` or same dir as exe.
 ```json
 [{ "label": "NAME", "cmd": "exe", "args": ["arg"] }]
 ```
 
-## Build & Run
-
-```
-# Build
-dotnet build ARCYN.UI\ARCYN.UI.csproj -c Release
-
-# Publish (framework-dependent)
-dotnet publish ARCYN.UI\ARCYN.UI.csproj -c Release -r win-x64
-
-# Run
-ARCYN\ARCYN.UI\bin\Release\net8.0-windows\ARCYN.exe
-
-# Or via launcher
-ARCYN\scripts\launch.ahk     # requires AHK v2
-ARCYN\scripts\launch.bat
-ARCYN\scripts\launch.ps1
-```
-
-Requires: .NET 8 runtime (x64), Windows 10/11
-
 ## Git
+- `6ad0e09` — fixes + gitignore
+- No remote configured
 
-- Initial commit created (`edc6c8f`)
-- `.gitignore` excludes bin/, obj/, *.dll
-- Build artifacts removed from tracking
-- No remote configured yet
-
-## Issues Fixed This Session
-
-1. **ParticleEngine.cs: missing `using System.Windows.Shapes`** — `Ellipse` type not found. Added `using System.Windows.Shapes` + `using System.Windows.Media.Animation`. Build 0 errors now.
-
-2. **Theme.xaml: missing `BorderSubtleBrush` resource** — referenced by MainWindow.xaml and LoadingWindow.xaml for border backgrounds/brushes but never defined. Would crash at runtime. Added `SolidColorBrush` with `#225FA3B3`.
-
-3. **No .gitignore** — bin/, obj/, and loose NuGet DLLs were tracked in initial commit. Created .gitignore and removed them from tracking.
-
-4. **ParticleEngine.cs: unreachable `using` for `System.Windows.Media.Animation`** — leftover from earlier edit. Not harmful but cleaned up.
-
-## Remaining Tasks / Wants
-
-- [ ] **Set up GitHub remote** — no remote configured; user wants to push to GitHub
-- [ ] **Tune visual effects** — particle density, speed, color intensity if user requests
-- [ ] **Add more modes** — currently 6 hardcoded defaults; config file supports custom
-- [ ] **User may want** — more visual depth, different animation styles, additional HUD features
-
-## Key Constraints
-
-- Framework-dependent publish only (self-contained = 150MB + crash bug)
-- .NET SDK 8.0.419 at `C:\Program Files\dotnet`
+## Constraints
+- Framework-dependent publish only
+- .NET 8 runtime required (SDK at `C:\Program Files\dotnet`)
 - AHK v2 at `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`
-- No files created outside `D:\protocoll\` unless user permits
-- WinUI 3 / MAUI unavailable — WPF is the UI framework
+- WPF only (WinUI 3 / MAUI unavailable)
 
-## Commands Reference
-
+## Commands
 ```powershell
-# Add remote & push
-git remote add origin <url>
-git push -u origin master
-
-# Build
-dotnet build ARCYN\ARCYN.UI\ARCYN.UI.csproj -c Release
-
-# Publish
-dotnet publish ARCYN\ARCYN.UI\ARCYN.UI.csproj -c Release -r win-x64
-
-# Run published
-ARCYN\ARCYN.UI\bin\Release\net8.0-windows\win-x64\publish\ARCYN.exe
+dotnet build ARCYN.UI\ARCYN.UI.csproj -c Release
+dotnet publish ARCYN.UI\ARCYN.UI.csproj -c Release -r win-x64
+git remote add origin <url>; git push -u origin master
 ```

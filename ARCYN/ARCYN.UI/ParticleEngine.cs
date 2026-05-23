@@ -13,8 +13,7 @@ public class ParticleEngine
     private readonly Random _rng = new();
     private readonly List<Particle> _particles = [];
     private DispatcherTimer? _timer;
-    private const int Count = 25;
-    private const double BaseSpeed = 0.4;
+    private const int Count = 40;
 
     private class Particle
     {
@@ -23,19 +22,22 @@ public class ParticleEngine
         public double Vy { get; set; }
         public double Life { get; set; }
         public double MaxLife { get; set; }
-        public double StartX { get; set; }
+        public double DriftPhase { get; set; }
+        public double DriftAmp { get; set; }
     }
 
     public ParticleEngine(Canvas canvas) => _canvas = canvas;
 
     public void Start()
     {
-        var accent = Color.FromArgb(180, 0x5F, 0xA3, 0xB3);
-        var accentDim = Color.FromArgb(60, 0x5F, 0xA3, 0xB3);
-
         for (int i = 0; i < Count; i++)
         {
-            var size = _rng.Next(1, 3);
+            var size = _rng.Next(2, 5);
+            var isBright = _rng.NextDouble() > 0.75;
+            var color = isBright
+                ? Color.FromRgb(0x8E, 0xCC, 0xDB)
+                : Color.FromRgb(0x5F, 0xA3, 0xB3);
+
             var p = new Particle
             {
                 Shape = new Ellipse
@@ -43,14 +45,15 @@ public class ParticleEngine
                     Width = size,
                     Height = size,
                     Fill = new SolidColorBrush(Color.FromArgb(
-                        (byte)_rng.Next(40, 160), accent.R, accent.G, accent.B)),
+                        (byte)_rng.Next(40, 180), color.R, color.G, color.B)),
                     Opacity = 0
                 },
-                Vx = (_rng.NextDouble() - 0.5) * BaseSpeed,
-                Vy = -(_rng.NextDouble() * 0.4 + 0.2),
-                MaxLife = _rng.Next(100, 250),
-                Life = _rng.Next(-50, 0),
-                StartX = _rng.NextDouble()
+                Vx = (_rng.NextDouble() - 0.5) * 0.8,
+                Vy = -(_rng.NextDouble() * 0.5 + 0.12),
+                MaxLife = _rng.Next(120, 350),
+                Life = _rng.Next(-60, 0),
+                DriftPhase = _rng.NextDouble() * Math.PI * 2,
+                DriftAmp = _rng.NextDouble() * 0.5 + 0.15
             };
 
             Canvas.SetLeft(p.Shape, _rng.NextDouble() * 800);
@@ -96,18 +99,20 @@ public class ParticleEngine
             var x = Canvas.GetLeft(p.Shape) + p.Vx;
             var y = Canvas.GetTop(p.Shape) + p.Vy;
 
+            x += Math.Sin(p.Life * 0.02 + p.DriftPhase) * p.DriftAmp;
+
             if (y < -10 || x < -10 || x > w + 10 || p.Life > p.MaxLife)
             {
                 Canvas.SetLeft(p.Shape, _rng.NextDouble() * w);
                 Canvas.SetTop(p.Shape, h + 5);
-                p.Vx = (_rng.NextDouble() - 0.5) * BaseSpeed;
-                p.Vy = -(_rng.NextDouble() * 0.4 + 0.2);
+                p.Vx = (_rng.NextDouble() - 0.5) * 0.8;
+                p.Vy = -(_rng.NextDouble() * 0.5 + 0.12);
                 p.Life = 0;
-                p.MaxLife = _rng.Next(100, 250);
+                p.MaxLife = _rng.Next(120, 350);
                 continue;
             }
 
-            Canvas.SetLeft(p.Shape, x + Math.Sin(p.Life * 0.02) * 0.3);
+            Canvas.SetLeft(p.Shape, x);
             Canvas.SetTop(p.Shape, y);
         }
     }

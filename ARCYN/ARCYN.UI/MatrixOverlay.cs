@@ -12,6 +12,8 @@ public class MatrixOverlay
     private readonly List<MatrixColumn> _columns = [];
     private DispatcherTimer? _timer;
     private const string HexChars = "0123456789ABCDEF";
+    private int _tickCount;
+    private const int FlashInterval = 25;
 
     private class MatrixColumn
     {
@@ -19,6 +21,7 @@ public class MatrixOverlay
         public double Speed { get; set; }
         public double Pos { get; set; }
         public int Length { get; set; }
+        public double FlashTime { get; set; } = -1;
     }
 
     public MatrixOverlay(Canvas canvas)
@@ -94,6 +97,14 @@ public class MatrixOverlay
 
         var h = Math.Max(_canvas.ActualHeight, 450);
 
+        _tickCount++;
+        if (_tickCount >= FlashInterval && _columns.Count > 0)
+        {
+            _tickCount = 0;
+            var col = _columns[_rng.Next(_columns.Count)];
+            col.FlashTime = 0;
+        }
+
         foreach (var col in _columns)
         {
             col.Pos += col.Speed;
@@ -107,12 +118,35 @@ public class MatrixOverlay
             }
 
             var topRatio = col.Pos / h;
+            double baseOpacity;
             if (topRatio < 0.15)
-                col.Label.Opacity = topRatio / 0.15 * 0.6;
+                baseOpacity = topRatio / 0.15 * 0.6;
             else if (topRatio > 0.7)
-                col.Label.Opacity = (1 - topRatio) / 0.3 * 0.6;
+                baseOpacity = (1 - topRatio) / 0.3 * 0.6;
             else
-                col.Label.Opacity = 0.6;
+                baseOpacity = 0.6;
+
+            if (col.FlashTime >= 0)
+            {
+                col.FlashTime += 80;
+                var flashProgress = col.FlashTime / 400.0;
+                if (flashProgress >= 1)
+                {
+                    col.FlashTime = -1;
+                    col.Label.Opacity = baseOpacity;
+                }
+                else
+                {
+                    col.Label.Opacity = baseOpacity + (1 - flashProgress) * (1 - baseOpacity);
+                    col.Label.Foreground = new SolidColorBrush(Color.FromArgb(
+                        (byte)(255 * (1 - flashProgress * 0.7)),
+                        0x8E, 0xCC, 0xDB));
+                }
+            }
+            else
+            {
+                col.Label.Opacity = baseOpacity;
+            }
 
             Canvas.SetTop(col.Label, col.Pos);
         }

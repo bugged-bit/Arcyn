@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Management;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using ARCYN.UI.Models;
@@ -11,6 +12,7 @@ namespace ARCYN.UI;
 public partial class LoadingWindow : Window, IDisposable
 {
     private readonly ModeConfig _mode;
+    private readonly int _modeIndex;
     private PerformanceCounter? _cpuCounter;
     private PerformanceCounter? _ramAvailCounter;
     private double _totalRamMb;
@@ -18,11 +20,13 @@ public partial class LoadingWindow : Window, IDisposable
     private Storyboard? _spinStoryboard;
     private bool _disposed;
     private CancellationTokenSource? _launchCts;
+    private int _dotCount;
 
     public LoadingWindow(ModeConfig mode, int modeIndex)
     {
         InitializeComponent();
         _mode = mode;
+        _modeIndex = modeIndex;
         Loaded += OnLoaded;
         Closed += OnClosed;
     }
@@ -40,6 +44,7 @@ public partial class LoadingWindow : Window, IDisposable
             0, 0, 0, 0,
             NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_SHOWWINDOW);
 
+        ModeLabel.Text = $"MODE {_modeIndex + 1}  ·  {_mode.Label}";
         StartSpinner();
         InitCounters();
         StartTelemetry();
@@ -51,7 +56,7 @@ public partial class LoadingWindow : Window, IDisposable
         var anim = new DoubleAnimation
         {
             From = 0, To = 360,
-            Duration = new Duration(TimeSpan.FromSeconds(1)),
+            Duration = new Duration(TimeSpan.FromSeconds(0.8)),
             RepeatBehavior = RepeatBehavior.Forever
         };
         Storyboard.SetTargetProperty(anim, new PropertyPath("(UIElement.RenderTransform).(RotateTransform.Angle)"));
@@ -86,7 +91,14 @@ public partial class LoadingWindow : Window, IDisposable
         _telemetryTimer.Interval = TimeSpan.FromMilliseconds(500);
         _telemetryTimer.Tick += UpdateTelemetry;
         _telemetryTimer.Start();
-        StatusText.Text = "Launching...";
+
+        var dotsTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        dotsTimer.Tick += (_, _) =>
+        {
+            _dotCount = (_dotCount + 1) % 4;
+            StatusText.Text = "Launching" + new string('.', _dotCount);
+        };
+        dotsTimer.Start();
     }
 
     private void UpdateTelemetry(object? sender, EventArgs e)
@@ -107,32 +119,46 @@ public partial class LoadingWindow : Window, IDisposable
     private async Task LaunchCommandsAsync()
     {
         _launchCts = new CancellationTokenSource();
-        StatusText.Text = "Launching...";
 
-        var tasks = _mode.Args.Select(arg => Task.Run(() =>
+        await Task.Run(() =>
         {
             try
             {
+                var fullArgs = string.Join(" ", _mode.Args);
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = _mode.Command,
-                    Arguments = arg,
+                    Arguments = fullArgs,
                     UseShellExecute = true,
                     Verb = "open",
                     WindowStyle = ProcessWindowStyle.Normal
                 });
             }
             catch { }
-        }));
+        });
 
-        await Task.WhenAll(tasks);
         StatusText.Text = "Ready";
+        AnimateProgressBar();
 
         try { await Task.Delay(2000, _launchCts.Token); }
         catch (TaskCanceledException) { }
 
         if (!_disposed)
             Dispatcher.Invoke(CloseWithFade);
+    }
+
+    private void AnimateProgressBar()
+    {
+        var scaleAnim = new DoubleAnimation
+        {
+            From = 0, To = 1,
+            Duration = TimeSpan.FromSeconds(0.6),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        ProgressBar.RenderTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+
+        var fadeAnim = new DoubleAnimation(0.6, TimeSpan.FromSeconds(0.3));
+        ProgressBar.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
     }
 
     private void CloseWithFade()

@@ -27,27 +27,35 @@
 
     <Grid Margin="20">
         <Rectangle Style="{StaticResource Scanlines}" />
+        <Rectangle Style="{StaticResource Vignette}" />
 
         <Border CornerRadius="8" Background="#F0080808"
-                BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}">
-            <Grid Margin="28,20">
+                BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}"
+                Effect="{StaticResource GlowTealSoft}">
+            <Grid Margin="36,28">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Viewbox Grid.Row="0" Width="40" Height="40"
+                <TextBlock x:Name="ModeLabel" Grid.Row="0" FontSize="10"
+                           Foreground="{StaticResource TextDimBrush}"
+                           HorizontalAlignment="Center" />
+
+                <Viewbox Grid.Row="1" Width="32" Height="32"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center">
-                    <Canvas Width="40" Height="40">
+                    <Canvas Width="32" Height="32">
                         <Path x:Name="SpinnerArc"
                               Stroke="{StaticResource TextSecondaryBrush}"
                               StrokeThickness="2.5"
                               StrokeEndLineCap="Round"
                               StrokeStartLineCap="Round"
-                              Width="40" Height="40"
+                              Width="32" Height="32"
                               Stretch="Uniform"
-                              Data="M 4,20 A 16,16 0 1,1 36,20"
+                              Data="M 3,16 A 13,13 0 1,1 29,16"
                               RenderTransformOrigin="0.5,0.5">
                             <Path.RenderTransform>
                                 <RotateTransform x:Name="SpinnerRotation" />
@@ -56,12 +64,12 @@
                     </Canvas>
                 </Viewbox>
 
-                <Border Grid.Row="1"
+                <Border Grid.Row="2"
                         Background="#08000000"
                         CornerRadius="4"
                         BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}"
                         Padding="16,10"
-                        Margin="0,20,0,0">
+                        Margin="0,16,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -70,19 +78,28 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0" x:Name="CpuText"
-                                   FontSize="11"
+                                   FontSize="10"
                                    Foreground="{StaticResource TextDimBrush}"
-                                   Margin="0,0,12,0" />
+                                   Margin="0,0,14,0" />
                         <TextBlock Grid.Column="1" x:Name="RamText"
-                                   FontSize="11"
+                                   FontSize="10"
                                    Foreground="{StaticResource TextDimBrush}"
-                                   Margin="0,0,12,0" />
+                                   Margin="0,0,14,0" />
                         <TextBlock Grid.Column="2" x:Name="StatusText"
-                                   FontSize="11"
+                                   FontSize="10"
                                    Foreground="{StaticResource TextPrimaryBrush}"
                                    HorizontalAlignment="Right" />
                     </Grid>
                 </Border>
+
+                <Rectangle x:Name="ProgressBar" Grid.Row="3" Height="1"
+                           Fill="{StaticResource TealBrush}" Opacity="0"
+                           HorizontalAlignment="Stretch" Margin="0,8,0,0"
+                           RenderTransformOrigin="0,0.5">
+                    <Rectangle.RenderTransform>
+                        <ScaleTransform ScaleX="0" />
+                    </Rectangle.RenderTransform>
+                </Rectangle>
             </Grid>
         </Border>
     </Grid>
