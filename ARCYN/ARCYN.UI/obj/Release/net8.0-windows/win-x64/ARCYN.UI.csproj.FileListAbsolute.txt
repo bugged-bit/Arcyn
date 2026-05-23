@@ -1,7 +1,0 @@
-D:\protocoll\ARCYN\ARCYN.UI\obj\Release\net8.0-windows\win-x64\ARCYN.UI.csproj.AssemblyReference.cache
-D:\protocoll\ARCYN\ARCYN.UI\obj\Release\net8.0-windows\win-x64\Styles\Theme.baml
-D:\protocoll\ARCYN\ARCYN.UI\obj\Release\net8.0-windows\win-x64\LoadingWindow.g.cs
-D:\protocoll\ARCYN\ARCYN.UI\obj\Release\net8.0-windows\win-x64\MainWindow.g.cs
-D:\protocoll\ARCYN\ARCYN.UI\obj\Release\net8.0-windows\win-x64\App.g.cs
-D:\protocoll\ARCYN\ARCYN.UI\obj\Release\net8.0-windows\win-x64\ARCYN_MarkupCompile.cache
-D:\protocoll\ARCYN\ARCYN.UI\obj\Release\net8.0-windows\win-x64\ARCYN_MarkupCompile.lref

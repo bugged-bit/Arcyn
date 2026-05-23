@@ -1,0 +1,13 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+packages/
+*.nupkg
+*.dll
+!ARCYN.UI/Assets/**
+ARCYN.exe
+ARCYN.dll
+ARCYN.deps.json
+ARCYN.runtimeconfig.json

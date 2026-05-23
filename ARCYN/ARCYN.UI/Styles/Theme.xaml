@@ -19,6 +19,7 @@
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}" />
     <SolidColorBrush x:Key="TextDimBrush" Color="{StaticResource TextDim}" />
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="#225FA3B3" />
 
     <FontFamily x:Key="UIFont">pack://application:,,,/Assets/Fonts/#JetBrains Mono</FontFamily>
 
