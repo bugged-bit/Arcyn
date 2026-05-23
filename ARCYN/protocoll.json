@@ -1,0 +1,32 @@
+[
+  {
+    "label": "STUDY",
+    "cmd": "cmd",
+    "args": ["/c","start https://ncert.nic.in && start ms-clock: && start https://www.selfstudys.com/"]
+  },
+  {
+    "label": "CODE",
+    "cmd": "cmd",
+    "args": ["/c","start wt.exe && start D:\\ && start https://chat.openai.com"]
+  },
+  {
+    "label": "DESIGN",
+    "cmd": "cmd",
+    "args": ["/c","start https://www.canva.com && start https://www.pinterest.com"]
+  },
+  {
+    "label": "BROWSE",
+    "cmd": "cmd",
+    "args": ["/c","start https://www.google.com"]
+  },
+  {
+    "label": "TERM",
+    "cmd": "wt.exe",
+    "args": []
+  },
+  {
+    "label": "FILES",
+    "cmd": "explorer.exe",
+    "args": []
+  }
+]

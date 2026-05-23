@@ -1,0 +1,107 @@
+﻿<Window x:Class="ARCYN.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ARCYN.UI"
+        mc:Ignorable="d"
+        Title="ARCYN"
+        Width="800" Height="480"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        SnapsToDevicePixels="True"
+        FontFamily="{StaticResource UIFont}"
+        KeyDown="Window_KeyDown">
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.25" />
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Grid>
+        <Canvas x:Name="MatrixCanvas" IsHitTestVisible="False" />
+
+        <Rectangle Style="{StaticResource Scanlines}" />
+
+        <Border CornerRadius="8" Background="#F0080808" Padding="0"
+                Margin="20" BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}">
+            <Grid Margin="28,20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="ARCYN"
+                               FontSize="13" FontWeight="Light"
+                               Foreground="{StaticResource TextDimBrush}"
+                               VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Column="2" Text="v1.0"
+                               FontSize="11" FontWeight="Light"
+                               Foreground="{StaticResource TextDimBrush}"
+                               VerticalAlignment="Center" />
+                </Grid>
+
+                <Border Grid.Row="1" Height="1" Background="{StaticResource BorderSubtleBrush}"
+                        Margin="0,0,0,18" />
+
+                <Border Grid.Row="2" CornerRadius="4"
+                        BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}"
+                        Padding="20,14" MinHeight="180">
+                    <ItemsControl x:Name="ModeItems"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3" Rows="2" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Label}"
+                                        Style="{StaticResource HudButton}"
+                                        Margin="6"
+                                        MinWidth="140" MinHeight="60"
+                                        Click="ModeButton_Click"
+                                        Tag="{Binding}"
+                                        RenderTransformOrigin="0.5,0.5">
+                                    <Button.RenderTransform>
+                                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                                    </Button.RenderTransform>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+
+                <Border Grid.Row="3" Height="1" Background="{StaticResource BorderSubtleBrush}"
+                        Margin="0,14,0,0" />
+                <TextBlock Grid.Row="4" Text="[↑↓ ← →]  [Enter]  [Esc]"
+                           FontSize="10"
+                           Foreground="{StaticResource TextDimBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
