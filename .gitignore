@@ -2,6 +2,8 @@ bin/
 obj/
 *.user
 *.suo
+*.pdb
+*.log
 .vs/
 packages/
 *.nupkg
@@ -11,3 +13,9 @@ ARCYN.exe
 ARCYN.dll
 ARCYN.deps.json
 ARCYN.runtimeconfig.json
+publish/
+ARCYN/ARCYN.exe
+ARCYN/arcyn_launch.log
+session.md
+vroken.md
+explanation.txt

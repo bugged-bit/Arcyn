@@ -1,32 +1,41 @@
 [
   {
     "label": "STUDY",
-    "cmd": "cmd",
-    "args": ["/c","start https://ncert.nic.in && start ms-clock: && start https://www.selfstudys.com/"]
-  },
-  {
-    "label": "CODE",
-    "cmd": "cmd",
-    "args": ["/c","start wt.exe && start D:\\ && start https://chat.openai.com"]
+    "subtitle": "focus-oriented workspace",
+    "type": "study",
+    "session": "SES 042",
+    "state": "FOCUS LOCK",
+    "targets": [
+      { "cmd": "https://ncert.nic.in", "args": [] },
+      { "cmd": "https://www.tiwariacademy.com", "args": [] },
+      { "cmd": "ms-clock:", "args": [] },
+      { "cmd": "explorer.exe", "args": ["D:\\study material"] }
+    ]
   },
   {
     "label": "DESIGN",
-    "cmd": "cmd",
-    "args": ["/c","start https://www.canva.com && start https://www.pinterest.com"]
+    "subtitle": "creative workstation",
+    "type": "design",
+    "session": "SES 017",
+    "state": "CREATIVE READY",
+    "targets": [
+      { "cmd": "https://www.pinterest.com", "args": [] },
+      { "cmd": "C:\\Users\\pryan\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Canva.lnk", "args": [] },
+      { "cmd": "explorer.exe", "args": ["D:\\Downloads\\Poster stuff"] }
+    ]
   },
   {
-    "label": "BROWSE",
-    "cmd": "cmd",
-    "args": ["/c","start https://www.google.com"]
-  },
-  {
-    "label": "TERM",
-    "cmd": "wt.exe",
-    "args": []
-  },
-  {
-    "label": "FILES",
-    "cmd": "explorer.exe",
-    "args": []
+    "label": "CODE",
+    "subtitle": "tactical terminal",
+    "type": "code",
+    "session": "SES 089",
+    "state": "EXEC LIVE",
+    "targets": [
+      { "cmd": "wt.exe", "args": [] },
+      { "cmd": "https://github.com", "args": [] },
+      { "cmd": "https://chatgpt.com", "args": [] },
+      { "cmd": "ollama.exe", "args": [] },
+      { "cmd": "explorer.exe", "args": ["D:\\"] }
+    ]
   }
 ]

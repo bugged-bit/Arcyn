@@ -1,15 +1,5 @@
-#SingleInstance
 #Requires AutoHotkey v2.0
+#SingleInstance Force
 
-TraySetIcon("imageres.dll", 109)
-
-!+d::
-{
-    exePath := A_ScriptDir "\..\ARCYN.exe"
-    if FileExist(exePath)
-        Run(exePath)
-    else
-        TrayTip("ARCYN not found at:" exePath)
-}
-
+!+d::Run('"D:\protocoll\ARCYN\ARCYN.exe"')
 #F12::WinClose("ahk_exe ARCYN.exe")

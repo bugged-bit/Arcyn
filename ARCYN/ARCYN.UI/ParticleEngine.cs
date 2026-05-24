@@ -1,110 +1,104 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Shapes;
-using System.Windows.Threading;
 
 namespace ARCYN.UI;
 
-public class ParticleEngine
+public sealed class ParticleEngine : IDisposable
 {
     private readonly Canvas _canvas;
     private readonly Random _rng = new();
     private readonly List<Particle> _particles = [];
-    private DispatcherTimer? _timer;
-    private const int Count = 40;
+    private readonly Stack<Ellipse> _pool = [];
+    private const int Count = 60;
+    private bool _running;
+    private bool _disposed;
+    private double _w, _h;
 
-    private class Particle
+    private sealed class Particle
     {
-        public Ellipse Shape { get; set; } = new();
-        public double Vx { get; set; }
-        public double Vy { get; set; }
-        public double Life { get; set; }
-        public double MaxLife { get; set; }
-        public double DriftPhase { get; set; }
-        public double DriftAmp { get; set; }
+        public Ellipse? Shape;
+        public double Vx, Vy, Life, MaxLife, DriftPhase, DriftAmp;
+        public bool Alive;
     }
 
     public ParticleEngine(Canvas canvas) => _canvas = canvas;
 
     public void Start()
     {
+        if (_running) return;
+        _running = true;
+        _w = Math.Max(_canvas.ActualWidth, 800);
+        _h = Math.Max(_canvas.ActualHeight, 480);
+
         for (int i = 0; i < Count; i++)
         {
-            var size = _rng.Next(2, 5);
-            var isBright = _rng.NextDouble() > 0.75;
-            var color = isBright
-                ? Color.FromRgb(0x8E, 0xCC, 0xDB)
-                : Color.FromRgb(0x5F, 0xA3, 0xB3);
-
             var p = new Particle
             {
-                Shape = new Ellipse
-                {
-                    Width = size,
-                    Height = size,
-                    Fill = new SolidColorBrush(Color.FromArgb(
-                        (byte)_rng.Next(40, 180), color.R, color.G, color.B)),
-                    Opacity = 0
-                },
-                Vx = (_rng.NextDouble() - 0.5) * 0.8,
-                Vy = -(_rng.NextDouble() * 0.5 + 0.12),
+                Shape = RentShape(),
+                Vx = (_rng.NextDouble() - 0.5) * 1.0,
+                Vy = -(_rng.NextDouble() * 0.6 + 0.15),
                 MaxLife = _rng.Next(120, 350),
                 Life = _rng.Next(-60, 0),
                 DriftPhase = _rng.NextDouble() * Math.PI * 2,
-                DriftAmp = _rng.NextDouble() * 0.5 + 0.15
+                DriftAmp = _rng.NextDouble() * 0.5 + 0.15,
+                Alive = true
             };
-
             Canvas.SetLeft(p.Shape, _rng.NextDouble() * 800);
             Canvas.SetTop(p.Shape, _rng.NextDouble() * 480);
-            Panel.SetZIndex(p.Shape, 0);
             _canvas.Children.Add(p.Shape);
             _particles.Add(p);
         }
-
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
-        _timer.Tick += Update;
-        _timer.Start();
-
-        _canvas.SizeChanged += (_, _) => { };
     }
 
     public void Stop()
     {
-        _timer?.Stop();
-        _timer = null;
-        _canvas.Children.Clear();
+        if (!_running) return;
+        _running = false;
+        foreach (var p in _particles)
+        {
+            if (p.Shape != null)
+            {
+                _canvas.Children.Remove(p.Shape);
+                ReturnShape(p.Shape);
+                p.Shape = null;
+            }
+            p.Alive = false;
+        }
         _particles.Clear();
     }
 
-    private void Update(object? sender, EventArgs e)
+    public void Tick()
     {
-        if (!_canvas.IsVisible) return;
-        var w = Math.Max(_canvas.ActualWidth, 800);
-        var h = Math.Max(_canvas.ActualHeight, 480);
+        if (!_running || _disposed || !_canvas.IsVisible) return;
+        _w = Math.Max(_canvas.ActualWidth, 800);
+        _h = Math.Max(_canvas.ActualHeight, 480);
 
-        foreach (var p in _particles)
+        for (int i = 0; i < _particles.Count; i++)
         {
+            var p = _particles[i];
+            if (!p.Alive) continue;
+
             p.Life++;
             if (p.Life < 0) continue;
 
             var ratio = p.Life / p.MaxLife;
             if (ratio > 1) ratio = 1;
+            var shape = p.Shape;
+            if (shape == null) continue;
 
-            if (ratio < 0.08) p.Shape.Opacity = ratio / 0.08;
-            else if (ratio > 0.75) p.Shape.Opacity = (1 - ratio) / 0.25;
-            else p.Shape.Opacity = 1;
+            shape.Opacity = ratio < 0.08 ? ratio / 0.08 :
+                            ratio > 0.75 ? (1 - ratio) / 0.25 : 1;
 
-            var x = Canvas.GetLeft(p.Shape) + p.Vx;
-            var y = Canvas.GetTop(p.Shape) + p.Vy;
-
+            var x = Canvas.GetLeft(shape) + p.Vx;
+            var y = Canvas.GetTop(shape) + p.Vy;
             x += Math.Sin(p.Life * 0.02 + p.DriftPhase) * p.DriftAmp;
 
-            if (y < -10 || x < -10 || x > w + 10 || p.Life > p.MaxLife)
+            if (y < -10 || x < -10 || x > _w + 10 || p.Life > p.MaxLife)
             {
-                Canvas.SetLeft(p.Shape, _rng.NextDouble() * w);
-                Canvas.SetTop(p.Shape, h + 5);
+                Canvas.SetLeft(shape, _rng.NextDouble() * _w);
+                Canvas.SetTop(shape, _h + 5);
                 p.Vx = (_rng.NextDouble() - 0.5) * 0.8;
                 p.Vy = -(_rng.NextDouble() * 0.5 + 0.12);
                 p.Life = 0;
@@ -112,8 +106,32 @@ public class ParticleEngine
                 continue;
             }
 
-            Canvas.SetLeft(p.Shape, x);
-            Canvas.SetTop(p.Shape, y);
+            Canvas.SetLeft(shape, x);
+            Canvas.SetTop(shape, y);
         }
+    }
+
+    private Ellipse RentShape()
+    {
+        if (_pool.Count > 0) return _pool.Pop();
+        return new Ellipse
+        {
+            Width = _rng.Next(2, 5),
+            Height = _rng.Next(2, 5),
+            IsHitTestVisible = false,
+            Fill = new SolidColorBrush(Color.FromArgb(
+                (byte)_rng.Next(60, 210), 0xE8, 0x60, 0x60))
+        };
+    }
+
+    private void ReturnShape(Ellipse e) => _pool.Push(e);
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        Stop();
+        _pool.Clear();
+        GC.SuppressFinalize(this);
     }
 }

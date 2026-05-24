@@ -117,25 +117,20 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         _log.Write("OnLoaded: runtime initialized");
 
-        await PlayStartupSequence(_lifeCts!.Token);
-        _log.Write("OnLoaded: boot sequence done");
+        await Task.Yield();
+        _state.TransitionTo(AppPhase.Ready);
+        MainHUD.Opacity = 1;
+        MainHUD.Visibility = Visibility.Visible;
+        BootOverlay.Visibility = Visibility.Collapsed;
+        _log.Write("OnLoaded: ready (boot skipped)");
     }
 
     private void OnDeactivated(object? sender, EventArgs e)
     {
-        // Log deactivation and current phase
+        // Log deactivation; do **not** close ARCYN on loss of focus.
         _log.Write("Window deactivated while Phase={0}", _state.Phase);
-        // Do NOT close when launching or selecting – these phases require the window to lose focus
-        if (_state.Phase == AppPhase.Launching || _state.Phase == AppPhase.Selecting)
-        {
-            _log.Write("Ignoring deactivation during active launch/selection");
-            return;
-        }
-        // If already closing, nothing to do
-        if (_state.Phase == AppPhase.Closing)
-            return;
-        // Otherwise, close the window
-        CloseWithAnimation();
+        // Keep ARCYN alive regardless of phase (except explicit closing via Escape).
+        // No action taken.
     }
 
     void RenderService.ISubscriber.OnRenderTick(long dt)
@@ -385,6 +380,11 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         ModePanel.IsHitTestVisible = false;
         ModePanel.Visibility = Visibility.Collapsed;
 
+        // Show loading window instead of the inline launch panel
+        var loadingWindow = new LoadingWindow(mode, index);
+        // Do not set Owner or hide the main window – keep both visible.
+        loadingWindow.Show();
+
         LaunchModeLabel.Text = mode.Label.ToUpperInvariant();
         LaunchSessionLabel.Text = $"{mode.SessionLabel}  -  {mode.StateLabel}";
         LaunchStatus.Text = "Launching";
@@ -427,7 +427,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
                 // Launch synchronously; Process.Start may return null for shell‑executed commands (e.g., explorer, URLs).
                 var proc = Process.Start(psi);
                 launchedTargets++;
-                _log.Write("Launch target OK: {0}", target.Cmd);
+                _log.Write(proc != null ? $"Launch target OK: {target.Cmd}" : $"Launch target executed (no process): {target.Cmd}");
             }
             catch (Exception ex)
             {
@@ -440,12 +440,14 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             await DelaySafe(350, token);
         }
 
-        if (token.IsCancellationRequested)
-        {
-            LaunchStatus.Text = "Cancelled";
-            await ReturnToReady();
-            return;
-        }
+if (token.IsCancellationRequested)
+            {
+                LaunchStatus.Text = "Cancelled";
+                // Exit the application on cancellation.
+                if (!_disposed)
+                    Dispatcher.Invoke(Close);
+                return;
+            }
 
         _launchDotTimer?.Stop();
 
@@ -463,12 +465,25 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         UpdateOperationalChrome();
 
         // Keep loading overlay visible for a maximum of 5 seconds (or 2 seconds on full success).
-        int finalDelayMs = success ? 2000 : 5000;
-        await DelaySafe(finalDelayMs, token);
-        if (token.IsCancellationRequested)
-            return;
+int finalDelayMs = success ? 2000 : 5000;
+await DelaySafe(finalDelayMs, token);
+if (token.IsCancellationRequested)
+    return;
 
-        await ReturnToReady();
+// Exit after launch completes
+if (!_disposed)
+{
+    // Close the loading window if open, then exit the app.
+    try
+    {
+        // loadingWindow is defined in this method's scope.
+        if (loadingWindow != null && loadingWindow.IsVisible)
+            loadingWindow.Close();
+    }
+    catch { }
+    Dispatcher.Invoke(Close);
+}
+return;
     }
 
     private async Task ReturnToReady()
@@ -779,21 +794,20 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         UpdateOperationalChrome();
     }
 
-    private static IEnumerable<string> GetCandidateConfigPaths()
-    {
-        var baseDir = AppContext.BaseDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar);
-        var currentDir = Environment.CurrentDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar);
+private static IEnumerable<string> GetCandidateConfigPaths()
+{
+    var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+    var currentDir = Environment.CurrentDirectory.TrimEnd(Path.DirectorySeparatorChar);
 
-        return new[]
-        {
-            System.IO.Path.Combine(baseDir, ConfigFileName),
-            System.IO.Path.Combine(baseDir, "ARCYN", ConfigFileName),
-            System.IO.Path.Combine(Directory.GetParent(baseDir)?.FullName ?? baseDir, ConfigFileName),
-            System.IO.Path.Combine(Directory.GetParent(baseDir)?.FullName ?? baseDir, "ARCYN", ConfigFileName),
-            System.IO.Path.Combine(currentDir, ConfigFileName),
-            System.IO.Path.Combine(currentDir, "ARCYN", ConfigFileName)
-        }.Distinct(StringComparer.OrdinalIgnoreCase);
-    }
+    // Primary locations – ordered by likelihood
+    return new[]
+    {
+        Path.Combine(baseDir, ConfigFileName),               // exe folder
+        Path.Combine(baseDir, "ARCYN", ConfigFileName),      // legacy subfolder
+        Path.Combine(currentDir, ConfigFileName),            // working folder
+        Path.Combine(currentDir, "ARCYN", ConfigFileName)   // legacy subfolder in cwd
+    }.Distinct(StringComparer.OrdinalIgnoreCase);
+}
 
     private static List<ModeConfig> GetDefaultModes() =>
     [

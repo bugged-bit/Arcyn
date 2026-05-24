@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Management;
 using System.Windows;
@@ -13,13 +14,14 @@ public partial class LoadingWindow : Window, IDisposable
 {
     private readonly ModeConfig _mode;
     private readonly int _modeIndex;
+    private readonly DispatcherTimer _telemetryTimer = new();
+    private DispatcherTimer? _dotTimer;
+    private Storyboard? _spinnerStoryboard;
+    private bool _disposed;
+    private readonly CancellationTokenSource _cts = new();
     private PerformanceCounter? _cpuCounter;
     private PerformanceCounter? _ramAvailCounter;
     private double _totalRamMb;
-    private readonly DispatcherTimer _telemetryTimer = new();
-    private Storyboard? _spinStoryboard;
-    private bool _disposed;
-    private CancellationTokenSource? _launchCts;
     private int _dotCount;
 
     public LoadingWindow(ModeConfig mode, int modeIndex)
@@ -28,41 +30,36 @@ public partial class LoadingWindow : Window, IDisposable
         _mode = mode;
         _modeIndex = modeIndex;
         Loaded += OnLoaded;
-        Closed += OnClosed;
+        Closed += (_, _) => Dispose();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
+        // Apply acrylic blur
         NativeMethods.EnableAcrylic(hwnd, 0xCC000000);
-
         var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
-        NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE,
-            exStyle | NativeMethods.WS_EX_TOOLWINDOW);
-
-        NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_TOPMOST,
-            0, 0, 0, 0,
+        NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle | NativeMethods.WS_EX_TOOLWINDOW);
+        NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0,
             NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_SHOWWINDOW);
 
-        ModeLabel.Text = $"MODE {_modeIndex + 1}  ·  {_mode.Label}";
+        ModeLabel.Text = $"MODE {_modeIndex + 1} · {_mode.Label}";
         StartSpinner();
         InitCounters();
         StartTelemetry();
-        _ = LaunchCommandsAsync();
     }
 
     private void StartSpinner()
     {
-        var anim = new DoubleAnimation
+        var anim = new DoubleAnimation(0, 360, new Duration(TimeSpan.FromSeconds(0.8)))
         {
-            From = 0, To = 360,
-            Duration = new Duration(TimeSpan.FromSeconds(0.8)),
-            RepeatBehavior = RepeatBehavior.Forever
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         Storyboard.SetTargetProperty(anim, new PropertyPath("(UIElement.RenderTransform).(RotateTransform.Angle)"));
-        _spinStoryboard = new Storyboard();
-        _spinStoryboard.Children.Add(anim);
-        _spinStoryboard.Begin(SpinnerArc);
+        _spinnerStoryboard = new Storyboard();
+        _spinnerStoryboard.Children.Add(anim);
+        _spinnerStoryboard.Begin(SpinnerArc);
     }
 
     private void InitCounters()
@@ -92,13 +89,13 @@ public partial class LoadingWindow : Window, IDisposable
         _telemetryTimer.Tick += UpdateTelemetry;
         _telemetryTimer.Start();
 
-        var dotsTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
-        dotsTimer.Tick += (_, _) =>
+        _dotTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        _dotTimer.Tick += (_, _)=>
         {
             _dotCount = (_dotCount + 1) % 4;
             StatusText.Text = "Launching" + new string('.', _dotCount);
         };
-        dotsTimer.Start();
+        _dotTimer.Start();
     }
 
     private void UpdateTelemetry(object? sender, EventArgs e)
@@ -109,80 +106,12 @@ public partial class LoadingWindow : Window, IDisposable
                 CpuText.Text = $"CPU {_cpuCounter.NextValue():F1}%";
             if (_ramAvailCounter != null && _totalRamMb > 0)
             {
-                var usedPct = ((_totalRamMb - _ramAvailCounter.NextValue()) / _totalRamMb) * 100;
-                RamText.Text = $"RAM {usedPct:F1}%";
+                var used = _totalRamMb - _ramAvailCounter.NextValue();
+                var pct = Math.Clamp(used / _totalRamMb * 100, 0, 100);
+                RamText.Text = $"RAM {pct:F1}%";
             }
         }
         catch { }
-    }
-
-    private async Task LaunchCommandsAsync()
-    {
-        _launchCts = new CancellationTokenSource();
-
-        await Task.Run(() =>
-        {
-            try
-            {
-                var fullArgs = string.Join(" ", _mode.Args);
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = _mode.Command,
-                    Arguments = fullArgs,
-                    UseShellExecute = true,
-                    Verb = "open",
-                    WindowStyle = ProcessWindowStyle.Normal
-                });
-            }
-            catch { }
-        });
-
-        StatusText.Text = "Ready";
-        AnimateProgressBar();
-
-        try { await Task.Delay(2000, _launchCts.Token); }
-        catch (TaskCanceledException) { }
-
-        if (!_disposed)
-            Dispatcher.Invoke(CloseWithFade);
-    }
-
-    private void AnimateProgressBar()
-    {
-        var scaleAnim = new DoubleAnimation
-        {
-            From = 0, To = 1,
-            Duration = TimeSpan.FromSeconds(0.6),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        ProgressBar.RenderTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
-
-        var fadeAnim = new DoubleAnimation(0.6, TimeSpan.FromSeconds(0.3));
-        ProgressBar.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
-    }
-
-    private void CloseWithFade()
-    {
-        var anim = new DoubleAnimation
-        {
-            From = 1, To = 0,
-            Duration = new Duration(TimeSpan.FromSeconds(0.2))
-        };
-        anim.Completed += (_, _) =>
-        {
-            Owner?.Show();
-            Close();
-        };
-        BeginAnimation(OpacityProperty, anim);
-    }
-
-    private void OnClosed(object? sender, EventArgs e)
-    {
-        _telemetryTimer.Stop();
-        _telemetryTimer.Tick -= UpdateTelemetry;
-        _spinStoryboard?.Stop(SpinnerArc);
-        _launchCts?.Cancel();
-        Dispose();
     }
 
     public void Dispose()
@@ -190,10 +119,11 @@ public partial class LoadingWindow : Window, IDisposable
         if (_disposed) return;
         _disposed = true;
         _telemetryTimer.Stop();
-        _telemetryTimer.Tick -= UpdateTelemetry;
+        _dotTimer?.Stop();
+        _spinnerStoryboard?.Stop(SpinnerArc);
+        _cts.Cancel();
         _cpuCounter?.Dispose();
         _ramAvailCounter?.Dispose();
-        _launchCts?.Dispose();
         GC.SuppressFinalize(this);
     }
 }
