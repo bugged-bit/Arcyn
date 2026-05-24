@@ -123,8 +123,19 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private void OnDeactivated(object? sender, EventArgs e)
     {
-        if (_state.Phase != AppPhase.Closing)
-            CloseWithAnimation();
+        // Log deactivation and current phase
+        _log.Write("Window deactivated while Phase={0}", _state.Phase);
+        // Do NOT close when launching or selecting – these phases require the window to lose focus
+        if (_state.Phase == AppPhase.Launching || _state.Phase == AppPhase.Selecting)
+        {
+            _log.Write("Ignoring deactivation during active launch/selection");
+            return;
+        }
+        // If already closing, nothing to do
+        if (_state.Phase == AppPhase.Closing)
+            return;
+        // Otherwise, close the window
+        CloseWithAnimation();
     }
 
     void RenderService.ISubscriber.OnRenderTick(long dt)
@@ -411,9 +422,10 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
             try
             {
+                _log.Write("Launching target: {0}", target.Cmd);
                 var psi = CreateLaunchStartInfo(target);
-                // Launch each target on a thread‑pool thread; ignore returned Process (may be null).
-                Task.Run(() => Process.Start(psi));
+                // Launch synchronously; Process.Start may return null for shell‑executed commands (e.g., explorer, URLs).
+                var proc = Process.Start(psi);
                 launchedTargets++;
                 _log.Write("Launch target OK: {0}", target.Cmd);
             }
