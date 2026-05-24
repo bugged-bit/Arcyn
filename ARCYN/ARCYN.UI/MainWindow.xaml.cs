@@ -117,12 +117,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         _log.Write("OnLoaded: runtime initialized");
 
-        await Task.Yield();
-        _state.TransitionTo(AppPhase.Ready);
-        MainHUD.Opacity = 1;
-        MainHUD.Visibility = Visibility.Visible;
-        BootOverlay.Visibility = Visibility.Collapsed;
-        _log.Write("OnLoaded: ready (boot skipped)");
+        await PlayStartupSequence(_lifeCts!.Token);
+        _log.Write("OnLoaded: boot sequence done");
     }
 
     private void OnDeactivated(object? sender, EventArgs e)
@@ -441,13 +437,17 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         }
 
 if (token.IsCancellationRequested)
-            {
-                LaunchStatus.Text = "Cancelled";
-                // Exit the application on cancellation.
-                if (!_disposed)
-                    Dispatcher.Invoke(Close);
-                return;
-            }
+                {
+                    LaunchStatus.Text = "Cancelled";
+                    // Close loading overlay and return to Ready UI.
+                    try
+                    {
+                        loadingWindow?.Close();
+                    }
+                    catch { }
+                    await ReturnToReady();
+                    return;
+                }
 
         _launchDotTimer?.Stop();
 
