@@ -412,11 +412,9 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             try
             {
                 var psi = CreateLaunchStartInfo(target);
-                // Process.Start may return null for shell‑executed commands (e.g., explorer)
-                // Treat any non‑exception launch as success.
-                Process.Start(psi);
+                // Launch each target on a thread‑pool thread; ignore returned Process (may be null).
+                Task.Run(() => Process.Start(psi));
                 launchedTargets++;
-
                 _log.Write("Launch target OK: {0}", target.Cmd);
             }
             catch (Exception ex)
@@ -426,6 +424,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             }
 
             SetLaunchProgress(launchedTargets + failures.Count, validTargets.Count);
+            // Small pause keeps UI responsive; keep same interval.
             await DelaySafe(350, token);
         }
 
@@ -438,21 +437,22 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         _launchDotTimer?.Stop();
 
-        var success = failures.Count == 0;
-        LaunchStatus.Text = success
-            ? "Ready"
-            : launchedTargets > 0
-                ? "Partial"
-                : "Fault";
+        bool anySuccess = launchedTargets > 0;
+        bool success = failures.Count == 0 && anySuccess;
+        // Update status display
+        LaunchStatus.Text = success ? "Ready" : anySuccess ? "Partial" : "Fault";
         LaunchStatus.Foreground = success ? _textPrimaryBrush : _accentLightBrush;
+        // Show failures if any, otherwise recent launch info
         LaunchRecent.Text = failures.Count == 0
             ? $"Recent: {mode.LastLaunchLabel}"
-            : $"Issue: {string.Join(", ", failures.Take(2))}";
+            : $"Issue: {string.Join(", ", failures)}";
 
         mode.RecordLaunch(launchedTargets, validTargets.Count, success);
         UpdateOperationalChrome();
 
-        await DelaySafe(success ? 1600 : 2600, token);
+        // Keep loading overlay visible for a maximum of 5 seconds (or 2 seconds on full success).
+        int finalDelayMs = success ? 2000 : 5000;
+        await DelaySafe(finalDelayMs, token);
         if (token.IsCancellationRequested)
             return;
 
@@ -939,10 +939,10 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         }
 
         // Shortcut (.lnk) – launch directly, set working directory to shortcut location.
-        var ext = Path.GetExtension(cmd);
+        var ext = System.IO.Path.GetExtension(cmd);
         if (File.Exists(cmd) && ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase))
         {
-            var dir = Path.GetDirectoryName(cmd) ?? workingDir;
+            var dir = System.IO.Path.GetDirectoryName(cmd) ?? workingDir;
             return new ProcessStartInfo
             {
                 FileName = cmd,
@@ -956,7 +956,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         // Executable or document – launch directly, set working dir to its location.
         if (File.Exists(cmd))
         {
-            var dir = Path.GetDirectoryName(cmd) ?? workingDir;
+            var dir = System.IO.Path.GetDirectoryName(cmd) ?? workingDir;
             return new ProcessStartInfo
             {
                 FileName = cmd,
