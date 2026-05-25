@@ -36,6 +36,13 @@ public SetupWindow()
             ShowStep(0);
         }
 
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Close the wizard and shutdown the application
+            this.Close();
+            System.Windows.Application.Current.Shutdown();
+        }
+
     private static ModeConfig NewMode()
     {
         return new ModeConfig
