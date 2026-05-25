@@ -8,8 +8,6 @@ public static class LaunchService
 {
     public static ProcessStartInfo CreateStartInfo(TargetItem target)
     {
-        var workingDir = Environment.CurrentDirectory;
-
         if (target.Kind == TargetKind.Folder)
         {
             return new ProcessStartInfo
@@ -18,7 +16,7 @@ public static class LaunchService
                 Arguments = QuotePath(target.LaunchArg),
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
+                WorkingDirectory = ResolveWorkingDir(target)
             };
         }
 
@@ -30,7 +28,7 @@ public static class LaunchService
                 Arguments = string.Empty,
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
+                WorkingDirectory = AppContext.BaseDirectory
             };
         }
 
@@ -44,7 +42,7 @@ public static class LaunchService
                 Arguments = QuotePath(cmd),
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
+                WorkingDirectory = ResolveWorkingDir(target)
             };
         }
 
@@ -56,27 +54,15 @@ public static class LaunchService
                 Arguments = QuotePath(cmd),
                 UseShellExecute = true,
                 WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
+                WorkingDirectory = ResolveWorkingDir(target)
             };
         }
+
+        var dir = ResolveWorkingDir(target);
 
         var ext = System.IO.Path.GetExtension(cmd);
-        if (File.Exists(cmd) && ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+        if (ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) || File.Exists(cmd))
         {
-            var dir = System.IO.Path.GetDirectoryName(cmd) ?? workingDir;
-            return new ProcessStartInfo
-            {
-                FileName = cmd,
-                Arguments = string.Empty,
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = dir
-            };
-        }
-
-        if (File.Exists(cmd))
-        {
-            var dir = System.IO.Path.GetDirectoryName(cmd) ?? workingDir;
             return new ProcessStartInfo
             {
                 FileName = cmd,
@@ -93,8 +79,26 @@ public static class LaunchService
             Arguments = string.Empty,
             UseShellExecute = true,
             WindowStyle = ProcessWindowStyle.Normal,
-            WorkingDirectory = workingDir
+            WorkingDirectory = dir
         };
+    }
+
+    private static string ResolveWorkingDir(TargetItem target)
+    {
+        if (target.Kind == TargetKind.Folder && !string.IsNullOrEmpty(target.LaunchArg))
+        {
+            if (Directory.Exists(target.LaunchArg))
+                return target.LaunchArg;
+        }
+
+        if (target.Kind == TargetKind.App)
+        {
+            var cmd = target.LaunchCmd?.Trim();
+            if (!string.IsNullOrEmpty(cmd) && File.Exists(cmd))
+                return System.IO.Path.GetDirectoryName(cmd) ?? AppContext.BaseDirectory;
+        }
+
+        return AppContext.BaseDirectory;
     }
 
     public static string QuotePath(string path)

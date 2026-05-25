@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -47,6 +48,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private bool _reducedEffects;
     private bool _compactMode;
+        private bool _alwaysOnTop;
+        private bool _closeOnLaunch;
 
     private double _ambientPhase;
     private double _spinnerAngle;
@@ -77,8 +80,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         var hwnd = new WindowInteropHelper(this).Handle;
         var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
         NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle | NativeMethods.WS_EX_TOOLWINDOW);
-        NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0,
-            NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_SHOWWINDOW);
+        
+            
 
         try
         {
@@ -109,8 +112,14 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _idleTimeout = arcynConfig.Behavior.IdleTimeoutSeconds;
         _reducedEffects = arcynConfig.Theme.ReducedEffects;
         _compactMode = arcynConfig.Theme.CompactMode;
+        _alwaysOnTop = arcynConfig.Behavior.AlwaysOnTop;
+        _closeOnLaunch = arcynConfig.Behavior.CloseOnLaunch;
+        Topmost = _alwaysOnTop;
         _log.Write("Config loaded ({0} modes), reduced_effects={1}, compact={2}",
             _modes.Count, _reducedEffects, _compactMode);
+
+        // Build the visual dashboard from the loaded modes before we interact with the UI
+        BuildDashboard();
 
         _telemetry = new TelemetryMonitor();
         _particles = new ParticleEngine(ParticleCanvas);
@@ -349,14 +358,14 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         await DelaySafe(320, ct);
     }
 
-    private void ModeButton_Click(object sender, RoutedEventArgs e)
+    private async void ModeButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ModeConfig mode }) return;
         var index = _modes.IndexOf(mode);
-        if (index >= 0) SelectMode(index);
+        if (index >= 0) await SelectMode(index);
     }
 
-    private async void SelectMode(int index)
+    private async Task SelectMode(int index)
     {
         var mode = _modes.Get(index);
         if (mode == null || _isLaunching) return;
@@ -414,9 +423,11 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
                 {
                     _log.Write("Launch: {0} ({1})", target.DisplayLabel, target.LaunchCmd);
                     var psi = LaunchService.CreateStartInfo(target);
-                    var proc = Process.Start(psi);
-                    launchedTargets++;
-                    _log.Write(proc != null ? "OK: {0}" : "OK (no proc): {0}", target.DisplayLabel);
+                    using (var proc = Process.Start(psi))
+                    {
+                        launchedTargets++;
+                        _log.Write(proc != null ? "OK: {0}" : "OK (no proc): {0}", target.DisplayLabel);
+                    }
                     LaunchFeedText.Text += $"> {target.DisplayLabel}\n";
                 }
                 catch (Exception ex)
@@ -453,13 +464,10 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
             await DelaySafe(success ? 2000 : 5000, token);
 
-            if (token.IsCancellationRequested)
-            {
+            if (_closeOnLaunch)
+                Close();
+            else
                 await ReturnToReady();
-                return;
-            }
-
-            Close();
         }
         catch (Exception ex)
         {
@@ -620,7 +628,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         Close();
     }
 
-    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         ResetIdle();
 
@@ -646,7 +654,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             Key.D9 or Key.NumPad9 => 8, _ => null
         };
 
-        if (modeIndex.HasValue) { SelectMode(modeIndex.Value); e.Handled = true; return; }
+        if (modeIndex.HasValue) { await SelectMode(modeIndex.Value); e.Handled = true; return; }
 
         if (_state.Phase == AppPhase.Ready && ModePanel.Visibility == Visibility.Visible)
         {
@@ -673,7 +681,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             _cardButtons[index].Focus();
     }
 
-    private void MenuEdit_Click(object sender, RoutedEventArgs e)
+    private async void MenuEdit_Click(object sender, RoutedEventArgs e)
     {
         var mode = GetModeFromMenu(sender);
         if (mode == null) return;
@@ -682,13 +690,13 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         dialog.Owner = this;
         if (dialog.ShowDialog() == true)
         {
-            SaveCurrentConfig();
+            await SaveCurrentConfig();
             BuildDashboard();
             UpdateOperationalChrome();
         }
     }
 
-    private void MenuDuplicate_Click(object sender, RoutedEventArgs e)
+    private async void MenuDuplicate_Click(object sender, RoutedEventArgs e)
     {
         var mode = GetModeFromMenu(sender);
         if (mode == null) return;
@@ -705,24 +713,24 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         var idx = _modes.IndexOf(mode);
         _modes.Insert(idx + 1, clone);
-        SaveCurrentConfig();
+        await SaveCurrentConfig();
         BuildDashboard();
         UpdateOperationalChrome();
     }
 
-    private void MenuDelete_Click(object sender, RoutedEventArgs e)
+    private async void MenuDelete_Click(object sender, RoutedEventArgs e)
     {
         var mode = GetModeFromMenu(sender);
         if (mode == null || _modes.Count <= 1) return;
 
         var idx = _modes.IndexOf(mode);
         _modes.RemoveAt(idx);
-        SaveCurrentConfig();
+        await SaveCurrentConfig();
         BuildDashboard();
         UpdateOperationalChrome();
     }
 
-    private void MenuMoveUp_Click(object sender, RoutedEventArgs e)
+    private async void MenuMoveUp_Click(object sender, RoutedEventArgs e)
     {
         var mode = GetModeFromMenu(sender);
         if (mode == null) return;
@@ -730,13 +738,13 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         var idx = _modes.IndexOf(mode);
         if (_modes.MoveUp(idx))
         {
-            SaveCurrentConfig();
+            await SaveCurrentConfig();
             BuildDashboard();
             UpdateOperationalChrome();
         }
     }
 
-    private void MenuMoveDown_Click(object sender, RoutedEventArgs e)
+    private async void MenuMoveDown_Click(object sender, RoutedEventArgs e)
     {
         var mode = GetModeFromMenu(sender);
         if (mode == null) return;
@@ -744,13 +752,13 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         var idx = _modes.IndexOf(mode);
         if (_modes.MoveDown(idx))
         {
-            SaveCurrentConfig();
+            await SaveCurrentConfig();
             BuildDashboard();
             UpdateOperationalChrome();
         }
     }
 
-    private void SaveCurrentConfig()
+    private async Task SaveCurrentConfig()
     {
         var cfg = new ArcynConfig
         {
@@ -762,7 +770,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             },
             Behavior = new BehaviorConfig { IdleTimeoutSeconds = _idleTimeout }
         };
-        _config.Save(cfg);
+        await _config.SaveAsync(cfg);
     }
 
     private static ModeConfig? GetModeFromMenu(object sender)

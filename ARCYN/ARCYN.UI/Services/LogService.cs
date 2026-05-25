@@ -47,8 +47,11 @@ public sealed class LogService : IDisposable
     {
         try
         {
-            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arcyn_launch.log");
-            File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}");
+            lock (_staticLock)
+            {
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arcyn_launch.log");
+                File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}");
+            }
         }
         catch { }
     }
@@ -57,11 +60,16 @@ public sealed class LogService : IDisposable
     {
         try
         {
-            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arcyn_launch.log");
-            File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {string.Format(format, args)}{Environment.NewLine}");
+            lock (_staticLock)
+            {
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arcyn_launch.log");
+                File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {string.Format(format, args)}{Environment.NewLine}");
+            }
         }
         catch { }
     }
+
+    private static readonly object _staticLock = new();
 
     public void Dispose()
     {

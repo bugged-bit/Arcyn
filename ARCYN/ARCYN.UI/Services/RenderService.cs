@@ -47,8 +47,9 @@ public sealed class RenderService : IDisposable
         if (dt < 1) dt = 1;
         if (dt > 100) dt = 100;
 
-        for (int i = 0; i < _subscribers.Count; i++)
-            _subscribers[i].OnRenderTick(dt);
+        var subs = _subscribers.ToArray();
+        for (int i = 0; i < subs.Length; i++)
+            subs[i].OnRenderTick(dt);
     }
 
     public void Dispose()

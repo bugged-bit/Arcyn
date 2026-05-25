@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using ARCYN.UI.Models;
 
 namespace ARCYN.UI.Services;
@@ -86,6 +87,20 @@ public sealed class ConfigService
 
         var json = JsonSerializer.Serialize(config, JsonOptions);
         File.WriteAllText(path, json);
+    }
+
+    public async Task SaveAsync(ArcynConfig config)
+    {
+        var path = GetOrCreatePath();
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        for (int i = 0; i < config.Modes.Count; i++)
+            config.Modes[i].Index = i + 1;
+
+        var json = JsonSerializer.Serialize(config, JsonOptions);
+        await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
     }
 
     private string? TryMigrateOldConfig()

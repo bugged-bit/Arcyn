@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -419,7 +420,7 @@ public partial class SetupWindow : Window
         for (int i = 0; i < config.Modes.Count; i++)
             config.Modes[i].Index = i + 1;
 
-        _config.Save(config);
+        await _config.SaveAsync(config);
 
         StatusBar.Text = "Config saved. Launching ARCYN...";
 
