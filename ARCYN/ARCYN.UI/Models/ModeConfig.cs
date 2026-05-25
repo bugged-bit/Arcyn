@@ -53,7 +53,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
     public SolidColorBrush AccentBrush => new(AccentColor);
 
     [JsonIgnore]
-    public SolidColorBrush AccentBarBrush => new(Color.FromArgb(0x2A, AccentColor.R, AccentColor.G, AccentColor.B));
+    public SolidColorBrush AccentBarBrush => new(Color.FromArgb(0x66, AccentColor.R, AccentColor.G, AccentColor.B));
 
     [JsonPropertyName("apps")]
     public List<string> Apps

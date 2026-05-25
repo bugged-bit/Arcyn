@@ -110,10 +110,10 @@
                             Padding="0"
                             TextOptions.TextFormattingMode="Display">
                         <Grid>
-                            <Rectangle x:Name="LeftAccent" Width="3"
-                                       Fill="{StaticResource AccentBrush}"
-                                       HorizontalAlignment="Left"
-                                       Opacity="0.5" />
+<Rectangle x:Name="LeftAccent" Width="0"
+                                           Fill="{StaticResource AccentBrush}"
+                                           HorizontalAlignment="Left"
+                                           Opacity="0" />
                             <Rectangle x:Name="GlowOverlay"
                                        Fill="{StaticResource AccentGlowBrush}"
                                        Opacity="0" IsHitTestVisible="False" />
