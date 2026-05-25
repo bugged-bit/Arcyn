@@ -43,6 +43,26 @@ public sealed class LogService : IDisposable
         catch { }
     }
 
+    public static void WriteStatic(string message)
+    {
+        try
+        {
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arcyn_launch.log");
+            File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}");
+        }
+        catch { }
+    }
+
+    public static void WriteStatic(string format, params object?[] args)
+    {
+        try
+        {
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "arcyn_launch.log");
+            File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {string.Format(format, args)}{Environment.NewLine}");
+        }
+        catch { }
+    }
+
     public void Dispose()
     {
         if (_disposed) return;

@@ -1,7 +1,5 @@
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -19,17 +17,17 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 {
     private readonly AppState _state = new();
     private readonly LogService _log;
+    private readonly ConfigService _config = new();
+    private readonly ModeService _modes;
+    private readonly ThemeService _theme = new();
     private readonly RenderService _render;
     private readonly Stopwatch _uptime = Stopwatch.StartNew();
-    private readonly List<ModeConfig> _modes = [];
     private readonly List<ContentControl> _cardWrappers = [];
     private readonly List<Button> _cardButtons = [];
     private readonly List<TrailParticle> _cursorTrail = [];
 
-    private Brush _accentBrightBrush = null!;
-    private Brush _accentLightBrush = null!;
-    private Brush _textPrimaryBrush = null!;
     private CancellationTokenSource? _lifeCts;
+    private CancellationTokenSource? _launchCts;
     private DispatcherTimer? _idleTimer;
     private DispatcherTimer? _launchDotTimer;
     private ParticleEngine? _particles;
@@ -47,28 +45,26 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private long _accelTrail;
     private long _idleElapsed;
 
+    private bool _reducedEffects;
+    private bool _compactMode;
+
     private double _ambientPhase;
     private double _spinnerAngle;
     private int _launchDotIndex;
     private int _trailSkip;
+    private int _idleTimeout;
 
     private Point _lastMousePos;
-    private string? _activeModeType;
-
-    private double _modeParticleMul = 1.0;
-    private double _modeGlowMul = 1.0;
-    private double _modeAmbientMul = 1.0;
-
-    private const string ConfigFileName = "protocoll.json";
-    private const int IdleTimeoutSeconds = 10;
 
     public MainWindow()
     {
         InitializeComponent();
 
+        _modes = new ModeService(_state);
         _log = new LogService();
         _render = new RenderService();
         _lifeCts = new CancellationTokenSource();
+        _launchCts = new CancellationTokenSource();
 
         _state.PhaseChanged += OnPhaseChanged;
         Loaded += OnLoaded;
@@ -98,21 +94,39 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         Focus();
         Keyboard.Focus(this);
 
-        _accentBrightBrush = TryFindResource("AccentBrightBrush") as Brush
-            ?? new SolidColorBrush(Color.FromRgb(0xF0, 0x80, 0x80));
-        _accentLightBrush = TryFindResource("AccentLightBrush") as Brush
-            ?? new SolidColorBrush(Color.FromRgb(0xF7, 0xA0, 0xA0));
-        _textPrimaryBrush = TryFindResource("TextPrimaryBrush") as Brush ?? Brushes.White;
+        _theme.LoadResources(this);
 
-        LoadConfig();
+        var arcynConfig = _config.Load();
+        if (arcynConfig == null || arcynConfig.Modes.Count == 0)
+        {
+            _log.Write("No config found — first-run detected");
+            _state.TransitionTo(AppPhase.Closing);
+            Close();
+            return;
+        }
+
+        _modes.Load(arcynConfig.Modes);
+        _idleTimeout = arcynConfig.Behavior.IdleTimeoutSeconds;
+        _reducedEffects = arcynConfig.Theme.ReducedEffects;
+        _compactMode = arcynConfig.Theme.CompactMode;
+        _log.Write("Config loaded ({0} modes), reduced_effects={1}, compact={2}",
+            _modes.Count, _reducedEffects, _compactMode);
 
         _telemetry = new TelemetryMonitor();
         _particles = new ParticleEngine(ParticleCanvas);
 
         _render.Subscribe(this);
         _render.Start();
-        _particles.Start();
-        InitCursorTrail();
+        if (!_reducedEffects)
+        {
+            _particles.Start();
+            InitCursorTrail();
+        }
+        else
+        {
+            ScanlinesOverlay.Visibility = Visibility.Collapsed;
+            AmbientGlow.Visibility = Visibility.Collapsed;
+        }
         UpdateOperationalChrome();
 
         _log.Write("OnLoaded: runtime initialized");
@@ -123,10 +137,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private void OnDeactivated(object? sender, EventArgs e)
     {
-        // Log deactivation; do **not** close ARCYN on loss of focus.
         _log.Write("Window deactivated while Phase={0}", _state.Phase);
-        // Keep ARCYN alive regardless of phase (except explicit closing via Escape).
-        // No action taken.
     }
 
     void RenderService.ISubscriber.OnRenderTick(long dt)
@@ -135,28 +146,28 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             return;
 
         _accelParticle += dt;
-        var particleInterval = Math.Clamp((long)(30 / _modeParticleMul), 8, 60);
-        if (_accelParticle >= particleInterval)
+        if (_accelParticle >= 30)
         {
-            _accelParticle -= particleInterval;
+            _accelParticle -= 30;
             _particles?.Tick();
         }
 
-        _accelAmbient += dt;
-        var ambientInterval = Math.Clamp((long)(30 / _modeAmbientMul), 10, 50);
-        if (_accelAmbient >= ambientInterval)
+        if (!_reducedEffects)
         {
-            _accelAmbient = 0;
-            _ambientPhase += 0.025 * _modeGlowMul;
-            var baseGlow = 0.26 * _modeGlowMul;
-            AmbientGlow.Opacity = Math.Clamp(baseGlow + Math.Sin(_ambientPhase) * 0.12 * _modeGlowMul, 0.08, 0.45);
-        }
+            _accelAmbient += dt;
+            if (_accelAmbient >= 30)
+            {
+                _accelAmbient = 0;
+                _ambientPhase += 0.025;
+                AmbientGlow.Opacity = Math.Clamp(0.26 + Math.Sin(_ambientPhase) * 0.12, 0.08, 0.45);
+            }
 
-        _accelTrail += dt;
-        if (_accelTrail >= 16 && _state.Phase == AppPhase.Ready)
-        {
-            _accelTrail = 0;
-            UpdateCursorTrail();
+            _accelTrail += dt;
+            if (_accelTrail >= 16 && _state.Phase == AppPhase.Ready)
+            {
+                _accelTrail = 0;
+                UpdateCursorTrail();
+            }
         }
 
         _accelTelemetry += dt;
@@ -207,6 +218,22 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     {
         _state.TransitionTo(AppPhase.Boot);
 
+        if (_reducedEffects)
+        {
+            BootOverlay.Visibility = Visibility.Collapsed;
+            MainHUD.Opacity = 1;
+            foreach (var wrapper in _cardWrappers)
+            {
+                if (ct.IsCancellationRequested) return;
+                wrapper.Opacity = 1;
+            }
+            FooterHint.Opacity = 1;
+            FooterIdle.Opacity = 1;
+            _state.TransitionTo(AppPhase.Ready);
+            StartIdleTimer();
+            return;
+        }
+
         var flashAnim = new DoubleAnimation(0.08, 0, TimeSpan.FromMilliseconds(350))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
@@ -229,7 +256,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         await TypeText(BootTitle, "A R C Y N", 25, ct);
         if (ct.IsCancellationRequested) return;
 
-        await TypeText(BootSubtitle, "SYSTEM BOOT SEQUENCE  -  v1.0", 15, ct);
+        await TypeText(BootSubtitle, "SYSTEM BOOT SEQUENCE  -  v1.0.0", 15, ct);
         if (ct.IsCancellationRequested) return;
 
         var progressAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900))
@@ -250,17 +277,14 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         foreach (var (message, index) in bootMessages.Select((value, idx) => (value, idx)))
         {
-            if (ct.IsCancellationRequested)
-                return;
-
+            if (ct.IsCancellationRequested) return;
             BootLog.Text += "\n> ";
             await TypeText(BootLog, message, 12, ct);
             BootPercent.Text = bootPercentages[index];
             await DelaySafe(100, ct);
         }
 
-        if (ct.IsCancellationRequested)
-            return;
+        if (ct.IsCancellationRequested) return;
 
         AnimationService.FadeIn(BootReady, 200);
         var pulseAnim = new DoubleAnimation(0.7, 1, TimeSpan.FromMilliseconds(500))
@@ -269,11 +293,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             RepeatBehavior = RepeatBehavior.Forever
         };
         BootReady.BeginAnimation(UIElement.OpacityProperty, pulseAnim);
-
         await DelaySafe(350, ct);
-        if (ct.IsCancellationRequested)
-            return;
-
+        if (ct.IsCancellationRequested) return;
         BootReady.BeginAnimation(UIElement.OpacityProperty, null);
 
         _telemetry?.Sample();
@@ -283,21 +304,17 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         AnimationService.FadeOut(BootOverlay, 150);
         await DelaySafe(160, ct);
-        if (ct.IsCancellationRequested)
-            return;
+        if (ct.IsCancellationRequested) return;
 
         BootOverlay.Visibility = Visibility.Collapsed;
         MainHUD.Opacity = 1;
         AnimationService.FadeIn(MainHUD, 120);
         await DelaySafe(40, ct);
-        if (ct.IsCancellationRequested)
-            return;
+        if (ct.IsCancellationRequested) return;
 
         foreach (var wrapper in _cardWrappers)
         {
-            if (ct.IsCancellationRequested)
-                return;
-
+            if (ct.IsCancellationRequested) return;
             AnimationService.FadeIn(wrapper, 120);
             await DelaySafe(25, ct);
         }
@@ -318,7 +335,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private async Task PlayShellExpansion(CancellationToken ct)
     {
         UpdateLayout();
-
         var targetWidth = Math.Max(ShellHost.ActualWidth, 880);
         var targetHeight = Math.Max(ShellHost.ActualHeight, 450);
 
@@ -335,162 +351,129 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private void ModeButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: ModeConfig mode })
-            return;
-
+        if (sender is not Button { Tag: ModeConfig mode }) return;
         var index = _modes.IndexOf(mode);
-        if (index >= 0)
-            SelectMode(index);
-    }
-
-    private void ApplyModeVisuals(string? type)
-    {
-        (_modeParticleMul, _modeGlowMul, _modeAmbientMul) = type switch
-        {
-            "study" => (0.45, 0.78, 0.70),
-            "design" => (1.15, 1.12, 1.08),
-            "code" => (1.35, 0.96, 0.92),
-            _ => (1.0, 1.0, 1.0)
-        };
+        if (index >= 0) SelectMode(index);
     }
 
     private async void SelectMode(int index)
     {
-        if (index < 0 || index >= _modes.Count || _isLaunching)
-            return;
-
-        if (!_state.TransitionTo(AppPhase.Selecting))
-            return;
+        var mode = _modes.Get(index);
+        if (mode == null || _isLaunching) return;
+        if (!_state.TransitionTo(AppPhase.Selecting)) return;
 
         _isLaunching = true;
-        _state.SelectedModeIndex = index;
+        _modes.SelectedIndex = index;
+        _log.Write("SelectMode({0}): name={1}, targets={2}", index, mode.Name, mode.ProcessCount);
 
-        var mode = _modes[index];
-        _activeModeType = mode.Type;
-        ApplyModeVisuals(_activeModeType);
-        UpdateOperationalChrome();
-
-        AnimationService.FadeOut(ModePanel, 100);
-        await DelaySafe(60);
-
-        ModePanel.IsHitTestVisible = false;
-        ModePanel.Visibility = Visibility.Collapsed;
-
-        // Show loading window instead of the inline launch panel
-        var loadingWindow = new LoadingWindow(mode, index);
-        // Do not set Owner or hide the main window – keep both visible.
-        loadingWindow.Show();
-
-        LaunchModeLabel.Text = mode.Label.ToUpperInvariant();
-        LaunchSessionLabel.Text = $"{mode.SessionLabel}  -  {mode.StateLabel}";
-        LaunchStatus.Text = "Launching";
-        LaunchStatus.Foreground = _textPrimaryBrush;
-        LaunchPanel.Opacity = 0;
-        LaunchPanel.Visibility = Visibility.Visible;
-        AnimationService.FadeIn(LaunchPanel, 100);
-        SetLaunchProgress(0, Math.Max(mode.ProcessCount, 1));
-
-        _state.TransitionTo(AppPhase.Launching);
-
-        _lifeCts?.Cancel();
-        _lifeCts = new CancellationTokenSource();
-        var token = _lifeCts.Token;
-
-        _launchDotTimer?.Stop();
-        _launchDotTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
-        _launchDotTimer.Tick += (_, _) =>
+        try
         {
-            _launchDotIndex = (_launchDotIndex + 1) % 4;
-            LaunchStatus.Text = "Launching" + new string('.', _launchDotIndex);
-        };
-        _launchDotTimer.Start();
+            AnimationService.FadeOut(ModePanel, 100);
+            await DelaySafe(60);
 
-        var launchedTargets = 0;
-        var validTargets = mode.Targets.Where(target => !string.IsNullOrWhiteSpace(target.Cmd)).ToList();
-        var failures = new List<string>();
+            ModePanel.IsHitTestVisible = false;
+            ModePanel.Visibility = Visibility.Collapsed;
 
-        for (int i = 0; i < validTargets.Count; i++)
-        {
-            if (token.IsCancellationRequested)
-                break;
+            LaunchModeLabel.Text = mode.Name.ToUpperInvariant();
+            LaunchSessionLabel.Text = $"MODE {mode.IndexLabel}";
+            LaunchStatus.Text = "Launching";
+            LaunchStatus.Foreground = _theme.TextPrimary;
+            LaunchPanel.Opacity = 0;
+            LaunchPanel.Visibility = Visibility.Visible;
+            AnimationService.FadeIn(LaunchPanel, 100);
+            SetLaunchProgress(0, Math.Max(mode.ProcessCount, 1));
 
-            var target = validTargets[i];
+            _state.TransitionTo(AppPhase.Launching);
 
-            try
+            _launchCts?.Dispose();
+            _launchCts = new CancellationTokenSource();
+            var token = _launchCts.Token;
+
+            _launchDotTimer?.Stop();
+            _launchDotTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+            _launchDotTimer.Tick += (_, _) =>
             {
-                _log.Write("Launching target: {0}", target.Cmd);
-                var psi = CreateLaunchStartInfo(target);
-                // Launch synchronously; Process.Start may return null for shell‑executed commands (e.g., explorer, URLs).
-                var proc = Process.Start(psi);
-                launchedTargets++;
-                _log.Write(proc != null ? $"Launch target OK: {target.Cmd}" : $"Launch target executed (no process): {target.Cmd}");
-            }
-            catch (Exception ex)
+                _launchDotIndex = (_launchDotIndex + 1) % 4;
+                LaunchStatus.Text = "Launching" + new string('.', _launchDotIndex);
+            };
+            _launchDotTimer.Start();
+
+            var launchedTargets = 0;
+            var validTargets = mode.Targets;
+            var failures = new List<string>();
+
+            LaunchTargetCount.Text = $"{validTargets.Count} TARGETS";
+            LaunchFeedText.Text = "";
+
+            for (int i = 0; i < validTargets.Count; i++)
             {
-                failures.Add(target.DisplayLabel);
-                _log.Write("Launch target failed: {0} ({1})", target.Cmd, ex.Message);
-            }
+                if (token.IsCancellationRequested) break;
+                var target = validTargets[i];
 
-            SetLaunchProgress(launchedTargets + failures.Count, validTargets.Count);
-            // Small pause keeps UI responsive; keep same interval.
-            await DelaySafe(350, token);
-        }
-
-if (token.IsCancellationRequested)
+                try
                 {
-                    LaunchStatus.Text = "Cancelled";
-                    // Close loading overlay and return to Ready UI.
-                    try
-                    {
-                        loadingWindow?.Close();
-                    }
-                    catch { }
-                    await ReturnToReady();
-                    return;
+                    _log.Write("Launch: {0} ({1})", target.DisplayLabel, target.LaunchCmd);
+                    var psi = LaunchService.CreateStartInfo(target);
+                    var proc = Process.Start(psi);
+                    launchedTargets++;
+                    _log.Write(proc != null ? "OK: {0}" : "OK (no proc): {0}", target.DisplayLabel);
+                    LaunchFeedText.Text += $"> {target.DisplayLabel}\n";
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(target.DisplayLabel);
+                    _log.Write("FAIL: {0}\n{1}", target.DisplayLabel, ex);
+                    LaunchFeedText.Text += $"> {target.DisplayLabel}  [FAIL]\n";
                 }
 
-        _launchDotTimer?.Stop();
+                LaunchFeedScroll.ScrollToBottom();
+                SetLaunchProgress(launchedTargets + failures.Count, validTargets.Count);
+                await DelaySafe(350, token);
+            }
 
-        bool anySuccess = launchedTargets > 0;
-        bool success = failures.Count == 0 && anySuccess;
-        // Update status display
-        LaunchStatus.Text = success ? "Ready" : anySuccess ? "Partial" : "Fault";
-        LaunchStatus.Foreground = success ? _textPrimaryBrush : _accentLightBrush;
-        // Show failures if any, otherwise recent launch info
-        LaunchRecent.Text = failures.Count == 0
-            ? $"Recent: {mode.LastLaunchLabel}"
-            : $"Issue: {string.Join(", ", failures)}";
+            _launchDotTimer?.Stop();
 
-        mode.RecordLaunch(launchedTargets, validTargets.Count, success);
-        UpdateOperationalChrome();
+            if (token.IsCancellationRequested)
+            {
+                LaunchStatus.Text = "Cancelled";
+                await ReturnToReady();
+                return;
+            }
 
-        // Keep loading overlay visible for a maximum of 5 seconds (or 2 seconds on full success).
-int finalDelayMs = success ? 2000 : 5000;
-await DelaySafe(finalDelayMs, token);
-if (token.IsCancellationRequested)
-    return;
+            bool anySuccess = launchedTargets > 0;
+            bool success = failures.Count == 0 && anySuccess;
+            LaunchStatus.Text = success ? "Ready" : anySuccess ? "Partial" : "Fault";
+            LaunchStatus.Foreground = success ? _theme.TextPrimary : _theme.AccentLight;
+            LaunchRecent.Text = failures.Count == 0
+                ? $"Recent: {mode.LastLaunchLabel}"
+                : $"Issue: {string.Join(", ", failures)}";
 
-// Exit after launch completes
-if (!_disposed)
-{
-    // Close the loading window if open, then exit the app.
-    try
-    {
-        // loadingWindow is defined in this method's scope.
-        if (loadingWindow != null && loadingWindow.IsVisible)
-            loadingWindow.Close();
-    }
-    catch { }
-    Dispatcher.Invoke(Close);
-}
-return;
+            mode.RecordLaunch(launchedTargets, validTargets.Count, success);
+            UpdateOperationalChrome();
+
+            await DelaySafe(success ? 2000 : 5000, token);
+
+            if (token.IsCancellationRequested)
+            {
+                await ReturnToReady();
+                return;
+            }
+
+            Close();
+        }
+        catch (Exception ex)
+        {
+            _log.Write("CRASH in SelectMode: {0}", ex);
+        }
+        finally
+        {
+            _isLaunching = false;
+        }
     }
 
     private async Task ReturnToReady()
     {
-        if (!_state.TransitionTo(AppPhase.Ready))
-            return;
-
+        if (!_state.TransitionTo(AppPhase.Ready)) return;
         _isLaunching = false;
         _launchDotTimer?.Stop();
 
@@ -502,10 +485,6 @@ return;
         ModePanel.Opacity = 0;
         AnimationService.FadeIn(ModePanel, 100);
         await DelaySafe(40);
-
-        _activeModeType = null;
-        ApplyModeVisuals(null);
-        UpdateOperationalChrome();
     }
 
     private void InitCursorTrail()
@@ -513,9 +492,7 @@ return;
         PreviewMouseMove += (_, e) =>
         {
             var position = e.GetPosition(TrailCanvas);
-            if (position == _lastMousePos)
-                return;
-
+            if (position == _lastMousePos) return;
             _lastMousePos = position;
             _mouseMoved = true;
             ResetIdle();
@@ -526,57 +503,49 @@ return;
     {
         for (int i = _cursorTrail.Count - 1; i >= 0; i--)
         {
-            var particle = _cursorTrail[i];
-            particle.Life++;
-            particle.X += particle.Vx;
-            particle.Y += particle.Vy;
+            var p = _cursorTrail[i];
+            p.Life++;
+            p.X += p.Vx;
+            p.Y += p.Vy;
 
-            if (particle.Life >= particle.MaxLife)
+            if (p.Life >= p.MaxLife)
             {
-                TrailCanvas.Children.Remove(particle.Element);
+                TrailCanvas.Children.Remove(p.Element);
                 _cursorTrail.RemoveAt(i);
                 continue;
             }
 
-            var ratio = particle.Life / particle.MaxLife;
-            particle.Element.Opacity = 0.6 * (1 - ratio);
+            var ratio = p.Life / p.MaxLife;
+            p.Element.Opacity = 0.6 * (1 - ratio);
             var size = 2.5 * (1 - ratio * 0.6);
-            particle.Element.Width = size;
-            particle.Element.Height = size;
-            Canvas.SetLeft(particle.Element, particle.X);
-            Canvas.SetTop(particle.Element, particle.Y);
+            p.Element.Width = size;
+            p.Element.Height = size;
+            Canvas.SetLeft(p.Element, p.X);
+            Canvas.SetTop(p.Element, p.Y);
         }
 
-        if (!_mouseMoved)
-            return;
-
+        if (!_mouseMoved) return;
         _mouseMoved = false;
         _trailSkip++;
-        if (_trailSkip % 3 != 0)
-            return;
+        if (_trailSkip % 3 != 0) return;
 
-        var newParticle = new TrailParticle
+        var newP = new TrailParticle
         {
             Element = new Ellipse
             {
-                Width = 2.5,
-                Height = 2.5,
-                Fill = _accentBrightBrush,
-                IsHitTestVisible = false,
-                Opacity = 0.6
+                Width = 2.5, Height = 2.5, Fill = _theme.AccentBright,
+                IsHitTestVisible = false, Opacity = 0.6
             },
-            Life = 0,
-            MaxLife = 20,
-            X = _lastMousePos.X,
-            Y = _lastMousePos.Y,
+            Life = 0, MaxLife = 20,
+            X = _lastMousePos.X, Y = _lastMousePos.Y,
             Vx = (Random.Shared.NextDouble() - 0.5) * 0.4,
             Vy = (Random.Shared.NextDouble() - 0.5) * 0.4
         };
 
-        Canvas.SetLeft(newParticle.Element, newParticle.X);
-        Canvas.SetTop(newParticle.Element, newParticle.Y);
-        TrailCanvas.Children.Add(newParticle.Element);
-        _cursorTrail.Add(newParticle);
+        Canvas.SetLeft(newP.Element, newP.X);
+        Canvas.SetTop(newP.Element, newP.Y);
+        TrailCanvas.Children.Add(newP.Element);
+        _cursorTrail.Add(newP);
 
         while (_cursorTrail.Count > 25)
         {
@@ -588,16 +557,14 @@ return;
 
     private void UpdateTelemetryUI()
     {
-        if (_telemetry == null)
-            return;
-
+        if (_telemetry == null) return;
         var cpu = _telemetry.CpuPercent;
         var ram = _telemetry.RamPercent;
 
         HeaderCpu.Text = $"CPU {cpu,4:F1}%";
         HeaderRam.Text = $"RAM {ram,4:F1}%";
         HeaderSys.Text = cpu < 75 && ram < 85 ? "ONLINE" : "LOAD";
-        HeaderSys.Foreground = cpu < 75 && ram < 85 ? _accentBrightBrush : _accentLightBrush;
+        HeaderSys.Foreground = cpu < 75 && ram < 85 ? _theme.AccentBright : _theme.AccentLight;
 
         SystemStrip.Text = cpu < 75 && ram < 85
             ? $"SYS {HeaderSys.Text}  -  HUD STABLE"
@@ -609,8 +576,8 @@ return;
             LaunchRam.Text = $"RAM {ram:F1}%";
         }
 
-        var idleSeconds = _idleElapsed > 0 ? (int)(_idleElapsed / 1000) : 0;
-        FooterIdle.Text = idleSeconds > 0 ? $"idle {idleSeconds}s" : string.Empty;
+        var idleSec = _idleElapsed > 0 ? (int)(_idleElapsed / 1000) : 0;
+        FooterIdle.Text = idleSec > 0 ? $"idle {idleSec}s" : string.Empty;
     }
 
     private void StartIdleTimer()
@@ -618,11 +585,9 @@ return;
         _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _idleTimer.Tick += (_, _) =>
         {
-            if (_state.Phase != AppPhase.Ready)
-                return;
-
+            if (_state.Phase != AppPhase.Ready) return;
             _idleElapsed += 1000;
-            if (_idleElapsed >= IdleTimeoutSeconds * 1000)
+            if (_idleElapsed >= _idleTimeout * 1000)
                 CloseWithAnimation();
         };
         _idleTimer.Start();
@@ -630,9 +595,7 @@ return;
 
     private void ResetIdle()
     {
-        if (_state.Phase != AppPhase.Ready)
-            return;
-
+        if (_state.Phase != AppPhase.Ready) return;
         _idleElapsed = 0;
         FooterIdle.Text = string.Empty;
         _idleTimer?.Stop();
@@ -641,9 +604,7 @@ return;
 
     private async void CloseWithAnimation()
     {
-        if (_isClosing || _disposed)
-            return;
-
+        if (_isClosing || _disposed) return;
         _isClosing = true;
         _state.TransitionTo(AppPhase.Closing);
         _lifeCts?.Cancel();
@@ -655,7 +616,6 @@ return;
 
         var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(200));
         BeginAnimation(OpacityProperty, fade);
-
         await DelaySafe(200);
         Close();
     }
@@ -668,195 +628,159 @@ return;
         {
             if (_state.Phase == AppPhase.Launching)
             {
-                _lifeCts?.Cancel();
-                _ = ReturnToReady();
+                LaunchStatus.Text = "Cancelling...";
+                _launchCts?.Cancel();
             }
             else if (_state.Phase != AppPhase.Closing)
-            {
                 CloseWithAnimation();
-            }
-
             e.Handled = true;
             return;
         }
 
         int? modeIndex = e.Key switch
         {
-            Key.D1 or Key.NumPad1 => 0,
-            Key.D2 or Key.NumPad2 => 1,
-            Key.D3 or Key.NumPad3 => 2,
-            Key.D4 or Key.NumPad4 => 3,
-            Key.D5 or Key.NumPad5 => 4,
-            Key.D6 or Key.NumPad6 => 5,
-            Key.D7 or Key.NumPad7 => 6,
-            Key.D8 or Key.NumPad8 => 7,
-            Key.D9 or Key.NumPad9 => 8,
-            _ => null
+            Key.D1 or Key.NumPad1 => 0, Key.D2 or Key.NumPad2 => 1,
+            Key.D3 or Key.NumPad3 => 2, Key.D4 or Key.NumPad4 => 3,
+            Key.D5 or Key.NumPad5 => 4, Key.D6 or Key.NumPad6 => 5,
+            Key.D7 or Key.NumPad7 => 6, Key.D8 or Key.NumPad8 => 7,
+            Key.D9 or Key.NumPad9 => 8, _ => null
         };
 
-        if (modeIndex.HasValue)
-        {
-            SelectMode(modeIndex.Value);
-            e.Handled = true;
-            return;
-        }
+        if (modeIndex.HasValue) { SelectMode(modeIndex.Value); e.Handled = true; return; }
 
         if (_state.Phase == AppPhase.Ready && ModePanel.Visibility == Visibility.Visible)
         {
             var focused = FocusManager.GetFocusedElement(this);
             var currentIndex = -1;
-            if (focused is Button button && button.Tag is ModeConfig mode)
-                currentIndex = _modes.IndexOf(mode);
+            if (focused is Button { Tag: ModeConfig mode }) currentIndex = _modes.IndexOf(mode);
 
             if (e.Key is Key.Down or Key.Right)
-            {
-                var nextIndex = (currentIndex + 1 + _modes.Count) % _modes.Count;
-                FocusModeButton(nextIndex);
-                e.Handled = true;
-                return;
-            }
-
+            { FocusModeButton((currentIndex + 1 + _modes.Count) % _modes.Count); e.Handled = true; return; }
             if (e.Key is Key.Up or Key.Left)
-            {
-                var previousIndex = currentIndex <= 0 ? _modes.Count - 1 : currentIndex - 1;
-                FocusModeButton(previousIndex);
-                e.Handled = true;
-                return;
-            }
+            { FocusModeButton(currentIndex <= 0 ? _modes.Count - 1 : currentIndex - 1); e.Handled = true; return; }
         }
 
         if (e.Key == Key.Enter && _state.Phase == AppPhase.Ready)
         {
-            if (FocusManager.GetFocusedElement(this) is Button focusedButton)
-                ModeButton_Click(focusedButton, new RoutedEventArgs());
-
+            if (FocusManager.GetFocusedElement(this) is Button fb) ModeButton_Click(fb, new RoutedEventArgs());
             e.Handled = true;
-            return;
         }
     }
 
     private void FocusModeButton(int index)
     {
-        if (index < 0 || index >= _cardButtons.Count)
-            return;
-
-        _cardButtons[index].Focus();
+        if (index >= 0 && index < _cardButtons.Count)
+            _cardButtons[index].Focus();
     }
 
-    private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
+    private void MenuEdit_Click(object sender, RoutedEventArgs e)
     {
-        if (_state.Phase == AppPhase.Closing)
-            return;
+        var mode = GetModeFromMenu(sender);
+        if (mode == null) return;
 
-        var position = e.GetPosition(MainBorder);
-        var insideMainBorder =
-            position.X >= 0 &&
-            position.Y >= 0 &&
-            position.X <= MainBorder.ActualWidth &&
-            position.Y <= MainBorder.ActualHeight;
-
-        if (!insideMainBorder)
-            CloseWithAnimation();
+        var dialog = new EditModeWindow(mode);
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true)
+        {
+            SaveCurrentConfig();
+            BuildDashboard();
+            UpdateOperationalChrome();
+        }
     }
 
-    private void LoadConfig()
+    private void MenuDuplicate_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var path in GetCandidateConfigPaths())
+        var mode = GetModeFromMenu(sender);
+        if (mode == null) return;
+
+        var clone = new ModeConfig
         {
-            if (!File.Exists(path))
-                continue;
+            Name = mode.Name + " 2",
+            Description = mode.Description,
+            Accent = mode.Accent
+        };
+        clone.Apps.AddRange(mode.Apps);
+        clone.Websites.AddRange(mode.Websites);
+        clone.Folders.AddRange(mode.Folders);
 
-            try
-            {
-                var json = File.ReadAllText(path);
-                var modes = JsonSerializer.Deserialize<List<ModeConfig>>(json) ?? [];
-                _modes.Clear();
-                _modes.AddRange(modes.Where(mode => !string.IsNullOrWhiteSpace(mode.Label) && mode.Targets.Count > 0));
-                _log.Write("Config loaded from {0} ({1} modes)", path, _modes.Count);
-                break;
-            }
-            catch (Exception ex)
-            {
-                _log.Write("Config parse error in {0}: {1}", path, ex.Message);
-            }
-        }
-
-        if (_modes.Count == 0)
-        {
-            _modes.AddRange(GetDefaultModes());
-            _log.Write("Using default modes");
-        }
-
-        for (int i = 0; i < _modes.Count; i++)
-            _modes[i].Index = i + 1;
-
+        var idx = _modes.IndexOf(mode);
+        _modes.Insert(idx + 1, clone);
+        SaveCurrentConfig();
         BuildDashboard();
         UpdateOperationalChrome();
     }
 
-private static IEnumerable<string> GetCandidateConfigPaths()
-{
-    var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-    var currentDir = Environment.CurrentDirectory.TrimEnd(Path.DirectorySeparatorChar);
-
-    // Primary locations – ordered by likelihood
-    return new[]
+    private void MenuDelete_Click(object sender, RoutedEventArgs e)
     {
-        Path.Combine(baseDir, ConfigFileName),               // exe folder
-        Path.Combine(baseDir, "ARCYN", ConfigFileName),      // legacy subfolder
-        Path.Combine(currentDir, ConfigFileName),            // working folder
-        Path.Combine(currentDir, "ARCYN", ConfigFileName)   // legacy subfolder in cwd
-    }.Distinct(StringComparer.OrdinalIgnoreCase);
-}
+        var mode = GetModeFromMenu(sender);
+        if (mode == null || _modes.Count <= 1) return;
 
-    private static List<ModeConfig> GetDefaultModes() =>
-    [
-        new()
+        var idx = _modes.IndexOf(mode);
+        _modes.RemoveAt(idx);
+        SaveCurrentConfig();
+        BuildDashboard();
+        UpdateOperationalChrome();
+    }
+
+    private void MenuMoveUp_Click(object sender, RoutedEventArgs e)
+    {
+        var mode = GetModeFromMenu(sender);
+        if (mode == null) return;
+
+        var idx = _modes.IndexOf(mode);
+        if (_modes.MoveUp(idx))
         {
-            Label = "STUDY",
-            Subtitle = "focus-oriented workspace",
-            Type = "study",
-            Session = "SES 042",
-            State = "FOCUS LOCK",
-            Targets =
-            [
-                new() { Cmd = "https://ncert.nic.in" },
-                new() { Cmd = "https://www.tiwariacademy.com" },
-                new() { Cmd = "ms-clock:" },
-                new() { Cmd = "explorer.exe", Args = ["D:\\study material"] }
-            ]
-        },
-        new()
-        {
-            Label = "DESIGN",
-            Subtitle = "creative workstation",
-            Type = "design",
-            Session = "SES 017",
-            State = "CREATIVE READY",
-            Targets =
-            [
-                new() { Cmd = "https://www.pinterest.com" },
-                new() { Cmd = "C:\\Users\\pryan\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Canva.lnk" },
-                new() { Cmd = "explorer.exe", Args = ["D:\\Downloads\\Poster stuff"] }
-            ]
-        },
-        new()
-        {
-            Label = "CODE",
-            Subtitle = "tactical terminal",
-            Type = "code",
-            Session = "SES 089",
-            State = "EXEC LIVE",
-            Targets =
-            [
-                new() { Cmd = "wt.exe" },
-                new() { Cmd = "https://github.com" },
-                new() { Cmd = "https://chatgpt.com" },
-                new() { Cmd = "ollama.exe" },
-                new() { Cmd = "explorer.exe", Args = ["D:\\"] }
-            ]
+            SaveCurrentConfig();
+            BuildDashboard();
+            UpdateOperationalChrome();
         }
-    ];
+    }
+
+    private void MenuMoveDown_Click(object sender, RoutedEventArgs e)
+    {
+        var mode = GetModeFromMenu(sender);
+        if (mode == null) return;
+
+        var idx = _modes.IndexOf(mode);
+        if (_modes.MoveDown(idx))
+        {
+            SaveCurrentConfig();
+            BuildDashboard();
+            UpdateOperationalChrome();
+        }
+    }
+
+    private void SaveCurrentConfig()
+    {
+        var cfg = new ArcynConfig
+        {
+            Modes = [.. _modes.Modes],
+            Theme = new ThemeConfig
+            {
+                ReducedEffects = _reducedEffects,
+                CompactMode = _compactMode
+            },
+            Behavior = new BehaviorConfig { IdleTimeoutSeconds = _idleTimeout }
+        };
+        _config.Save(cfg);
+    }
+
+    private static ModeConfig? GetModeFromMenu(object sender)
+    {
+        if (sender is System.Windows.Controls.MenuItem mi &&
+            mi.Parent is ContextMenu cm &&
+            cm.PlacementTarget is Button { Tag: ModeConfig mode })
+            return mode;
+        return null;
+    }
+
+    private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_state.Phase == AppPhase.Closing) return;
+        var pos = e.GetPosition(MainBorder);
+        if (pos.X < 0 || pos.Y < 0 || pos.X > MainBorder.ActualWidth || pos.Y > MainBorder.ActualHeight)
+            CloseWithAnimation();
+    }
 
     private void BuildDashboard()
     {
@@ -866,8 +790,7 @@ private static IEnumerable<string> GetCandidateConfigPaths()
         _cardWrappers.Clear();
         _cardButtons.Clear();
 
-        if (_modes.Count == 0)
-            return;
+        if (_modes.Count == 0) return;
 
         DashboardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         var template = (DataTemplate)FindResource("ModeCardTemplate");
@@ -875,17 +798,16 @@ private static IEnumerable<string> GetCandidateConfigPaths()
         for (int i = 0; i < _modes.Count; i++)
         {
             DashboardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
             var wrapper = new ContentControl
             {
-                Content = _modes[i],
+                Content = _modes.Get(i),
                 ContentTemplate = template,
-                Margin = new Thickness(0, 0, 0, 6),
+                Margin = new Thickness(0, 0, 0, _compactMode ? 3 : 6),
                 Opacity = 0,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                VerticalAlignment = VerticalAlignment.Top
+                VerticalAlignment = VerticalAlignment.Top,
+                Height = _compactMode ? 60 : double.NaN
             };
-
             Grid.SetColumn(wrapper, 0);
             Grid.SetRow(wrapper, i);
             DashboardGrid.Children.Add(wrapper);
@@ -896,32 +818,19 @@ private static IEnumerable<string> GetCandidateConfigPaths()
 
         foreach (var wrapper in _cardWrappers)
         {
-            if (FindVisualChild<Button>(wrapper) is { } button)
-                _cardButtons.Add(button);
+            if (FindVisualChild<Button>(wrapper) is { } btn)
+                _cardButtons.Add(btn);
         }
     }
 
     private void UpdateOperationalChrome()
     {
-        var totalProcesses = _modes.Sum(mode => mode.ProcessCount);
-        var activeMode = _state.SelectedModeIndex >= 0 && _state.SelectedModeIndex < _modes.Count
-            ? _modes[_state.SelectedModeIndex].Label.ToUpperInvariant()
-            : "STANDBY";
-
+        var activeLabel = _modes.ActiveLabel;
         ModeCountRun.Text = _modes.Count.ToString("D2");
-        ProcessStrip.Text = $"PROC {totalProcesses:D2}  -  ACTIVE {activeMode}";
-        FooterHint.Text = $"{ShortcutSpan()} select  -  ENTER launch  -  ESC close";
-        LaunchRecent.Text = _state.SelectedModeIndex >= 0 && _state.SelectedModeIndex < _modes.Count
-            ? $"Recent: {_modes[_state.SelectedModeIndex].LastLaunchLabel}"
-            : "Recent: none";
-    }
-
-    private string ShortcutSpan()
-    {
-        if (_modes.Count == 0)
-            return "[1]";
-
-        return _modes.Count == 1 ? "[1]" : $"[1-{_modes.Count}]";
+        ProcessStrip.Text = $"PROC {_modes.TotalProcesses:D2}  -  ACTIVE {activeLabel}";
+        FooterHint.Text = $"{_modes.ShortcutHint} select  -  ENTER launch  -  ESC close";
+        var sel = _modes.SelectedMode;
+        LaunchRecent.Text = sel != null ? $"Recent: {sel.LastLaunchLabel}" : "Recent: none";
     }
 
     private void SetLaunchProgress(int completed, int total)
@@ -932,138 +841,43 @@ private static IEnumerable<string> GetCandidateConfigPaths()
         LaunchProgressText.Text = $"PROC {Math.Min(completed, safeTotal):D2}/{safeTotal:D2}";
     }
 
-    private static ProcessStartInfo CreateLaunchStartInfo(TargetConfig target)
-    {
-        var cmd = target.Cmd.Trim();
-        var args = string.Join(" ", target.Args.Select(QuoteArgument));
-        var workingDir = Environment.CurrentDirectory;
-
-        // Drive root with trailing slash (e.g., "D:\") – treat as folder launch via Explorer.
-        if (cmd.Length >= 3 && cmd[1] == ':' && (cmd.EndsWith("\\") || cmd.EndsWith("/")))
-        {
-            return new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = QuoteArgument(cmd),
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
-            };
-        }
-
-        // Folder launch – open with Explorer, ensure quoting for spaces.
-        if (Directory.Exists(cmd))
-        {
-            return new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = QuoteArgument(cmd),
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
-            };
-        }
-
-        // Shortcut (.lnk) – launch directly, set working directory to shortcut location.
-        var ext = System.IO.Path.GetExtension(cmd);
-        if (File.Exists(cmd) && ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase))
-        {
-            var dir = System.IO.Path.GetDirectoryName(cmd) ?? workingDir;
-            return new ProcessStartInfo
-            {
-                FileName = cmd,
-                Arguments = args,
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = dir
-            };
-        }
-
-        // Executable or document – launch directly, set working dir to its location.
-        if (File.Exists(cmd))
-        {
-            var dir = System.IO.Path.GetDirectoryName(cmd) ?? workingDir;
-            return new ProcessStartInfo
-            {
-                FileName = cmd,
-                Arguments = args,
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = dir
-            };
-        }
-
-        // Fallback – treat as command or URL.
-        return new ProcessStartInfo
-        {
-            FileName = cmd,
-            Arguments = args,
-            UseShellExecute = true,
-            WindowStyle = ProcessWindowStyle.Normal,
-            WorkingDirectory = workingDir
-        };
-    }
-
-    private static string QuoteArgument(string argument)
-    {
-        return argument.Contains(' ') ? $"\"{argument}\"" : argument;
-    }
-
     private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
     {
         for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {
             var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T typedChild)
-                return typedChild;
-
+            if (child is T tc) return tc;
             var result = FindVisualChild<T>(child);
-            if (result != null)
-                return result;
+            if (result != null) return result;
         }
-
         return null;
     }
 
     private static async Task TypeText(TextBlock target, string text, int intervalMs, CancellationToken ct = default)
     {
-        foreach (char character in text)
+        foreach (char c in text)
         {
-            if (ct.IsCancellationRequested)
-                return;
-
-            target.Text += character;
+            if (ct.IsCancellationRequested) return;
+            target.Text += c;
             await DelaySafe(intervalMs, ct);
         }
     }
 
-    private static async Task DelaySafe(int milliseconds, CancellationToken ct = default)
+    private static async Task DelaySafe(int ms, CancellationToken ct = default)
     {
-        try
-        {
-            await Task.Delay(milliseconds, ct);
-        }
-        catch (OperationCanceledException)
-        {
-        }
+        try { await Task.Delay(ms, ct); }
+        catch (OperationCanceledException) { }
     }
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
-
+        if (_disposed) return;
         _disposed = true;
         _log.Write("ARCYN disposed");
-
-        _lifeCts?.Cancel();
-        _lifeCts?.Dispose();
-        _idleTimer?.Stop();
-        _launchDotTimer?.Stop();
-        _render.Dispose();
-        _telemetry?.Dispose();
-        _particles?.Dispose();
-        _log.Dispose();
+        _lifeCts?.Cancel(); _lifeCts?.Dispose();
+        _launchCts?.Cancel(); _launchCts?.Dispose();
+        _idleTimer?.Stop(); _launchDotTimer?.Stop();
+        _render.Dispose(); _telemetry?.Dispose(); _particles?.Dispose(); _log.Dispose();
     }
 
     private sealed class TrailParticle
@@ -1071,9 +885,7 @@ private static IEnumerable<string> GetCandidateConfigPaths()
         public required Ellipse Element { get; init; }
         public double Life { get; set; }
         public double MaxLife { get; init; }
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Vx { get; init; }
-        public double Vy { get; init; }
+        public double X { get; set; } public double Y { get; set; }
+        public double Vx { get; init; } public double Vy { get; init; }
     }
 }

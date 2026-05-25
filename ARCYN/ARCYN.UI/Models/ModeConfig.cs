@@ -1,88 +1,79 @@
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Windows.Media;
 
 namespace ARCYN.UI.Models;
 
 public sealed class ModeConfig : INotifyPropertyChanged
 {
-    private string _label = string.Empty;
-    private string _subtitle = string.Empty;
-    private string _type = "default";
-    private List<TargetConfig> _targets = [];
-    private string _session = string.Empty;
-    private string _state = string.Empty;
+    private string _name = string.Empty;
+    private string _description = string.Empty;
+    private string _accent = "#D64545";
+    private List<string> _apps = [];
+    private List<string> _websites = [];
+    private List<string> _folders = [];
     private int _index;
     private int _launchCount;
     private DateTime? _lastLaunchedAt;
     private string _lastLaunchOutcome = "STANDBY";
 
-    [JsonPropertyName("label")]
-    public string Label
+    [JsonPropertyName("name")]
+    public string Name
     {
-        get => _label;
-        set => SetField(ref _label, value);
+        get => _name;
+        set => SetField(ref _name, value);
     }
 
-    [JsonPropertyName("subtitle")]
-    public string Subtitle
+    [JsonPropertyName("description")]
+    public string Description
     {
-        get => _subtitle;
-        set => SetField(ref _subtitle, value);
+        get => _description;
+        set => SetField(ref _description, value);
     }
 
-    [JsonPropertyName("type")]
-    public string Type
+    [JsonPropertyName("accent")]
+    public string Accent
     {
-        get => _type;
+        get => _accent;
         set
         {
-            if (!SetField(ref _type, value))
-                return;
-
-            RaiseDerivedProperties();
+            if (!SetField(ref _accent, value)) return;
+            OnPropertyChanged(nameof(AccentColor));
+            OnPropertyChanged(nameof(AccentBrush));
+            OnPropertyChanged(nameof(AccentBarBrush));
         }
     }
 
-    [JsonPropertyName("targets")]
-    public List<TargetConfig> Targets
-    {
-        get => _targets;
-        set
-        {
-            if (!SetField(ref _targets, value))
-                return;
+    [JsonIgnore]
+    public Color AccentColor => ColorFromHex(_accent);
 
-            RaiseDerivedProperties();
-        }
+    [JsonIgnore]
+    public SolidColorBrush AccentBrush => new(AccentColor);
+
+    [JsonIgnore]
+    public SolidColorBrush AccentBarBrush => new(Color.FromArgb(0x2A, AccentColor.R, AccentColor.G, AccentColor.B));
+
+    [JsonPropertyName("apps")]
+    public List<string> Apps
+    {
+        get => _apps;
+        set => SetField(ref _apps, value);
     }
 
-    [JsonPropertyName("session")]
-    public string Session
+    [JsonPropertyName("websites")]
+    public List<string> Websites
     {
-        get => _session;
-        set
-        {
-            if (!SetField(ref _session, value))
-                return;
-
-            OnPropertyChanged(nameof(SessionLabel));
-        }
+        get => _websites;
+        set => SetField(ref _websites, value);
     }
 
-    [JsonPropertyName("state")]
-    public string State
+    [JsonPropertyName("folders")]
+    public List<string> Folders
     {
-        get => _state;
-        set
-        {
-            if (!SetField(ref _state, value))
-                return;
-
-            RaiseDerivedProperties();
-        }
+        get => _folders;
+        set => SetField(ref _folders, value);
     }
 
     [JsonIgnore]
@@ -96,7 +87,6 @@ public sealed class ModeConfig : INotifyPropertyChanged
 
             OnPropertyChanged(nameof(IndexLabel));
             OnPropertyChanged(nameof(ShortcutHint));
-            OnPropertyChanged(nameof(SessionLabel));
         }
     }
 
@@ -107,33 +97,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
     public string ShortcutHint => $"[{Math.Max(Index, 1)}]";
 
     [JsonIgnore]
-    public string SessionLabel => string.IsNullOrWhiteSpace(Session) ? $"SES {IndexLabel}" : Session.ToUpperInvariant();
-
-    [JsonIgnore]
-    public string StateLabel => string.IsNullOrWhiteSpace(State)
-        ? Type switch
-        {
-            "study" => "FOCUS LOCK",
-            "design" => "CREATIVE READY",
-            "code" => "EXEC LIVE",
-            _ => "TACTICAL READY"
-        }
-        : State.ToUpperInvariant();
-
-    [JsonIgnore]
-    public string StatusTag => Type switch
-    {
-        "study" => "FOCUS",
-        "design" => "CREATE",
-        "code" => "DEPLOY",
-        _ => "ACTIVE"
-    };
-
-    [JsonIgnore]
-    public string TypeLabel => string.IsNullOrWhiteSpace(Type) ? "DEFAULT" : Type.ToUpperInvariant();
-
-    [JsonIgnore]
-    public int ProcessCount => Targets.Count(target => !string.IsNullOrWhiteSpace(target.Cmd));
+    public int ProcessCount => _apps.Count + _websites.Count + _folders.Count;
 
     [JsonIgnore]
     public string ProcessLabel => $"{ProcessCount:D2} PROC";
@@ -147,14 +111,52 @@ public sealed class ModeConfig : INotifyPropertyChanged
     [JsonIgnore]
     public string LastOutcomeLabel => _lastLaunchOutcome;
 
-    public void RecordLaunch(int launchedTargets, int totalTargets, bool fullSuccess)
+    [JsonIgnore]
+    public List<TargetItem> Targets
+    {
+        get
+        {
+            var items = new List<TargetItem>();
+            foreach (var app in _apps)
+            {
+                if (string.IsNullOrWhiteSpace(app)) continue;
+                items.Add(new TargetItem(
+                    MakeAppLabel(app),
+                    app,
+                    string.Empty,
+                    TargetKind.App));
+            }
+            foreach (var site in _websites)
+            {
+                if (string.IsNullOrWhiteSpace(site)) continue;
+                items.Add(new TargetItem(
+                    MakeWebLabel(site),
+                    site,
+                    string.Empty,
+                    TargetKind.Website));
+            }
+            foreach (var folder in _folders)
+            {
+                if (string.IsNullOrWhiteSpace(folder)) continue;
+                var name = Path.GetFileName(folder.TrimEnd('\\', '/'));
+                items.Add(new TargetItem(
+                    string.IsNullOrEmpty(name) ? folder : name,
+                    "explorer.exe",
+                    folder,
+                    TargetKind.Folder));
+            }
+            return items;
+        }
+    }
+
+    public void RecordLaunch(int launched, int total, bool fullSuccess)
     {
         _launchCount++;
         _lastLaunchedAt = DateTime.Now;
         _lastLaunchOutcome = fullSuccess
             ? "SYNCED"
-            : launchedTargets > 0
-                ? $"PARTIAL {launchedTargets:D2}/{totalTargets:D2}"
+            : launched > 0
+                ? $"PARTIAL {launched:D2}/{total:D2}"
                 : "FAULT";
 
         OnPropertyChanged(nameof(LaunchCountLabel));
@@ -168,62 +170,43 @@ public sealed class ModeConfig : INotifyPropertyChanged
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
             return false;
-
         field = value;
         OnPropertyChanged(propertyName);
         return true;
-    }
-
-    private void RaiseDerivedProperties()
-    {
-        OnPropertyChanged(nameof(StateLabel));
-        OnPropertyChanged(nameof(StatusTag));
-        OnPropertyChanged(nameof(TypeLabel));
-        OnPropertyChanged(nameof(ProcessCount));
-        OnPropertyChanged(nameof(ProcessLabel));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-}
 
-public sealed class TargetConfig
-{
-    [JsonPropertyName("cmd")]
-    public string Cmd { get; set; } = string.Empty;
-
-    [JsonPropertyName("args")]
-    public List<string> Args { get; set; } = [];
-
-    [JsonIgnore]
-    public string DisplayLabel
+    private static Color ColorFromHex(string hex)
     {
-        get
+        try { return (Color)ColorConverter.ConvertFromString(hex); }
+        catch { return Color.FromRgb(0xD6, 0x45, 0x45); }
+    }
+
+    private static string MakeAppLabel(string app)
+    {
+        var name = Path.GetFileNameWithoutExtension(app);
+        return string.IsNullOrEmpty(name) ? app : name;
+    }
+
+    private static string MakeWebLabel(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
-            if (Uri.TryCreate(Cmd, UriKind.Absolute, out var uri))
-            {
-                var host = uri.Host;
-                return string.IsNullOrWhiteSpace(host) ? Cmd : host.Replace("www.", string.Empty, StringComparison.OrdinalIgnoreCase);
-            }
-
-            if (Cmd.EndsWith(":", StringComparison.Ordinal))
-                return Cmd.TrimEnd(':').ToUpperInvariant();
-
-            if (Cmd.Contains('\\') || Cmd.Contains('/'))
-                {
-                    // If launching via Explorer with a folder argument, show friendly folder name.
-                    if (Cmd.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) && Args.Count > 0)
-                    {
-                        var folder = Args[0].TrimEnd('\\', '/');
-                        var name = System.IO.Path.GetFileName(folder);
-                        return string.IsNullOrEmpty(name) ? folder : name;
-                    }
-                    return System.IO.Path.GetFileNameWithoutExtension(Cmd);
-                }
-
-            return Cmd;
+            var host = uri.Host;
+            return string.IsNullOrWhiteSpace(host) ? url : host.Replace("www.", string.Empty, StringComparison.OrdinalIgnoreCase);
         }
+        return url;
     }
 }
+
+public enum TargetKind { App, Website, Folder }
+
+public sealed record TargetItem(
+    [property: JsonIgnore] string DisplayLabel,
+    [property: JsonIgnore] string LaunchCmd,
+    [property: JsonIgnore] string LaunchArg,
+    [property: JsonIgnore] TargetKind Kind);

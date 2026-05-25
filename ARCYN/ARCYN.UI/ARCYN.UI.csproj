@@ -28,7 +28,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\protocoll.json" Link="protocoll.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\example.arcyn.json" Link="example.arcyn.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+
 
 </Project>
