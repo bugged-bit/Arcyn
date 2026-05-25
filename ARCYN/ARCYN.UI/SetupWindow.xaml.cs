@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Interop;
 using ARCYN.UI.Models;
 using ARCYN.UI.Services;
 
@@ -26,12 +27,14 @@ public partial class SetupWindow : Window
         ["ColorPurple"] = "#A045D6"
     };
 
-    public SetupWindow()
-    {
-        InitializeComponent();
-        _currentMode = NewMode();
-        ShowStep(0);
-    }
+public SetupWindow()
+        {
+            InitializeComponent();
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            try { NativeMethods.EnableAcrylic(hwnd, 0xE20A0A0A); } catch { }
+            _currentMode = NewMode();
+            ShowStep(0);
+        }
 
     private static ModeConfig NewMode()
     {

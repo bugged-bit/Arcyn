@@ -9,7 +9,7 @@
         Height="520"
         WindowStyle="None"
         AllowsTransparency="True"
-        Background="Transparent"
+        Background="#FF0A0A0A"
         ShowInTaskbar="False"
         Topmost="True"
         WindowStartupLocation="CenterScreen"
@@ -113,11 +113,11 @@
         </Style>
     </Window.Resources>
 
-    <Border CornerRadius="8"
-            Background="#F0080808"
-            BorderThickness="1"
-            BorderBrush="{StaticResource BorderGlowBrush}"
-            Effect="{StaticResource GlowAccentSoft}">
+<Border CornerRadius="9"
+        Background="#0A0A0A"
+        BorderThickness="1"
+        BorderBrush="{StaticResource BorderGlowBrush}"
+        Effect="{StaticResource GlowAccent}" Padding="16">
         <Grid Margin="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="36"/>
