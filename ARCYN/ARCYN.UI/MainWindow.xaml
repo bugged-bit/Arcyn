@@ -9,7 +9,7 @@
         WindowStyle="None"
         Background="#FF0A0A0A"
         ShowInTaskbar="False"
-        Topmost="True"
+        
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         SnapsToDevicePixels="True"

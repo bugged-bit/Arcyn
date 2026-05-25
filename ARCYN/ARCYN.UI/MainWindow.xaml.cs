@@ -26,6 +26,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private readonly List<ContentControl> _cardWrappers = [];
     private readonly List<Button> _cardButtons = [];
     private readonly List<TrailParticle> _cursorTrail = [];
+    // Reuse a StringBuilder for launch‑feed text to avoid per‑target string allocations.
+    private readonly System.Text.StringBuilder _launchFeedBuilder = new();
 
     private CancellationTokenSource? _lifeCts;
     private CancellationTokenSource? _launchCts;
@@ -77,72 +79,91 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
-        NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle | NativeMethods.WS_EX_TOOLWINDOW);
-        
-            
-
         try
         {
-            NativeMethods.EnableAcrylic(hwnd, 0xE20A0A0A);
+            var hwnd = new WindowInteropHelper(this).Handle;
+            var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
+            NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle | NativeMethods.WS_EX_TOOLWINDOW);
+
+            try
+            {
+                NativeMethods.EnableAcrylic(hwnd, 0xE20A0A0A);
+            }
+            catch
+            {
+                _log.Write("Acrylic enable skipped");
+            }
+
+            _log.Write("OnLoaded: start");
+            Activate();
+            Focus();
+            Keyboard.Focus(this);
+
+            _theme.LoadResources(this);
+
+            // Load config on background thread to avoid UI freeze
+            ArcynConfig? arcynConfig = null;
+            try
+            {
+                arcynConfig = await Task.Run(() => _config.Load());
+            }
+            catch (Exception ex)
+            {
+                _log.Write("CONFIG LOAD EXCEPTION: {0}", ex);
+            }
+
+            if (arcynConfig == null || arcynConfig.Modes.Count == 0)
+            {
+                _log.Write("No config found — first-run detected");
+                _state.TransitionTo(AppPhase.Closing);
+                Close();
+                return;
+            }
+
+            _modes.Load(arcynConfig.Modes);
+            _idleTimeout = arcynConfig.Behavior.IdleTimeoutSeconds;
+            _reducedEffects = arcynConfig.Theme.ReducedEffects;
+            _compactMode = arcynConfig.Theme.CompactMode;
+            _alwaysOnTop = arcynConfig.Behavior.AlwaysOnTop;
+            _closeOnLaunch = arcynConfig.Behavior.CloseOnLaunch;
+            Topmost = _alwaysOnTop;
+            _log.Write("Config loaded ({0} modes), reduced_effects={1}, compact={2}",
+                _modes.Count, _reducedEffects, _compactMode);
+
+            // Build the visual dashboard from the loaded modes before we interact with the UI
+            BuildDashboard();
+
+            _telemetry = new TelemetryMonitor();
+            _particles = new ParticleEngine(ParticleCanvas);
+
+            _render.Subscribe(this);
+            _render.Start();
+            if (!_reducedEffects)
+            {
+                _particles.Start();
+                InitCursorTrail();
+            }
+            else
+            {
+                ScanlinesOverlay.Visibility = Visibility.Collapsed;
+                AmbientGlow.Visibility = Visibility.Collapsed;
+            }
+            UpdateOperationalChrome();
+
+            _log.Write("OnLoaded: runtime initialized");
+
+            await PlayStartupSequence(_lifeCts!.Token);
+            _log.Write("OnLoaded: boot sequence done");
         }
-        catch
+        catch (Exception ex)
         {
-            _log.Write("Acrylic enable skipped");
-        }
-
-        _log.Write("OnLoaded: start");
-        Activate();
-        Focus();
-        Keyboard.Focus(this);
-
-        _theme.LoadResources(this);
-
-        var arcynConfig = _config.Load();
-        if (arcynConfig == null || arcynConfig.Modes.Count == 0)
-        {
-            _log.Write("No config found — first-run detected");
+            _log.Write("UNHANDLED EXCEPTION in OnLoaded: {0}", ex);
+            // Fail fast – let the application shut down gracefully
             _state.TransitionTo(AppPhase.Closing);
             Close();
-            return;
         }
-
-        _modes.Load(arcynConfig.Modes);
-        _idleTimeout = arcynConfig.Behavior.IdleTimeoutSeconds;
-        _reducedEffects = arcynConfig.Theme.ReducedEffects;
-        _compactMode = arcynConfig.Theme.CompactMode;
-        _alwaysOnTop = arcynConfig.Behavior.AlwaysOnTop;
-        _closeOnLaunch = arcynConfig.Behavior.CloseOnLaunch;
-        Topmost = _alwaysOnTop;
-        _log.Write("Config loaded ({0} modes), reduced_effects={1}, compact={2}",
-            _modes.Count, _reducedEffects, _compactMode);
-
-        // Build the visual dashboard from the loaded modes before we interact with the UI
-        BuildDashboard();
-
-        _telemetry = new TelemetryMonitor();
-        _particles = new ParticleEngine(ParticleCanvas);
-
-        _render.Subscribe(this);
-        _render.Start();
-        if (!_reducedEffects)
-        {
-            _particles.Start();
-            InitCursorTrail();
-        }
-        else
-        {
-            ScanlinesOverlay.Visibility = Visibility.Collapsed;
-            AmbientGlow.Visibility = Visibility.Collapsed;
-        }
-        UpdateOperationalChrome();
-
-        _log.Write("OnLoaded: runtime initialized");
-
-        await PlayStartupSequence(_lifeCts!.Token);
-        _log.Write("OnLoaded: boot sequence done");
     }
+
 
     private void OnDeactivated(object? sender, EventArgs e)
     {
@@ -343,26 +364,37 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private async Task PlayShellExpansion(CancellationToken ct)
     {
+        // Responsive expansion – animate to actual control size without enforcing large minimums.
         UpdateLayout();
-        var targetWidth = Math.Max(ShellHost.ActualWidth, 880);
-        var targetHeight = Math.Max(ShellHost.ActualHeight, 450);
+        var targetWidth = ShellHost.ActualWidth;
+        var targetHeight = ShellHost.ActualHeight;
 
+        // Start from a tiny square for visual effect.
         MainBorder.Width = 6;
         MainBorder.Height = 6;
 
+        // Expand width first, keep height minimal.
         AnimationService.ResizeTo(MainBorder, targetWidth, 6, 280, EasingMode.EaseOut);
         await DelaySafe(300, ct);
         if (ct.IsCancellationRequested) return;
 
+        // Then expand height to final size.
         AnimationService.ResizeTo(MainBorder, targetWidth, targetHeight, 280, EasingMode.EaseOut);
         await DelaySafe(320, ct);
     }
 
     private async void ModeButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: ModeConfig mode }) return;
-        var index = _modes.IndexOf(mode);
-        if (index >= 0) await SelectMode(index);
+        try
+        {
+            if (sender is not Button { Tag: ModeConfig mode }) return;
+            var index = _modes.IndexOf(mode);
+            if (index >= 0) await SelectMode(index);
+        }
+        catch (Exception ex)
+        {
+            _log.Write("UNHANDLED EXCEPTION in ModeButton_Click: {0}", ex);
+        }
     }
 
     private async Task SelectMode(int index)
@@ -377,8 +409,16 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         try
         {
-            AnimationService.FadeOut(ModePanel, 100);
-            await DelaySafe(60);
+            if (!_reducedEffects)
+            {
+                AnimationService.FadeOut(ModePanel, 100);
+                await DelaySafe(60);
+            }
+            else
+            {
+                // Immediate hide without animation
+                ModePanel.Visibility = Visibility.Collapsed;
+            }
 
             ModePanel.IsHitTestVisible = false;
             ModePanel.Visibility = Visibility.Collapsed;
@@ -387,9 +427,17 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             LaunchSessionLabel.Text = $"MODE {mode.IndexLabel}";
             LaunchStatus.Text = "Launching";
             LaunchStatus.Foreground = _theme.TextPrimary;
-            LaunchPanel.Opacity = 0;
-            LaunchPanel.Visibility = Visibility.Visible;
-            AnimationService.FadeIn(LaunchPanel, 100);
+            if (!_reducedEffects)
+            {
+                LaunchPanel.Opacity = 0;
+                LaunchPanel.Visibility = Visibility.Visible;
+                AnimationService.FadeIn(LaunchPanel, 100);
+            }
+            else
+            {
+                LaunchPanel.Opacity = 1;
+                LaunchPanel.Visibility = Visibility.Visible;
+            }
             SetLaunchProgress(0, Math.Max(mode.ProcessCount, 1));
 
             _state.TransitionTo(AppPhase.Launching);
@@ -406,60 +454,45 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
                 LaunchStatus.Text = "Launching" + new string('.', _launchDotIndex);
             };
             _launchDotTimer.Start();
+            LaunchTargetCount.Text = $"{mode.Targets.Count} TARGETS";
 
-            var launchedTargets = 0;
-            var validTargets = mode.Targets;
-            var failures = new List<string>();
-
-            LaunchTargetCount.Text = $"{validTargets.Count} TARGETS";
-            LaunchFeedText.Text = "";
-
-            for (int i = 0; i < validTargets.Count; i++)
+            // Launch orchestration – validation, start, progress
+            var orchestrator = new LaunchOrchestrator(_log);
+            // Clear previous launch feed for this run
+            _launchFeedBuilder.Clear();
+            LaunchFeedText.Text = string.Empty;
+            var progress = new Progress<LaunchProgress>(p =>
             {
-                if (token.IsCancellationRequested) break;
-                var target = validTargets[i];
-
-                try
+                // UI feed update per target – use StringBuilder to avoid repeated string allocations
+                if (!string.IsNullOrEmpty(p.CurrentLabel))
                 {
-                    _log.Write("Launch: {0} ({1})", target.DisplayLabel, target.LaunchCmd);
-                    var psi = LaunchService.CreateStartInfo(target);
-                    using (var proc = Process.Start(psi))
-                    {
-                        launchedTargets++;
-                        _log.Write(proc != null ? "OK: {0}" : "OK (no proc): {0}", target.DisplayLabel);
-                    }
-                    LaunchFeedText.Text += $"> {target.DisplayLabel}\n";
+                    _launchFeedBuilder.Append("> ").Append(p.CurrentLabel).Append('\n');
+                    LaunchFeedText.Text = _launchFeedBuilder.ToString();
+                    LaunchFeedScroll.ScrollToBottom();
                 }
-                catch (Exception ex)
-                {
-                    failures.Add(target.DisplayLabel);
-                    _log.Write("FAIL: {0}\n{1}", target.DisplayLabel, ex);
-                    LaunchFeedText.Text += $"> {target.DisplayLabel}  [FAIL]\n";
-                }
+                SetLaunchProgress(p.CompletedTargets, p.TotalTargets);
+            });
 
-                LaunchFeedScroll.ScrollToBottom();
-                SetLaunchProgress(launchedTargets + failures.Count, validTargets.Count);
-                await DelaySafe(350, token);
-            }
+            var launchResult = await orchestrator.LaunchModeAsync(mode, token, progress);
 
             _launchDotTimer?.Stop();
 
-            if (token.IsCancellationRequested)
+            if (launchResult.Canceled)
             {
                 LaunchStatus.Text = "Cancelled";
                 await ReturnToReady();
                 return;
             }
 
-            bool anySuccess = launchedTargets > 0;
-            bool success = failures.Count == 0 && anySuccess;
+            bool anySuccess = launchResult.LaunchedTargets > 0;
+            bool success = launchResult.Failures.Count == 0 && anySuccess;
             LaunchStatus.Text = success ? "Ready" : anySuccess ? "Partial" : "Fault";
             LaunchStatus.Foreground = success ? _theme.TextPrimary : _theme.AccentLight;
-            LaunchRecent.Text = failures.Count == 0
+            LaunchRecent.Text = launchResult.Failures.Count == 0
                 ? $"Recent: {mode.LastLaunchLabel}"
-                : $"Issue: {string.Join(", ", failures)}";
+                : $"Issue: {string.Join(", ", launchResult.Failures)}";
 
-            mode.RecordLaunch(launchedTargets, validTargets.Count, success);
+            mode.RecordLaunch(launchResult.LaunchedTargets, launchResult.TotalTargets, success);
             UpdateOperationalChrome();
 
             await DelaySafe(success ? 2000 : 5000, token);
@@ -479,21 +512,35 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         }
     }
 
-    private async Task ReturnToReady()
-    {
-        if (!_state.TransitionTo(AppPhase.Ready)) return;
-        _isLaunching = false;
-        _launchDotTimer?.Stop();
+        private async Task ReturnToReady()
+        {
+            if (!_state.TransitionTo(AppPhase.Ready)) return;
+            _isLaunching = false;
+            _launchDotTimer?.Stop();
 
-        AnimationService.FadeOut(LaunchPanel, 100);
-        await DelaySafe(60);
+            if (!_reducedEffects)
+            {
+                AnimationService.FadeOut(LaunchPanel, 100);
+                await DelaySafe(60);
+            }
+            else
+            {
+                LaunchPanel.Visibility = Visibility.Collapsed;
+            }
 
-        LaunchPanel.Visibility = Visibility.Collapsed;
-        ModePanel.Visibility = Visibility.Visible;
-        ModePanel.Opacity = 0;
-        AnimationService.FadeIn(ModePanel, 100);
-        await DelaySafe(40);
-    }
+            LaunchPanel.Visibility = Visibility.Collapsed;
+            ModePanel.Visibility = Visibility.Visible;
+            if (!_reducedEffects)
+            {
+                ModePanel.Opacity = 0;
+                AnimationService.FadeIn(ModePanel, 100);
+                await DelaySafe(40);
+            }
+            else
+            {
+                ModePanel.Opacity = 1;
+            }
+        }
 
     private void InitCursorTrail()
     {
@@ -591,12 +638,12 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private void StartIdleTimer()
     {
         _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _idleTimer.Tick += (_, _) =>
+        _idleTimer.Tick += async (_, _) =>
         {
             if (_state.Phase != AppPhase.Ready) return;
             _idleElapsed += 1000;
             if (_idleElapsed >= _idleTimeout * 1000)
-                CloseWithAnimation();
+                await CloseWithAnimation();
         };
         _idleTimer.Start();
     }
@@ -610,7 +657,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _idleTimer?.Start();
     }
 
-    private async void CloseWithAnimation()
+    private async Task CloseWithAnimation()
     {
         if (_isClosing || _disposed) return;
         _isClosing = true;
@@ -630,48 +677,55 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        ResetIdle();
-
-        if (e.Key == Key.Escape)
+        try
         {
-            if (_state.Phase == AppPhase.Launching)
+            ResetIdle();
+
+            if (e.Key == Key.Escape)
             {
-                LaunchStatus.Text = "Cancelling...";
-                _launchCts?.Cancel();
+                if (_state.Phase == AppPhase.Launching)
+                {
+                    LaunchStatus.Text = "Cancelling...";
+                    _launchCts?.Cancel();
+                }
+                else if (_state.Phase != AppPhase.Closing)
+                    await CloseWithAnimation();
+                e.Handled = true;
+                return;
             }
-            else if (_state.Phase != AppPhase.Closing)
-                CloseWithAnimation();
-            e.Handled = true;
-            return;
+
+            int? modeIndex = e.Key switch
+            {
+                Key.D1 or Key.NumPad1 => 0, Key.D2 or Key.NumPad2 => 1,
+                Key.D3 or Key.NumPad3 => 2, Key.D4 or Key.NumPad4 => 3,
+                Key.D5 or Key.NumPad5 => 4, Key.D6 or Key.NumPad6 => 5,
+                Key.D7 or Key.NumPad7 => 6, Key.D8 or Key.NumPad8 => 7,
+                Key.D9 or Key.NumPad9 => 8, _ => null
+            };
+
+            if (modeIndex.HasValue) { await SelectMode(modeIndex.Value); e.Handled = true; return; }
+
+            if (_state.Phase == AppPhase.Ready && ModePanel.Visibility == Visibility.Visible)
+            {
+                var focused = FocusManager.GetFocusedElement(this);
+                var currentIndex = -1;
+                if (focused is Button { Tag: ModeConfig mode }) currentIndex = _modes.IndexOf(mode);
+
+                if (e.Key is Key.Down or Key.Right)
+                { FocusModeButton((currentIndex + 1 + _modes.Count) % _modes.Count); e.Handled = true; return; }
+                if (e.Key is Key.Up or Key.Left)
+                { FocusModeButton(currentIndex <= 0 ? _modes.Count - 1 : currentIndex - 1); e.Handled = true; return; }
+            }
+
+            if (e.Key == Key.Enter && _state.Phase == AppPhase.Ready)
+            {
+                if (FocusManager.GetFocusedElement(this) is Button fb) ModeButton_Click(fb, new RoutedEventArgs());
+                e.Handled = true;
+            }
         }
-
-        int? modeIndex = e.Key switch
+        catch (Exception ex)
         {
-            Key.D1 or Key.NumPad1 => 0, Key.D2 or Key.NumPad2 => 1,
-            Key.D3 or Key.NumPad3 => 2, Key.D4 or Key.NumPad4 => 3,
-            Key.D5 or Key.NumPad5 => 4, Key.D6 or Key.NumPad6 => 5,
-            Key.D7 or Key.NumPad7 => 6, Key.D8 or Key.NumPad8 => 7,
-            Key.D9 or Key.NumPad9 => 8, _ => null
-        };
-
-        if (modeIndex.HasValue) { await SelectMode(modeIndex.Value); e.Handled = true; return; }
-
-        if (_state.Phase == AppPhase.Ready && ModePanel.Visibility == Visibility.Visible)
-        {
-            var focused = FocusManager.GetFocusedElement(this);
-            var currentIndex = -1;
-            if (focused is Button { Tag: ModeConfig mode }) currentIndex = _modes.IndexOf(mode);
-
-            if (e.Key is Key.Down or Key.Right)
-            { FocusModeButton((currentIndex + 1 + _modes.Count) % _modes.Count); e.Handled = true; return; }
-            if (e.Key is Key.Up or Key.Left)
-            { FocusModeButton(currentIndex <= 0 ? _modes.Count - 1 : currentIndex - 1); e.Handled = true; return; }
-        }
-
-        if (e.Key == Key.Enter && _state.Phase == AppPhase.Ready)
-        {
-            if (FocusManager.GetFocusedElement(this) is Button fb) ModeButton_Click(fb, new RoutedEventArgs());
-            e.Handled = true;
+            _log.Write("UNHANDLED EXCEPTION in Window_PreviewKeyDown: {0}", ex);
         }
     }
 
@@ -683,78 +737,113 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private async void MenuEdit_Click(object sender, RoutedEventArgs e)
     {
-        var mode = GetModeFromMenu(sender);
-        if (mode == null) return;
-
-        var dialog = new EditModeWindow(mode);
-        dialog.Owner = this;
-        if (dialog.ShowDialog() == true)
+        try
         {
-            await SaveCurrentConfig();
-            BuildDashboard();
-            UpdateOperationalChrome();
+            var mode = GetModeFromMenu(sender);
+            if (mode == null) return;
+
+            var dialog = new EditModeWindow(mode);
+            dialog.Owner = this;
+            if (dialog.ShowDialog() == true)
+            {
+                await SaveCurrentConfig();
+                BuildDashboard();
+                UpdateOperationalChrome();
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Write("UNHANDLED EXCEPTION in MenuEdit_Click: {0}", ex);
         }
     }
 
     private async void MenuDuplicate_Click(object sender, RoutedEventArgs e)
     {
-        var mode = GetModeFromMenu(sender);
-        if (mode == null) return;
-
-        var clone = new ModeConfig
+        try
         {
-            Name = mode.Name + " 2",
-            Description = mode.Description,
-            Accent = mode.Accent
-        };
-        clone.Apps.AddRange(mode.Apps);
-        clone.Websites.AddRange(mode.Websites);
-        clone.Folders.AddRange(mode.Folders);
+            var mode = GetModeFromMenu(sender);
+            if (mode == null) return;
 
-        var idx = _modes.IndexOf(mode);
-        _modes.Insert(idx + 1, clone);
-        await SaveCurrentConfig();
-        BuildDashboard();
-        UpdateOperationalChrome();
+            var clone = new ModeConfig
+            {
+                Name = mode.Name + " 2",
+                Description = mode.Description,
+                Accent = mode.Accent
+            };
+            clone.Apps.AddRange(mode.Apps);
+            clone.Websites.AddRange(mode.Websites);
+            clone.Folders.AddRange(mode.Folders);
+
+            var idx = _modes.IndexOf(mode);
+            _modes.Insert(idx + 1, clone);
+            await SaveCurrentConfig();
+            BuildDashboard();
+            UpdateOperationalChrome();
+        }
+        catch (Exception ex)
+        {
+            _log.Write("UNHANDLED EXCEPTION in MenuDuplicate_Click: {0}", ex);
+        }
     }
 
     private async void MenuDelete_Click(object sender, RoutedEventArgs e)
     {
-        var mode = GetModeFromMenu(sender);
-        if (mode == null || _modes.Count <= 1) return;
+        try
+        {
+            var mode = GetModeFromMenu(sender);
+            if (mode == null || _modes.Count <= 1) return;
 
-        var idx = _modes.IndexOf(mode);
-        _modes.RemoveAt(idx);
-        await SaveCurrentConfig();
-        BuildDashboard();
-        UpdateOperationalChrome();
+            var idx = _modes.IndexOf(mode);
+            _modes.RemoveAt(idx);
+            await SaveCurrentConfig();
+            BuildDashboard();
+            UpdateOperationalChrome();
+        }
+        catch (Exception ex)
+        {
+            _log.Write("UNHANDLED EXCEPTION in MenuDelete_Click: {0}", ex);
+        }
     }
 
     private async void MenuMoveUp_Click(object sender, RoutedEventArgs e)
     {
-        var mode = GetModeFromMenu(sender);
-        if (mode == null) return;
-
-        var idx = _modes.IndexOf(mode);
-        if (_modes.MoveUp(idx))
+        try
         {
-            await SaveCurrentConfig();
-            BuildDashboard();
-            UpdateOperationalChrome();
+            var mode = GetModeFromMenu(sender);
+            if (mode == null) return;
+
+            var idx = _modes.IndexOf(mode);
+            if (_modes.MoveUp(idx))
+            {
+                await SaveCurrentConfig();
+                BuildDashboard();
+                UpdateOperationalChrome();
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Write("UNHANDLED EXCEPTION in MenuMoveUp_Click: {0}", ex);
         }
     }
 
     private async void MenuMoveDown_Click(object sender, RoutedEventArgs e)
     {
-        var mode = GetModeFromMenu(sender);
-        if (mode == null) return;
-
-        var idx = _modes.IndexOf(mode);
-        if (_modes.MoveDown(idx))
+        try
         {
-            await SaveCurrentConfig();
-            BuildDashboard();
-            UpdateOperationalChrome();
+            var mode = GetModeFromMenu(sender);
+            if (mode == null) return;
+
+            var idx = _modes.IndexOf(mode);
+            if (_modes.MoveDown(idx))
+            {
+                await SaveCurrentConfig();
+                BuildDashboard();
+                UpdateOperationalChrome();
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Write("UNHANDLED EXCEPTION in MenuMoveDown_Click: {0}", ex);
         }
     }
 
@@ -782,12 +871,19 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         return null;
     }
 
-    private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
+    private async void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (_state.Phase == AppPhase.Closing) return;
-        var pos = e.GetPosition(MainBorder);
-        if (pos.X < 0 || pos.Y < 0 || pos.X > MainBorder.ActualWidth || pos.Y > MainBorder.ActualHeight)
-            CloseWithAnimation();
+        try
+        {
+            if (_state.Phase == AppPhase.Closing) return;
+            var pos = e.GetPosition(MainBorder);
+            if (pos.X < 0 || pos.Y < 0 || pos.X > MainBorder.ActualWidth || pos.Y > MainBorder.ActualHeight)
+                await CloseWithAnimation();
+        }
+        catch (Exception ex)
+        {
+            _log.Write("UNHANDLED EXCEPTION in RootGrid_MouseDown: {0}", ex);
+        }
     }
 
     private void BuildDashboard()
@@ -822,7 +918,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             _cardWrappers.Add(wrapper);
         }
 
-        DashboardGrid.UpdateLayout();
+        // DashboardGrid.UpdateLayout(); // Layout is handled by WPF after UI changes – avoid forced layout pass each rebuild.
 
         foreach (var wrapper in _cardWrappers)
         {
@@ -882,6 +978,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         if (_disposed) return;
         _disposed = true;
         _log.Write("ARCYN disposed");
+        _state.PhaseChanged -= OnPhaseChanged;
         _lifeCts?.Cancel(); _lifeCts?.Dispose();
         _launchCts?.Cancel(); _launchCts?.Dispose();
         _idleTimer?.Stop(); _launchDotTimer?.Stop();

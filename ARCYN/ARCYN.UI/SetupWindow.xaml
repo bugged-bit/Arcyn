@@ -11,32 +11,32 @@
         AllowsTransparency="True"
         Background="#FF0A0A0A"
         ShowInTaskbar="False"
-        Topmost="True"
+        
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         SnapsToDevicePixels="True"
         FontFamily="{StaticResource UIFont}">
     <Window.Resources>
         <Style x:Key="StepTitle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
         </Style>
         <Style x:Key="StepDesc" TargetType="TextBlock">
             <Setter Property="FontSize" Value="9"/>
-            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="8"/>
-            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
             <Setter Property="Margin" Value="0,0,0,2"/>
         </Style>
         <Style x:Key="WizInput" TargetType="TextBox">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="Background" Value="#E6080808"/>
+            <Setter Property="Background" Value="#E0141420"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,4"/>
@@ -53,7 +53,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd"
-                                Background="#18000000"
+                                Background="#0F000000"
                                 BorderThickness="1"
                                 BorderBrush="{StaticResource BorderSubtleBrush}"
                                 CornerRadius="3"
@@ -62,11 +62,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#30D64545"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#1AFFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBorderBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#50D64545"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#2AFFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.35"/>
@@ -77,12 +77,12 @@
             </Setter>
         </Style>
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource NavButton}">
-            <Setter Property="Foreground" Value="#0A0A0A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd"
-                                Background="{StaticResource AccentBrightBrush}"
+                                Background="#CCD64545"
                                 BorderThickness="0"
                                 CornerRadius="3"
                                 Padding="{TemplateBinding Padding}">
@@ -90,10 +90,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FFC0C0"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#E06060"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FFE0E0"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#F08080"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
@@ -109,7 +109,7 @@
             <Setter Property="CornerRadius" Value="2"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
-            <Setter Property="Background" Value="#14000000"/>
+            <Setter Property="Background" Value="#18000000"/>
         </Style>
     </Window.Resources>
 
@@ -122,7 +122,7 @@
         <Grid x:Name="ShellHost" Margin="12,10">
             <Border x:Name="MainBorder"
                     CornerRadius="9"
-                    Background="#D6080808"
+                    Background="#D7171725"
                     BorderThickness="1"
                     BorderBrush="{StaticResource BorderGlowBrush}"
                     Effect="{StaticResource GlowAccent}">

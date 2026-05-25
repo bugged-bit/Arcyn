@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using System.Linq;
 using ARCYN.UI.Models;
 
 namespace ARCYN.UI.Services;
@@ -32,10 +33,14 @@ public sealed class ConfigService
             var config = JsonSerializer.Deserialize<ArcynConfig>(json, JsonOptions);
             if (config == null) return null;
 
-            for (int i = 0; i < config.Modes.Count; i++)
-                config.Modes[i].Index = i + 1;
-
-            return config;
+            // Validate and sanitize configuration – removes corrupt entries and enforces defaults
+            var sanitized = ValidateAndSanitize(config);
+            if (sanitized == null)
+            {
+                LogService.WriteStatic("Config validation failed – using empty configuration.");
+                return null;
+            }
+            return sanitized;
         }
         catch (Exception ex)
         {
@@ -82,11 +87,18 @@ public sealed class ConfigService
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
+        // Re‑index before persisting
         for (int i = 0; i < config.Modes.Count; i++)
             config.Modes[i].Index = i + 1;
 
         var json = JsonSerializer.Serialize(config, JsonOptions);
-        File.WriteAllText(path, json);
+        // Write to a temporary file then replace atomically to avoid corruption on crash
+        var tempPath = path + ".tmp";
+        File.WriteAllText(tempPath, json);
+        if (File.Exists(path))
+            File.Replace(tempPath, path, null);
+        else
+            File.Move(tempPath, path);
     }
 
     public async Task SaveAsync(ArcynConfig config)
@@ -96,11 +108,18 @@ public sealed class ConfigService
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
+        // Re‑index before persisting
         for (int i = 0; i < config.Modes.Count; i++)
             config.Modes[i].Index = i + 1;
 
         var json = JsonSerializer.Serialize(config, JsonOptions);
-        await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
+        // Write to temp then atomically replace
+        var tempPath = path + ".tmp";
+        await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
+        if (File.Exists(path))
+            File.Replace(tempPath, path, null);
+        else
+            File.Move(tempPath, path);
     }
 
     private string? TryMigrateOldConfig()
@@ -208,5 +227,60 @@ public sealed class ConfigService
             }
         }
         return result;
+    }
+
+    // ---------------------------------------------------------------------
+    // Validation & sanitization ------------------------------------------------
+    // ---------------------------------------------------------------------
+    private ArcynConfig? ValidateAndSanitize(ArcynConfig config)
+    {
+        if (config == null) return null;
+        // Ensure modes list exists
+        if (config.Modes == null) config.Modes = [];
+
+        var validModes = new List<ModeConfig>();
+        var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mode in config.Modes)
+        {
+            // Basic name check – skip if empty or duplicate
+            if (string.IsNullOrWhiteSpace(mode.Name)) continue;
+            var nameKey = mode.Name.Trim();
+            if (!seenNames.Add(nameKey)) continue; // duplicate name – skip
+
+            // Ensure collection properties are not null
+            mode.Apps ??= [];
+            mode.Websites ??= [];
+            mode.Folders ??= [];
+
+            // Sanitize app entries – trim whitespace, remove empty entries
+            mode.Apps = mode.Apps.Select(a => a.Trim()).Where(a => !string.IsNullOrWhiteSpace(a)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            // Sanitize folder entries – keep only existing directories
+            mode.Folders = mode.Folders.Select(f => f.Trim()).Where(f => Directory.Exists(f)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            // Sanitize website entries – keep only well‑formed http/https URLs
+            mode.Websites = mode.Websites.Select(u => u.Trim()).Where(u =>
+            {
+                if (Uri.TryCreate(u, UriKind.Absolute, out var uri))
+                    return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+                return false;
+            }).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            // If mode has no targets after sanitization, drop it
+            if (mode.Apps.Count == 0 && mode.Websites.Count == 0 && mode.Folders.Count == 0)
+                continue;
+
+            validModes.Add(mode);
+        }
+        // If no valid modes remain, configuration is unusable
+        if (validModes.Count == 0) return null;
+
+        // Re‑index sequentially
+        for (int i = 0; i < validModes.Count; i++)
+            validModes[i].Index = i + 1;
+
+        config.Modes = validModes;
+        // Ensure Theme and Behavior sections have defaults (they are already instantiated by default ctor)
+        config.Theme ??= new ThemeConfig();
+        config.Behavior ??= new BehaviorConfig();
+        return config;
     }
 }
