@@ -113,52 +113,73 @@
         </Style>
     </Window.Resources>
 
-<Border CornerRadius="9"
-        Background="#0A0A0A"
-        BorderThickness="1"
-        BorderBrush="{StaticResource BorderGlowBrush}"
-        Effect="{StaticResource GlowAccent}" Padding="16">
-        <Grid Margin="0">
+<Grid x:Name="RootGrid" Background="Transparent" MouseDown="RootGrid_MouseDown">
+        <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" />
+        <Rectangle Style="{StaticResource AmbientGlow}" />
+        <Rectangle Style="{StaticResource Scanlines}" />
+        <Rectangle Style="{StaticResource Vignette}" />
+
+        <Grid x:Name="ShellHost" Margin="12,10">
+            <Border x:Name="MainBorder"
+                    CornerRadius="9"
+                    Background="#D6080808"
+                    BorderThickness="1"
+                    BorderBrush="{StaticResource BorderGlowBrush}"
+                    Effect="{StaticResource GlowAccent}">
+        <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="36"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="44"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header -->
+            <!-- Header - HUD style top bar -->
             <Border Grid.Row="0"
+                    CornerRadius="2"
                     Background="#12000000"
-                    CornerRadius="8,8,0,0"
-                    Padding="14,0">
+                    Padding="8,3">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <Ellipse Width="5" Height="5"
+                    <Ellipse Width="4" Height="4"
                              Fill="{StaticResource AccentBrightBrush}"
                              VerticalAlignment="Center"
-                             Effect="{StaticResource GlowAccentSharp}"/>
+                             Effect="{StaticResource GlowAccentSoft}" />
                     <TextBlock Grid.Column="1"
-                               Text="ARCYN SETUP"
-                               FontSize="10"
+                               Text="ARCYN"
+                               FontSize="9"
                                FontWeight="Bold"
+                               Margin="6,0,10,0"
                                Foreground="{StaticResource TextPrimaryBrush}"
-                               Margin="8,0,0,0"
-                               VerticalAlignment="Center"/>
+                               VerticalAlignment="Center" />
                     <TextBlock Grid.Column="2"
+                               Text="SETUP"
+                               FontSize="8"
+                               Foreground="{StaticResource AccentBrush}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3"
                                x:Name="StepCounter"
                                FontSize="8"
-                               Foreground="{StaticResource TextMutedBrush}"
+                               Margin="10,0,0,0"
+                               Foreground="{StaticResource TextDimBrush}"
                                VerticalAlignment="Center"/>
-                    <Button Grid.Column="3"
+                    <Rectangle Grid.Column="4"
+                               Height="1"
+                               Fill="{StaticResource BorderSubtleBrush}"
+                               VerticalAlignment="Center"
+                               Margin="8,0" />
+                    <Button Grid.Column="5"
                             Style="{StaticResource NavButton}"
                             Content="✖"
-                            Width="30" Height="30"
+                            Width="26" Height="26"
                             Padding="0"
-                            HorizontalAlignment="Right"
                             Click="CloseButton_Click"/>
                 </Grid>
             </Border>
@@ -526,22 +547,17 @@
                 </Grid>
             </Grid>
 
-            <!-- Footer / Navigation -->
+            <!-- Footer - nav buttons -->
             <Border Grid.Row="2"
+                    CornerRadius="2"
                     Background="#12000000"
-                    CornerRadius="0,0,8,8"
-                    Padding="14,0">
+                    Padding="6,2">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
-                               x:Name="StatusBar"
-                               FontSize="7"
-                               Foreground="{StaticResource TextMutedBrush}"
-                               VerticalAlignment="Center"/>
                     <Button Grid.Column="1"
                             x:Name="BackButton"
                             Style="{StaticResource NavButton}"
@@ -565,6 +581,20 @@
                             Click="Finish_Click"/>
                 </Grid>
             </Border>
+
+            <!-- Footer - status bar -->
+            <Border Grid.Row="3"
+                    CornerRadius="2"
+                    Background="#12000000"
+                    Padding="6,2"
+                    Margin="0,2,0,0">
+                <TextBlock x:Name="StatusBar"
+                           FontSize="7"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           VerticalAlignment="Center"/>
+            </Border>
         </Grid>
-    </Border>
+            </Border>
+        </Grid>
+    </Grid>
 </Window>

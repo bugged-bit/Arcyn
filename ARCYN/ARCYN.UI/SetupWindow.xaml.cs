@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using ARCYN.UI.Models;
 using ARCYN.UI.Services;
 
@@ -16,6 +17,8 @@ public partial class SetupWindow : Window
     private readonly List<ModeConfig> _modes = [];
     private ModeConfig? _currentMode;
     private int _step;
+    private ParticleEngine? _particles;
+    private DispatcherTimer? _particleTimer;
     private static readonly string[] StepTitles = ["Welcome", "Mode", "Apps", "Folders", "Websites", "Review"];
 
     private static readonly Dictionary<string, string> ColorMap = new()
@@ -27,20 +30,45 @@ public partial class SetupWindow : Window
         ["ColorPurple"] = "#A045D6"
     };
 
-public SetupWindow()
+        public SetupWindow()
         {
             InitializeComponent();
-            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            try { NativeMethods.EnableAcrylic(hwnd, 0xE20A0A0A); } catch { }
+            Loaded += OnLoaded;
             _currentMode = NewMode();
             ShowStep(0);
         }
 
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            try { NativeMethods.EnableAcrylic(hwnd, 0xE20A0A0A); } catch { }
+
+            _particles = new ParticleEngine(ParticleCanvas);
+            _particles.Start();
+            _particleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+            _particleTimer.Tick += (_, _) => _particles?.Tick();
+            _particleTimer.Start();
+        }
+
+        private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var pos = e.GetPosition(MainBorder);
+            if (pos.X < 0 || pos.Y < 0 || pos.X > MainBorder.ActualWidth || pos.Y > MainBorder.ActualHeight)
+                Close();
+        }
+
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            // Close the wizard and shutdown the application
-            this.Close();
+            _particleTimer?.Stop();
+            _particles?.Dispose();
             System.Windows.Application.Current.Shutdown();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _particleTimer?.Stop();
+            _particles?.Dispose();
+            base.OnClosed(e);
         }
 
     private static ModeConfig NewMode()
@@ -396,6 +424,9 @@ public SetupWindow()
         StatusBar.Text = "Config saved. Launching ARCYN...";
 
         await Task.Delay(300);
+
+        _particleTimer?.Stop();
+        _particles?.Dispose();
 
         var mainWindow = new MainWindow();
         mainWindow.Show();
