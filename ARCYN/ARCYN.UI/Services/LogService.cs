@@ -1,57 +1,27 @@
 using System.IO;
-
 namespace ARCYN.UI.Services;
 
 public sealed class LogService : IDisposable
 {
-    private readonly string _path;
-    private readonly StreamWriter _writer;
-    private readonly object _writeLock = new();
+    private static readonly object Gate = new();
+    public static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ARCYN");
     private bool _disposed;
-
-    public LogService(string fileName = "arcyn_launch.log")
+    public void Write(string message) { if (!_disposed) WriteStatic(message); }
+    public void Write(string format, params object?[] args) { if (!_disposed) WriteStatic(format, args); }
+    public static void WriteStatic(string format, params object?[] args)
     {
-        _path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
-        var stream = new FileStream(_path, FileMode.Append, FileAccess.Write, FileShare.Read, 4096, useAsync: true);
-        _writer = new StreamWriter(stream);
-        _writer.AutoFlush = true;
-    }
-
-    public void Write(string message)
-    {
-        if (_disposed) return;
         try
         {
-            lock (_writeLock)
+            lock (Gate)
             {
-                _writer.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] {message}");
+                Directory.CreateDirectory(DirectoryPath);
+                var path = Path.Combine(DirectoryPath, "arcyn.log");
+                if (File.Exists(path) && new FileInfo(path).Length > 512 * 1024) File.Move(path, path + ".old", true);
+                File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {string.Format(format, args)}{Environment.NewLine}");
             }
         }
-        catch { }
+        catch (Exception) { /* Logging must never prevent startup or recovery. */ }
     }
-
-    public void Write(string format, params object?[] args)
-    {
-        if (_disposed) return;
-        try
-        {
-            lock (_writeLock)
-            {
-                _writer.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] {string.Format(format, args)}");
-            }
-        }
-        catch { }
-    }
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        lock (_writeLock)
-        {
-            _writer.Flush();
-            _writer.Dispose();
-        }
-        GC.SuppressFinalize(this);
-    }
+    public void Dispose() => _disposed = true;
 }
+

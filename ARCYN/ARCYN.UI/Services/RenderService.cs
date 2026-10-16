@@ -47,8 +47,12 @@ public sealed class RenderService : IDisposable
         if (dt < 1) dt = 1;
         if (dt > 100) dt = 100;
 
-        for (int i = 0; i < _subscribers.Count; i++)
-            _subscribers[i].OnRenderTick(dt);
+        // Iterate directly over the subscriber list to avoid per‑frame array allocation.
+        // Since subscribers are only added/removed during startup or shutdown, a simple snapshot of the count is safe.
+        var subs = _subscribers;
+        int count = subs.Count;
+        for (int i = 0; i < count; i++)
+            subs[i].OnRenderTick(dt);
     }
 
     public void Dispose()

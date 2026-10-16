@@ -3,11 +3,25 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using System.Text.Json;
+using System.Windows.Media;
 
 namespace ARCYN.UI.Models;
 
 public sealed class ModeConfig : INotifyPropertyChanged
 {
+    [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
+    [JsonPropertyName("name")] public string Name { get => Label; set => Label = value; }
+    [JsonPropertyName("description")] public string Description { get => Subtitle; set => Subtitle = value; }
+    [JsonPropertyName("accent")] public string Accent { get; set; } = "#D64545";
+    [JsonIgnore] public SolidColorBrush AccentBrush => new((Color)ColorConverter.ConvertFromString(Accent));
+    [JsonPropertyName("apps")] public List<string> Apps { get; set; } = [];
+    [JsonPropertyName("websites")] public List<string> Websites { get; set; } = [];
+    [JsonPropertyName("folders")] public List<string> Folders { get; set; } = [];
+    [JsonIgnore] public IEnumerable<TargetConfig> LaunchTargets => Targets
+        .Concat(Apps.Select(a => new TargetConfig { Cmd = a, LegacyCommandLine = true }))
+        .Concat(Websites.Select(a => new TargetConfig { Cmd = a }))
+        .Concat(Folders.Select(a => new TargetConfig { Cmd = "explorer.exe", Args = [a] }));
     private string _label = string.Empty;
     private string _subtitle = string.Empty;
     private string _type = "default";
@@ -133,7 +147,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
     public string TypeLabel => string.IsNullOrWhiteSpace(Type) ? "DEFAULT" : Type.ToUpperInvariant();
 
     [JsonIgnore]
-    public int ProcessCount => Targets.Count(target => !string.IsNullOrWhiteSpace(target.Cmd));
+    public int ProcessCount => LaunchTargets.Count();
 
     [JsonIgnore]
     public string ProcessLabel => $"{ProcessCount:D2} PROC";
@@ -191,6 +205,9 @@ public sealed class ModeConfig : INotifyPropertyChanged
 
 public sealed class TargetConfig
 {
+    [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
+    [JsonPropertyName("working_directory")] public string? WorkingDirectory { get; set; }
+    [JsonIgnore] public bool LegacyCommandLine { get; set; }
     [JsonPropertyName("cmd")]
     public string Cmd { get; set; } = string.Empty;
 

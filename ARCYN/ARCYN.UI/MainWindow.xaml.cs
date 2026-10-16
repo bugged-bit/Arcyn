@@ -21,7 +21,11 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private readonly LogService _log;
     private readonly RenderService _render;
     private readonly Stopwatch _uptime = Stopwatch.StartNew();
-    private readonly List<ModeConfig> _modes = [];
+    private readonly List<ModeConfig> _modes;
+    private readonly ConfigService _configService;
+    private readonly ArcynConfig _config;
+    private readonly IdleDeadline _idle = new();
+    private bool _editing;
     private readonly List<ContentControl> _cardWrappers = [];
     private readonly List<Button> _cardButtons = [];
     private readonly List<TrailParticle> _cursorTrail = [];
@@ -46,7 +50,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private long _accelTelemetry;
     private long _accelTime;
     private long _accelTrail;
-    private long _idleElapsed;
+
 
     private double _ambientPhase;
     private double _spinnerAngle;
@@ -60,12 +64,19 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private double _modeGlowMul = 1.0;
     private double _modeAmbientMul = 1.0;
 
-    private const string ConfigFileName = "protocoll.json";
-    private const int IdleTimeoutSeconds = 10;
 
-    public MainWindow()
+
+    public MainWindow() : this(new ConfigService(), null) { }
+
+    public MainWindow(ConfigService service, ArcynConfig? config)
     {
+        _configService = service;
+        _config = config ?? service.Load() ?? new ArcynConfig();
+        _modes = _config.Modes;
         InitializeComponent();
+        Topmost = _config.Behavior.AlwaysOnTop;
+        PreviewMouseDown += (_, _) => ResetIdle();
+        PreviewMouseWheel += (_, _) => ResetIdle();
 
         _log = new LogService();
         _render = new RenderService();
@@ -83,7 +94,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         var hwnd = new WindowInteropHelper(this).Handle;
         var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
         NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle | NativeMethods.WS_EX_TOOLWINDOW);
-        NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0,
+        NativeMethods.SetWindowPos(hwnd, Topmost ? NativeMethods.HWND_TOPMOST : IntPtr.Zero, 0, 0, 0, 0,
             NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_SHOWWINDOW);
 
         try
@@ -238,7 +249,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
         };
-        BootProgress.BeginAnimation(ScaleTransform.ScaleXProperty, progressAnim);
+        ((ScaleTransform)BootProgress.RenderTransform).BeginAnimation(ScaleTransform.ScaleXProperty, progressAnim);
 
         string[] bootMessages =
         [
@@ -358,30 +369,24 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private async void SelectMode(int index)
     {
-        if (index < 0 || index >= _modes.Count || _isLaunching)
-            return;
-
-        if (!_state.TransitionTo(AppPhase.Selecting))
-            return;
-
+        if (index < 0 || index >= _modes.Count || _isLaunching || _editing || _isClosing) return;
+        if (!_state.TransitionTo(AppPhase.Selecting)) return;
         _isLaunching = true;
         _state.SelectedModeIndex = index;
-
-        _log.Write("SelectMode({0}): mode={1}, targetCount={2}", index, _modes[index].Label, _modes[index].Targets.Count);
-
+        _launchCts?.Dispose();
+        _launchCts = CancellationTokenSource.CreateLinkedTokenSource(_lifeCts!.Token);
+        var token = _launchCts.Token;
         try
         {
             var mode = _modes[index];
             _activeModeType = mode.Type;
-            ApplyModeVisuals(_activeModeType);
+            ApplyModeVisuals(mode.Type);
             UpdateOperationalChrome();
-
             AnimationService.FadeOut(ModePanel, 100);
-            await DelaySafe(60);
-
+            await DelaySafe(60, token);
+            token.ThrowIfCancellationRequested();
             ModePanel.IsHitTestVisible = false;
             ModePanel.Visibility = Visibility.Collapsed;
-
             LaunchModeLabel.Text = mode.Label.ToUpperInvariant();
             LaunchSessionLabel.Text = $"{mode.SessionLabel}  -  {mode.StateLabel}";
             LaunchStatus.Text = "Launching";
@@ -390,96 +395,37 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             LaunchPanel.Visibility = Visibility.Visible;
             AnimationService.FadeIn(LaunchPanel, 100);
             SetLaunchProgress(0, Math.Max(mode.ProcessCount, 1));
-
             _state.TransitionTo(AppPhase.Launching);
-
-            _launchCts?.Dispose();
-            _launchCts = new CancellationTokenSource();
-            var token = _launchCts.Token;
-
             _launchDotTimer?.Stop();
             _launchDotTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
-            _launchDotTimer.Tick += (_, _) =>
-            {
+            _launchDotTimer.Tick += (_, _) => {
                 _launchDotIndex = (_launchDotIndex + 1) % 4;
                 LaunchStatus.Text = "Launching" + new string('.', _launchDotIndex);
             };
             _launchDotTimer.Start();
-
-            var launchedTargets = 0;
-            var validTargets = mode.Targets.Where(t => !string.IsNullOrWhiteSpace(t.Cmd)).ToList();
-            var failures = new List<string>();
-
-            LaunchTargetCount.Text = $"{validTargets.Count} TARGETS";
+            LaunchTargetCount.Text = $"{mode.ProcessCount} TARGETS";
             LaunchFeedText.Text = "";
-
-            for (int i = 0; i < validTargets.Count; i++)
-            {
-                if (token.IsCancellationRequested)
-                    break;
-
-                var target = validTargets[i];
-
-                try
-                {
-                    _log.Write("Launch: {0}", target.Cmd);
-                    var psi = CreateLaunchStartInfo(target);
-                    var proc = Process.Start(psi);
-                    launchedTargets++;
-                    _log.Write(proc != null ? "OK: {0}" : "OK (no proc): {0}", target.Cmd);
-                    LaunchFeedText.Text += $"> {target.DisplayLabel}\n";
-                }
-                catch (Exception ex)
-                {
-                    failures.Add(target.DisplayLabel);
-                    _log.Write("FAIL: {0}\n{1}", target.Cmd, ex);
-                    LaunchFeedText.Text += $"> {target.DisplayLabel}  [FAIL]\n";
-                }
-
+            var progress = new Progress<LaunchProgress>(p => {
+                if (_disposed || token.IsCancellationRequested) return;
+                LaunchFeedText.Text += $"> {p.CurrentLabel}{(p.Error == null ? "" : "  [" + p.Error + "]")}\n";
                 LaunchFeedScroll.ScrollToBottom();
-                SetLaunchProgress(launchedTargets + failures.Count, validTargets.Count);
-                await DelaySafe(350, token);
-            }
-
-            _launchDotTimer?.Stop();
-
-            if (token.IsCancellationRequested)
-            {
-                LaunchStatus.Text = "Cancelled";
-                await ReturnToReady();
-                return;
-            }
-
-            bool anySuccess = launchedTargets > 0;
-            bool success = failures.Count == 0 && anySuccess;
-            LaunchStatus.Text = success ? "Ready" : anySuccess ? "Partial" : "Fault";
-            LaunchStatus.Foreground = success ? _textPrimaryBrush : _accentLightBrush;
-            LaunchRecent.Text = failures.Count == 0
-                ? $"Recent: {mode.LastLaunchLabel}"
-                : $"Issue: {string.Join(", ", failures)}";
-
-            mode.RecordLaunch(launchedTargets, validTargets.Count, success);
+                SetLaunchProgress(p.CompletedTargets, p.TotalTargets);
+            });
+            var result = await new LaunchOrchestrator(_log).LaunchModeAsync(mode, token, progress);
+            _launchDotTimer.Stop();
+            if (result.Canceled || token.IsCancellationRequested) { await ReturnToReady(); return; }
+            LaunchStatus.Text = result.Success ? "Ready" : result.LaunchedTargets > 0 ? "Partial" : "Fault";
+            LaunchStatus.Foreground = result.Success ? _textPrimaryBrush : _accentLightBrush;
+            mode.RecordLaunch(result.LaunchedTargets, result.TotalTargets, result.Success);
             UpdateOperationalChrome();
-
-            int finalDelayMs = success ? 2000 : 5000;
-            await DelaySafe(finalDelayMs, token);
-
-            if (token.IsCancellationRequested)
-            {
-                await ReturnToReady();
-                return;
-            }
-
-            Close();
+            if (result.Failures.Count > 0) LaunchRecent.Text = "Issue: " + string.Join(", ", result.Failures);
+            await DelaySafe(result.Success ? 2000 : 5000, token);
+            if (token.IsCancellationRequested || !_config.Behavior.CloseOnLaunch) await ReturnToReady();
+            else if (!_disposed) Close();
         }
-        catch (Exception ex)
-        {
-            _log.Write("CRASH in SelectMode: {0}", ex);
-        }
-        finally
-        {
-            _isLaunching = false;
-        }
+        catch (OperationCanceledException) { await ReturnToReady(); }
+        catch (Exception ex) { _log.Write("Launch error: {0}", ex); await ReturnToReady(); }
+        finally { _launchDotTimer?.Stop(); _isLaunching = false; }
     }
 
     private async Task ReturnToReady()
@@ -487,7 +433,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         if (!_state.TransitionTo(AppPhase.Ready))
             return;
 
-        _isLaunching = false;
         _launchDotTimer?.Stop();
 
         AnimationService.FadeOut(LaunchPanel, 100);
@@ -502,6 +447,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _activeModeType = null;
         ApplyModeVisuals(null);
         UpdateOperationalChrome();
+        ResetIdle();
     }
 
     private void InitCursorTrail()
@@ -605,34 +551,24 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             LaunchRam.Text = $"RAM {ram:F1}%";
         }
 
-        var idleSeconds = _idleElapsed > 0 ? (int)(_idleElapsed / 1000) : 0;
+        var idleSeconds = _state.Phase == AppPhase.Ready ? (int)(_idle.Elapsed / 1000) : 0;
         FooterIdle.Text = idleSeconds > 0 ? $"idle {idleSeconds}s" : string.Empty;
     }
 
     private void StartIdleTimer()
     {
+        _idle.Reset();
+        _idleTimer?.Stop();
         _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _idleTimer.Tick += (_, _) =>
-        {
-            if (_state.Phase != AppPhase.Ready)
-                return;
-
-            _idleElapsed += 1000;
-            if (_idleElapsed >= IdleTimeoutSeconds * 1000)
-                CloseWithAnimation();
+        _idleTimer.Tick += (_, _) => {
+            if (_state.Phase == AppPhase.Ready && !_editing && _idle.Expired(_config.Behavior.IdleTimeoutSeconds)) CloseWithAnimation();
         };
         _idleTimer.Start();
     }
-
     private void ResetIdle()
     {
-        if (_state.Phase != AppPhase.Ready)
-            return;
-
-        _idleElapsed = 0;
+        _idle.Reset();
         FooterIdle.Text = string.Empty;
-        _idleTimer?.Stop();
-        _idleTimer?.Start();
     }
 
     private async void CloseWithAnimation()
@@ -643,6 +579,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _isClosing = true;
         _state.TransitionTo(AppPhase.Closing);
         _lifeCts?.Cancel();
+        _launchCts?.Cancel();
         _idleTimer?.Stop();
 
         AnimationService.FadeOut(BootOverlay, 80);
@@ -662,7 +599,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         if (e.Key == Key.Escape)
         {
-            if (_state.Phase == AppPhase.Launching)
+            if (_state.Phase is AppPhase.Launching or AppPhase.Selecting)
             {
                 LaunchStatus.Text = "Cancelling...";
                 _launchCts?.Cancel();
@@ -697,7 +634,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             return;
         }
 
-        if (_state.Phase == AppPhase.Ready && ModePanel.Visibility == Visibility.Visible)
+        if (_state.Phase == AppPhase.Ready && _modes.Count > 0 && ModePanel.Visibility == Visibility.Visible)
         {
             var focused = FocusManager.GetFocusedElement(this);
             var currentIndex = -1;
@@ -737,6 +674,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             return;
 
         _cardButtons[index].Focus();
+        _cardButtons[index].BringIntoView();
     }
 
     private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
@@ -757,101 +695,10 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private void LoadConfig()
     {
-        foreach (var path in GetCandidateConfigPaths())
-        {
-            if (!File.Exists(path))
-                continue;
-
-            try
-            {
-                var json = File.ReadAllText(path);
-                var modes = JsonSerializer.Deserialize<List<ModeConfig>>(json) ?? [];
-                _modes.Clear();
-                _modes.AddRange(modes.Where(mode => !string.IsNullOrWhiteSpace(mode.Label) && mode.Targets.Count > 0));
-                _log.Write("Config loaded from {0} ({1} modes)", path, _modes.Count);
-                break;
-            }
-            catch (Exception ex)
-            {
-                _log.Write("Config parse error in {0}: {1}", path, ex.Message);
-            }
-        }
-
-        if (_modes.Count == 0)
-        {
-            _modes.AddRange(GetDefaultModes());
-            _log.Write("Using default modes");
-        }
-
-        for (int i = 0; i < _modes.Count; i++)
-            _modes[i].Index = i + 1;
-
+        ConfigService.Validate(_config);
         BuildDashboard();
         UpdateOperationalChrome();
     }
-
-private static IEnumerable<string> GetCandidateConfigPaths()
-{
-    var baseDir = AppContext.BaseDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar);
-    var currentDir = Environment.CurrentDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar);
-
-    return new[]
-    {
-        System.IO.Path.Combine(baseDir, ConfigFileName),
-        System.IO.Path.Combine(baseDir, "ARCYN", ConfigFileName),
-        System.IO.Path.Combine(currentDir, ConfigFileName),
-        System.IO.Path.Combine(currentDir, "ARCYN", ConfigFileName)
-    }.Distinct(StringComparer.OrdinalIgnoreCase);
-}
-
-    private static List<ModeConfig> GetDefaultModes() =>
-    [
-        new()
-        {
-            Label = "STUDY",
-            Subtitle = "focus-oriented workspace",
-            Type = "study",
-            Session = "SES 042",
-            State = "FOCUS LOCK",
-            Targets =
-            [
-                new() { Cmd = "https://ncert.nic.in" },
-                new() { Cmd = "https://www.tiwariacademy.com" },
-                new() { Cmd = "ms-clock:" },
-                new() { Cmd = "explorer.exe", Args = ["D:\\study material"] }
-            ]
-        },
-        new()
-        {
-            Label = "DESIGN",
-            Subtitle = "creative workstation",
-            Type = "design",
-            Session = "SES 017",
-            State = "CREATIVE READY",
-            Targets =
-            [
-                new() { Cmd = "https://www.pinterest.com" },
-                new() { Cmd = "C:\\Users\\pryan\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Canva.lnk" },
-                new() { Cmd = "explorer.exe", Args = ["D:\\Downloads\\Poster stuff"] }
-            ]
-        },
-        new()
-        {
-            Label = "CODE",
-            Subtitle = "tactical terminal",
-            Type = "code",
-            Session = "SES 089",
-            State = "EXEC LIVE",
-            Targets =
-            [
-                new() { Cmd = "wt.exe" },
-                new() { Cmd = "https://github.com" },
-                new() { Cmd = "https://chatgpt.com" },
-                new() { Cmd = "ollama.exe" },
-                new() { Cmd = "explorer.exe", Args = ["D:\\"] }
-            ]
-        }
-    ];
 
     private void BuildDashboard()
     {
@@ -876,7 +723,7 @@ private static IEnumerable<string> GetCandidateConfigPaths()
                 Content = _modes[i],
                 ContentTemplate = template,
                 Margin = new Thickness(0, 0, 0, 6),
-                Opacity = 0,
+                Opacity = _state.Phase == AppPhase.Boot ? 0 : 1,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Top
             };
@@ -925,83 +772,6 @@ private static IEnumerable<string> GetCandidateConfigPaths()
         var ratio = Math.Clamp((double)completed / safeTotal, 0, 1);
         LaunchProgressScale.ScaleX = ratio;
         LaunchProgressText.Text = $"PROC {Math.Min(completed, safeTotal):D2}/{safeTotal:D2}";
-    }
-
-    private static ProcessStartInfo CreateLaunchStartInfo(TargetConfig target)
-    {
-        var cmd = target.Cmd.Trim();
-        var args = string.Join(" ", target.Args.Select(QuoteArgument));
-        var workingDir = Environment.CurrentDirectory;
-
-        // Drive root with trailing slash (e.g., "D:\") – treat as folder launch via Explorer.
-        if (cmd.Length >= 3 && cmd[1] == ':' && (cmd.EndsWith("\\") || cmd.EndsWith("/")))
-        {
-            return new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = QuoteArgument(cmd),
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
-            };
-        }
-
-        // Folder launch – open with Explorer, ensure quoting for spaces.
-        if (Directory.Exists(cmd))
-        {
-            return new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = QuoteArgument(cmd),
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
-            };
-        }
-
-        // Shortcut (.lnk) – launch directly, set working directory to shortcut location.
-        var ext = System.IO.Path.GetExtension(cmd);
-        if (File.Exists(cmd) && ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase))
-        {
-            var dir = System.IO.Path.GetDirectoryName(cmd) ?? workingDir;
-            return new ProcessStartInfo
-            {
-                FileName = cmd,
-                Arguments = args,
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = dir
-            };
-        }
-
-        // Executable or document – launch directly, set working dir to its location.
-        if (File.Exists(cmd))
-        {
-            var dir = System.IO.Path.GetDirectoryName(cmd) ?? workingDir;
-            return new ProcessStartInfo
-            {
-                FileName = cmd,
-                Arguments = args,
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = dir
-            };
-        }
-
-        // Fallback – treat as command or URL.
-        return new ProcessStartInfo
-        {
-            FileName = cmd,
-            Arguments = args,
-            UseShellExecute = true,
-            WindowStyle = ProcessWindowStyle.Normal,
-            WorkingDirectory = workingDir
-        };
-    }
-
-    private static string QuoteArgument(string argument)
-    {
-        return argument.Contains(' ') ? $"\"{argument}\"" : argument;
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject

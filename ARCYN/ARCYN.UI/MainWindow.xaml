@@ -273,7 +273,7 @@
                                     BorderBrush="{StaticResource BorderSubtleBrush}">
                                 <Rectangle x:Name="BootProgress"
                                            Fill="{StaticResource AccentBrightBrush}"
-                                           HorizontalAlignment="Left">
+                                           HorizontalAlignment="Stretch">
                                     <Rectangle.RenderTransform>
                                         <ScaleTransform ScaleX="0" />
                                     </Rectangle.RenderTransform>
@@ -459,7 +459,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="▲ LAUNCH SEQUENCE"
+                                        <TextBlock Text="â–² LAUNCH SEQUENCE"
                                                    FontSize="9" FontWeight="Bold"
                                                    Foreground="{StaticResource AccentBrightBrush}"
                                                    VerticalAlignment="Center" />
@@ -582,7 +582,7 @@
                                                        RadiusX="1" RadiusY="1" Opacity="0.3" />
                                             <Rectangle Fill="{StaticResource AccentBrush}"
                                                        RadiusX="1" RadiusY="1"
-                                                       HorizontalAlignment="Left"
+                                                       HorizontalAlignment="Stretch"
                                                        RenderTransformOrigin="0,0.5">
                                                 <Rectangle.RenderTransform>
                                                     <ScaleTransform x:Name="LaunchProgressScale" ScaleX="0" />
@@ -597,7 +597,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="ESC aborts · targets launch sequentially"
+                                        <TextBlock Text="ESC aborts Â· targets launch sequentially"
                                                    FontSize="7"
                                                    Foreground="{StaticResource TextMutedBrush}"
                                                    Opacity="0.5" />
