@@ -1,113 +1,331 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ARCYN Config",
-  "description": "Configuration schema for the ARCYN tactical workspace launcher",
-  "type": "object",
-  "properties": {
-    "theme": {
+  "title": "ARCYN configuration (legacy and current)",
+  "anyOf": [
+    {
       "type": "object",
-      "description": "Visual theme settings",
       "properties": {
-        "accent": {
-          "type": "string",
-          "description": "Accent color in hex format (e.g. #D64545)",
-          "pattern": "^#[0-9A-Fa-f]{6}$",
-          "default": "#D64545"
-        },
-        "glow_opacity": {
-          "type": "number",
-          "description": "Ambient glow opacity (0.0 - 1.0)",
-          "minimum": 0,
-          "maximum": 1,
-          "default": 0.28
-        },
-        "scanlines": {
-          "type": "boolean",
-          "description": "Show CRT scanline overlay",
-          "default": true
-        },
-        "animations": {
-          "type": "boolean",
-          "description": "Enable animations and transitions",
-          "default": true
-        },
-        "reduced_effects": {
-          "type": "boolean",
-          "description": "Disable particles, cursor trail, ambient glow, scanlines, and boot animation (for low-end PCs)",
-          "default": false
-        },
-        "compact_mode": {
-          "type": "boolean",
-          "description": "Compact card sizing for more modes visible at once",
-          "default": false
-        }
-      }
-    },
-    "behavior": {
-      "type": "object",
-      "description": "App behavior settings",
-      "properties": {
-        "idle_timeout_seconds": {
+        "schema_version": {
           "type": "integer",
-          "description": "Seconds of inactivity before auto-close (0 to disable)",
-          "minimum": 0,
-          "default": 10
+          "minimum": 1,
+          "maximum": 1
         },
-        "always_on_top": {
-          "type": "boolean",
-          "description": "Keep window always on top",
-          "default": true
+        "theme": {
+          "type": "object",
+          "properties": {
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+              "default": "#D64545"
+            },
+            "background": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+              "default": "#0A0A0A"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+              "default": "#FFFFFF"
+            },
+            "font_family": {
+              "type": "string",
+              "default": "JetBrainsMono NF",
+              "maxLength": 100
+            },
+            "font_scale": {
+              "type": "number",
+              "minimum": 0.7,
+              "maximum": 1.8,
+              "default": 1
+            },
+            "width": {
+              "type": "number",
+              "minimum": 640,
+              "maximum": 1920,
+              "default": 920
+            },
+            "height": {
+              "type": "number",
+              "minimum": 360,
+              "maximum": 1080,
+              "default": 490
+            },
+            "corner_radius": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30,
+              "default": 9
+            },
+            "border_width": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 4,
+              "default": 1
+            },
+            "card_height": {
+              "type": "number",
+              "minimum": 64,
+              "maximum": 160,
+              "default": 94
+            },
+            "spacing": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 24,
+              "default": 6
+            },
+            "layout": {
+              "enum": [
+                "rows",
+                "compact",
+                "grid"
+              ],
+              "default": "rows"
+            },
+            "particles": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 120,
+              "default": 60
+            },
+            "glow_opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.28
+            },
+            "motion_amount": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2,
+              "default": 1
+            },
+            "cursor_trail": {
+              "type": "boolean",
+              "default": true
+            },
+            "acrylic": {
+              "type": "boolean",
+              "default": true
+            },
+            "vignette": {
+              "type": "boolean",
+              "default": true
+            },
+            "scanlines": {
+              "type": "boolean",
+              "default": true
+            },
+            "animations": {
+              "type": "boolean",
+              "default": true,
+              "description": "Continuous ambient effects only. Boot and launch timing is retained."
+            },
+            "reduced_effects": {
+              "type": "boolean",
+              "default": false,
+              "description": "Disable particles, trail, glow, acrylic and scanlines without shortening cinematics."
+            },
+            "compact_mode": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": true
         },
-        "close_on_launch": {
-          "type": "boolean",
-          "description": "Close ARCYN after launching a mode",
-          "default": true
+        "behavior": {
+          "type": "object",
+          "properties": {
+            "idle_timeout_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 86400,
+              "default": 10
+            },
+            "always_on_top": {
+              "type": "boolean",
+              "default": true
+            },
+            "close_on_launch": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "modes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "default": ""
+              },
+              "label": {
+                "type": "string",
+                "default": ""
+              },
+              "description": {
+                "type": "string",
+                "default": ""
+              },
+              "subtitle": {
+                "type": "string",
+                "default": ""
+              },
+              "type": {
+                "type": "string",
+                "default": ""
+              },
+              "session": {
+                "type": "string",
+                "default": ""
+              },
+              "state": {
+                "type": "string",
+                "default": ""
+              },
+              "accent": {
+                "type": "string",
+                "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+                "default": "#D64545"
+              },
+              "targets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "cmd": {
+                      "type": "string",
+                      "default": ""
+                    },
+                    "args": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "working_directory": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "apps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "websites": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "folders": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          }
         }
-      }
+      },
+      "additionalProperties": true
     },
-    "modes": {
+    {
       "type": "array",
-      "description": "List of workspace modes",
       "items": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "description": "Mode display name (e.g. CODE, DESIGN, STUDY)"
+            "default": ""
+          },
+          "label": {
+            "type": "string",
+            "default": ""
           },
           "description": {
             "type": "string",
-            "description": "Short description shown below the name"
+            "default": ""
+          },
+          "subtitle": {
+            "type": "string",
+            "default": ""
+          },
+          "type": {
+            "type": "string",
+            "default": ""
+          },
+          "session": {
+            "type": "string",
+            "default": ""
+          },
+          "state": {
+            "type": "string",
+            "default": ""
           },
           "accent": {
             "type": "string",
-            "description": "Per-mode accent color override (optional)",
-            "pattern": "^#[0-9A-Fa-f]{6}$"
+            "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+            "default": "#D64545"
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "cmd": {
+                  "type": "string",
+                  "default": ""
+                },
+                "args": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "working_directory": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": true
+            }
           },
           "apps": {
             "type": "array",
-            "description": "Applications to launch (exe name, full path, or shell command)",
-            "items": { "type": "string" },
-            "examples": [["wt.exe", "C:\\Program Files\\MyApp\\app.exe"]]
+            "items": {
+              "type": "string"
+            }
           },
           "websites": {
             "type": "array",
-            "description": "Websites to open in default browser",
-            "items": { "type": "string", "format": "uri" },
-            "examples": [["https://github.com", "https://chatgpt.com"]]
+            "items": {
+              "type": "string"
+            }
           },
           "folders": {
             "type": "array",
-            "description": "Folders to open in File Explorer",
-            "items": { "type": "string" },
-            "examples": [["D:\\Projects", "C:\\Users\\me\\Documents"]]
+            "items": {
+              "type": "string"
+            }
           }
         },
-        "required": ["name"],
-        "additionalProperties": false
+        "additionalProperties": true
       }
     }
-  },
-  "required": ["modes"],
-  "additionalProperties": false
+  ]
 }

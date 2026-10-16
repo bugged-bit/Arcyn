@@ -51,8 +51,11 @@ for ($run = 0; $run -lt ($Runs + $ExtractionColdRuns); $run++) {
     RecordedAt = (Get-Date).ToString('o'); Executable = $Executable
     SHA256 = (Get-FileHash -LiteralPath $Executable -Algorithm SHA256).Hash
     OS = [Environment]::OSVersion.VersionString; LogicalProcessors = [Environment]::ProcessorCount
+    CPU = Get-ItemPropertyValue 'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0' -Name ProcessorNameString
     ColdDefinition = 'Fresh bundle extraction directory; OS caches are not cleared and the machine is not rebooted.'
     FrameMetric = 'WPF rendering callback cadence, not GPU presentation time.'
+    Timing = 'Probe phases and first callback are relative to the startup hook; add ProcessAgeAtHookMs for an approximate process-start time.'
+    Attribution = 'Only the launcher PID is sampled. Helper and opened/reused application processes require separate sampling.'
     Input = 'Probe suppresses keyboard and click dispatch; no targets are launched.'
     Runs = $results
 } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'baseline.json')

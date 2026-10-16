@@ -32,10 +32,12 @@ ARCYN.UI/
 ## Pull request guidelines
 
 - One feature/fix per PR
-- Rebase on main before submitting
+- Base changes on master; preserve local work before integrating upstream
 - Ensure `dotnet build -c Release` passes with 0 errors, 0 warnings
 - No breaking changes to `arcyn.json` schema without migration support
-- Test manually: run the app, create a mode, launch it, verify keyboard nav
+- Run `./ARCYN/tools/Test-Arcyn.ps1` from the repository root (headless, with the bundled servicing runtime)
+- Publish the complete artifact with `./ARCYN/tools/Publish-Arcyn.ps1`; distributing only ARCYN.exe is insufficient
+- Run visible smoke/performance checks only when the desktop is available; keep cinematic timing unchanged
 
 ## Reporting issues
 

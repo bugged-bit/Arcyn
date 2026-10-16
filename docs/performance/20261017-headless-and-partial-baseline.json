@@ -1,0 +1,140 @@
+{
+  "RecordedAt": "2026-10-17T00:15:49.7065748+05:30",
+  "CPU": "11th Gen Intel(R) Core(TM) i3-1115G4 @ 3.00GHz",
+  "LogicalProcessors": 4,
+  "Runtime": "8.0.25",
+  "RenderTier": 2,
+  "DPI": "not captured in initial partial run",
+  "Method": "Four source-build runs on a shared desktop before changes; one has no Ready capture. Earlier probe measured Ready through exit, not pure Ready. Callback cadence is not GPU presentation time.",
+  "SourceHostSHA256": "292B11FF945CE9B1715BB402EC85FEF1C561F65A8291F7EE6FF5900CDFD4C5FB",
+  "SourceAssemblySHA256": "612AFAB8D6BA01D288D7B392EB7FD5161DF9D541FAD293C7FD688C07DEAE9482",
+  "Baseline": [
+    {
+      "Run": 0,
+      "FirstRenderCallbackSinceHookMs": 1139.6727,
+      "ReadySinceHookMs": 7037.9503,
+      "PrivatePeakBytes": 119394304,
+      "WorkingPeakBytes": 185630720,
+      "HandlePeak": 449,
+      "ReadyToExitCpuMs": 5328.125,
+      "ReadyToExitDurationMs": 10460.034199999998,
+      "CallbackP95Ms": 83.32859999999982
+    },
+    {
+      "Run": 1,
+      "FirstRenderCallbackSinceHookMs": 888.1417,
+      "ReadySinceHookMs": 6607.3803,
+      "PrivatePeakBytes": 124268544,
+      "WorkingPeakBytes": 190042112,
+      "HandlePeak": 453,
+      "ReadyToExitCpuMs": 8437.5,
+      "ReadyToExitDurationMs": 10459.0196,
+      "CallbackP95Ms": 49.994400000001406
+    },
+    {
+      "Run": 2,
+      "FirstRenderCallbackSinceHookMs": 3237.767,
+      "ReadySinceHookMs": 9059.6623,
+      "PrivatePeakBytes": 120197120,
+      "WorkingPeakBytes": 186609664,
+      "HandlePeak": 450,
+      "ReadyToExitCpuMs": 5140.625,
+      "ReadyToExitDurationMs": 6364.9959,
+      "CallbackP95Ms": 49.99980000000005
+    },
+    {
+      "Run": 3,
+      "FirstRenderCallbackSinceHookMs": 800.6591,
+      "ReadySinceHookMs": null,
+      "PrivatePeakBytes": 116998144,
+      "WorkingPeakBytes": 179003392,
+      "HandlePeak": 468,
+      "ReadyToExitCpuMs": null,
+      "ReadyToExitDurationMs": null,
+      "CallbackP95Ms": 33.33120000000008
+    }
+  ],
+  "TelemetryComparison": [
+    {
+      "Component": "legacy",
+      "Run": 0,
+      "InitializationMs": 1581.2669,
+      "HundredSamplesMs": 24.5817,
+      "LegacyCpuAvailable": true,
+      "LegacyRamAvailable": true
+    },
+    {
+      "Component": "legacy",
+      "Run": 1,
+      "InitializationMs": 14.4319,
+      "HundredSamplesMs": 27.482,
+      "LegacyCpuAvailable": true,
+      "LegacyRamAvailable": true
+    },
+    {
+      "Component": "legacy",
+      "Run": 2,
+      "InitializationMs": 18.2981,
+      "HundredSamplesMs": 32.0376,
+      "LegacyCpuAvailable": true,
+      "LegacyRamAvailable": true
+    },
+    {
+      "Component": "legacy",
+      "Run": 3,
+      "InitializationMs": 13.4796,
+      "HundredSamplesMs": 22.5378,
+      "LegacyCpuAvailable": true,
+      "LegacyRamAvailable": true
+    },
+    {
+      "Component": "legacy",
+      "Run": 4,
+      "InitializationMs": 14.0537,
+      "HundredSamplesMs": 24.7005,
+      "LegacyCpuAvailable": true,
+      "LegacyRamAvailable": true
+    },
+    {
+      "Component": "native",
+      "Run": 0,
+      "InitializationMs": 1.7567,
+      "HundredSamplesMs": 17.0991,
+      "LegacyCpuAvailable": null,
+      "LegacyRamAvailable": null
+    },
+    {
+      "Component": "native",
+      "Run": 1,
+      "InitializationMs": 4.6215,
+      "HundredSamplesMs": 67.7538,
+      "LegacyCpuAvailable": null,
+      "LegacyRamAvailable": null
+    },
+    {
+      "Component": "native",
+      "Run": 2,
+      "InitializationMs": 0.0327,
+      "HundredSamplesMs": 9.4546,
+      "LegacyCpuAvailable": null,
+      "LegacyRamAvailable": null
+    },
+    {
+      "Component": "native",
+      "Run": 3,
+      "InitializationMs": 0.0306,
+      "HundredSamplesMs": 57.8891,
+      "LegacyCpuAvailable": null,
+      "LegacyRamAvailable": null
+    },
+    {
+      "Component": "native",
+      "Run": 4,
+      "InitializationMs": 0.0297,
+      "HundredSamplesMs": 4.5744,
+      "LegacyCpuAvailable": null,
+      "LegacyRamAvailable": null
+    }
+  ],
+  "TelemetryMethod": "Five sequential constructions per provider in one headless .NET process, 100 samples each; legacy counters confirmed available. Shared desktop; not whole-app performance."
+}

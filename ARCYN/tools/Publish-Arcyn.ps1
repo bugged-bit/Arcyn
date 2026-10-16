@@ -15,6 +15,9 @@ Get-ChildItem -LiteralPath $OutputDirectory -File | Where-Object Extension -ne '
 foreach ($folder in Get-ChildItem -LiteralPath $OutputDirectory -Directory | Where-Object Name -ne 'native-build') { Copy-Item -LiteralPath $folder.FullName -Destination $release -Recurse }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\scripts') -Destination $release -Recurse
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\LICENSE'), (Join-Path $PSScriptRoot '..\..\README.md') -Destination $release
+New-Item -ItemType Directory -Path (Join-Path $release 'docs\performance') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\implementation-validation.md') -Destination (Join-Path $release 'docs')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\performance\20261017-headless-and-partial-baseline.json') -Destination (Join-Path $release 'docs\performance')
 & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $release
 Compress-Archive -LiteralPath $release -DestinationPath ($release + '.zip')
 Write-Output ('Complete standalone ZIP: ' + $release + '.zip')
