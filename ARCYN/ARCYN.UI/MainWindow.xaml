@@ -441,53 +441,75 @@
                                     BorderBrush="{StaticResource BorderSubtleBrush}"
                                     Background="#E9080808"
                                     Padding="10">
-                                <Grid>
+                                 <Grid>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="6" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <Grid Grid.Row="0" Margin="0,0,0,8">
+                                    <!-- Row 0: Header + target count + separator -->
+                                    <Grid Grid.Row="0" Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="LAUNCH CHANNEL"
-                                                   FontSize="9"
-                                                   Foreground="{StaticResource TextMutedBrush}" />
-                                        <Rectangle Grid.Column="1"
+                                        <TextBlock Text="▲ LAUNCH SEQUENCE"
+                                                   FontSize="9" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentBrightBrush}"
+                                                   VerticalAlignment="Center" />
+                                        <Ellipse Width="4" Height="4"
+                                                 Fill="{StaticResource AccentBrightBrush}"
+                                                 Effect="{StaticResource GlowAccentSharp}"
+                                                 Margin="6,0" VerticalAlignment="Center" />
+                                        <Rectangle Grid.Column="2"
                                                    Height="1"
                                                    Fill="{StaticResource BorderSubtleBrush}"
                                                    VerticalAlignment="Center"
-                                                   Margin="8,0,0,0" />
+                                                   Margin="0,0,8,0" />
+                                        <TextBlock Grid.Column="3"
+                                                   x:Name="LaunchTargetCount"
+                                                   FontSize="8"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Text="00 TARGETS" />
                                     </Grid>
 
-                                    <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-
-                                        <Grid HorizontalAlignment="Center">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Viewbox Width="20" Height="20" VerticalAlignment="Center">
-                                                <Canvas Width="20" Height="20">
+                                    <!-- Row 1: Mode name + spinner -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock x:Name="LaunchModeLabel"
+                                                       FontSize="22" FontWeight="Light"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                                       Text="" />
+                                            <TextBlock x:Name="LaunchSessionLabel"
+                                                       FontSize="9" Margin="0,2,0,0"
+                                                       Foreground="{StaticResource TextDimBrush}"
+                                                       Text="" />
+                                        </StackPanel>
+                                        <Grid Grid.Column="1" VerticalAlignment="Center">
+                                            <Ellipse Width="36" Height="36"
+                                                     Stroke="{StaticResource BorderSubtleBrush}"
+                                                     StrokeThickness="0.5" Opacity="0.3" />
+                                            <Viewbox Width="28" Height="28">
+                                                <Canvas Width="28" Height="28">
                                                     <Path x:Name="SpinnerArc"
-                                                          Stroke="{StaticResource TextSecondaryBrush}"
-                                                          StrokeThickness="2"
+                                                          Stroke="{StaticResource AccentBrightBrush}"
+                                                          StrokeThickness="2.5"
                                                           StrokeEndLineCap="Round"
                                                           StrokeStartLineCap="Round"
-                                                          Width="20"
-                                                          Height="20"
+                                                          Width="28" Height="28"
                                                           Stretch="Uniform"
-                                                          Data="M 2,10 A 8,8 0 1,1 18,10"
+                                                          Data="M 3,14 A 11,11 0 1,1 25,14"
                                                           RenderTransformOrigin="0.5,0.5">
                                                         <Path.RenderTransform>
                                                             <RotateTransform x:Name="SpinnerRotation" />
@@ -495,32 +517,28 @@
                                                     </Path>
                                                 </Canvas>
                                             </Viewbox>
-                                            <TextBlock x:Name="LaunchModeLabel"
-                                                       Grid.Column="1"
-                                                       FontSize="18"
-                                                       FontWeight="SemiBold"
-                                                       Margin="10,0,0,0"
-                                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                                       VerticalAlignment="Center" />
                                         </Grid>
-
-                                        <TextBlock x:Name="LaunchSessionLabel"
-                                                   Grid.Row="1"
-                                                   FontSize="9"
-                                                   Margin="0,8,0,0"
-                                                   HorizontalAlignment="Center"
-                                                   Foreground="{StaticResource TextDimBrush}" />
-
-                                        <TextBlock x:Name="LaunchRecent"
-                                                   Grid.Row="2"
-                                                   FontSize="8"
-                                                   Margin="0,4,0,0"
-                                                   HorizontalAlignment="Center"
-                                                   Foreground="{StaticResource TextMutedBrush}"
-                                                   Text="Recent: none" />
                                     </Grid>
 
-                                    <Grid Grid.Row="2" Margin="0,8,0,8">
+                                    <!-- Row 2: Target feed -->
+                                    <Border Grid.Row="2" CornerRadius="2"
+                                            Background="#0A000000"
+                                            BorderThickness="1"
+                                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                                            Padding="8,6" MinHeight="56">
+                                        <ScrollViewer x:Name="LaunchFeedScroll"
+                                                      VerticalScrollBarVisibility="Hidden"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      Background="Transparent">
+                                            <TextBlock x:Name="LaunchFeedText"
+                                                       FontSize="8"
+                                                       Foreground="{StaticResource TextDimBrush}"
+                                                       LineHeight="14" />
+                                        </ScrollViewer>
+                                    </Border>
+
+                                    <!-- Row 3: Telemetry strip -->
+                                    <Grid Grid.Row="3" Margin="0,6,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
@@ -553,26 +571,42 @@
                                                    Text="PROC 00/00" />
                                     </Grid>
 
-                                    <Grid Grid.Row="3">
-                                        <Rectangle Fill="{StaticResource BorderSubtleBrush}"
-                                                   RadiusX="1"
-                                                   RadiusY="1" />
-                                        <Rectangle Fill="{StaticResource AccentBrush}"
-                                                   RadiusX="1"
-                                                   RadiusY="1"
-                                                   HorizontalAlignment="Left"
-                                                   RenderTransformOrigin="0,0.5">
-                                            <Rectangle.RenderTransform>
-                                                <ScaleTransform x:Name="LaunchProgressScale" ScaleX="0" />
-                                            </Rectangle.RenderTransform>
-                                        </Rectangle>
-                                    </Grid>
+                                    <!-- Row 4: Segmented progress bar -->
+                                    <Border Grid.Row="4" Height="6" CornerRadius="2"
+                                            Background="#06000000"
+                                            BorderThickness="0.5"
+                                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                                            Padding="1">
+                                        <Grid>
+                                            <Rectangle Fill="{StaticResource BorderSubtleBrush}"
+                                                       RadiusX="1" RadiusY="1" Opacity="0.3" />
+                                            <Rectangle Fill="{StaticResource AccentBrush}"
+                                                       RadiusX="1" RadiusY="1"
+                                                       HorizontalAlignment="Left"
+                                                       RenderTransformOrigin="0,0.5">
+                                                <Rectangle.RenderTransform>
+                                                    <ScaleTransform x:Name="LaunchProgressScale" ScaleX="0" />
+                                                </Rectangle.RenderTransform>
+                                            </Rectangle>
+                                        </Grid>
+                                    </Border>
 
-                                    <TextBlock Grid.Row="4"
-                                               Text="Esc aborts launch sequence"
-                                               FontSize="8"
-                                               Margin="0,8,0,0"
-                                               Foreground="{StaticResource TextMutedBrush}" />
+                                    <!-- Row 5: Footer -->
+                                    <Grid Grid.Row="5" Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="ESC aborts · targets launch sequentially"
+                                                   FontSize="7"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   Opacity="0.5" />
+                                        <TextBlock Grid.Column="1"
+                                                   x:Name="LaunchRecent"
+                                                   FontSize="7"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   Text="" />
+                                    </Grid>
                                 </Grid>
                             </Border>
                         </Grid>

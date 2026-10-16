@@ -30,6 +30,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private Brush _accentLightBrush = null!;
     private Brush _textPrimaryBrush = null!;
     private CancellationTokenSource? _lifeCts;
+    private CancellationTokenSource? _launchCts;
     private DispatcherTimer? _idleTimer;
     private DispatcherTimer? _launchDotTimer;
     private ParticleEngine? _particles;
@@ -69,6 +70,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _log = new LogService();
         _render = new RenderService();
         _lifeCts = new CancellationTokenSource();
+        _launchCts = new CancellationTokenSource();
 
         _state.PhaseChanged += OnPhaseChanged;
         Loaded += OnLoaded;
@@ -365,125 +367,119 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _isLaunching = true;
         _state.SelectedModeIndex = index;
 
-        var mode = _modes[index];
-        _activeModeType = mode.Type;
-        ApplyModeVisuals(_activeModeType);
-        UpdateOperationalChrome();
+        _log.Write("SelectMode({0}): mode={1}, targetCount={2}", index, _modes[index].Label, _modes[index].Targets.Count);
 
-        AnimationService.FadeOut(ModePanel, 100);
-        await DelaySafe(60);
-
-        ModePanel.IsHitTestVisible = false;
-        ModePanel.Visibility = Visibility.Collapsed;
-
-        // Show loading window instead of the inline launch panel
-        var loadingWindow = new LoadingWindow(mode, index);
-        // Do not set Owner or hide the main window – keep both visible.
-        loadingWindow.Show();
-
-        LaunchModeLabel.Text = mode.Label.ToUpperInvariant();
-        LaunchSessionLabel.Text = $"{mode.SessionLabel}  -  {mode.StateLabel}";
-        LaunchStatus.Text = "Launching";
-        LaunchStatus.Foreground = _textPrimaryBrush;
-        LaunchPanel.Opacity = 0;
-        LaunchPanel.Visibility = Visibility.Visible;
-        AnimationService.FadeIn(LaunchPanel, 100);
-        SetLaunchProgress(0, Math.Max(mode.ProcessCount, 1));
-
-        _state.TransitionTo(AppPhase.Launching);
-
-        _lifeCts?.Cancel();
-        _lifeCts = new CancellationTokenSource();
-        var token = _lifeCts.Token;
-
-        _launchDotTimer?.Stop();
-        _launchDotTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
-        _launchDotTimer.Tick += (_, _) =>
+        try
         {
-            _launchDotIndex = (_launchDotIndex + 1) % 4;
-            LaunchStatus.Text = "Launching" + new string('.', _launchDotIndex);
-        };
-        _launchDotTimer.Start();
+            var mode = _modes[index];
+            _activeModeType = mode.Type;
+            ApplyModeVisuals(_activeModeType);
+            UpdateOperationalChrome();
 
-        var launchedTargets = 0;
-        var validTargets = mode.Targets.Where(target => !string.IsNullOrWhiteSpace(target.Cmd)).ToList();
-        var failures = new List<string>();
+            AnimationService.FadeOut(ModePanel, 100);
+            await DelaySafe(60);
 
-        for (int i = 0; i < validTargets.Count; i++)
-        {
-            if (token.IsCancellationRequested)
-                break;
+            ModePanel.IsHitTestVisible = false;
+            ModePanel.Visibility = Visibility.Collapsed;
 
-            var target = validTargets[i];
+            LaunchModeLabel.Text = mode.Label.ToUpperInvariant();
+            LaunchSessionLabel.Text = $"{mode.SessionLabel}  -  {mode.StateLabel}";
+            LaunchStatus.Text = "Launching";
+            LaunchStatus.Foreground = _textPrimaryBrush;
+            LaunchPanel.Opacity = 0;
+            LaunchPanel.Visibility = Visibility.Visible;
+            AnimationService.FadeIn(LaunchPanel, 100);
+            SetLaunchProgress(0, Math.Max(mode.ProcessCount, 1));
 
-            try
+            _state.TransitionTo(AppPhase.Launching);
+
+            _launchCts?.Dispose();
+            _launchCts = new CancellationTokenSource();
+            var token = _launchCts.Token;
+
+            _launchDotTimer?.Stop();
+            _launchDotTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+            _launchDotTimer.Tick += (_, _) =>
             {
-                _log.Write("Launching target: {0}", target.Cmd);
-                var psi = CreateLaunchStartInfo(target);
-                // Launch synchronously; Process.Start may return null for shell‑executed commands (e.g., explorer, URLs).
-                var proc = Process.Start(psi);
-                launchedTargets++;
-                _log.Write(proc != null ? $"Launch target OK: {target.Cmd}" : $"Launch target executed (no process): {target.Cmd}");
-            }
-            catch (Exception ex)
+                _launchDotIndex = (_launchDotIndex + 1) % 4;
+                LaunchStatus.Text = "Launching" + new string('.', _launchDotIndex);
+            };
+            _launchDotTimer.Start();
+
+            var launchedTargets = 0;
+            var validTargets = mode.Targets.Where(t => !string.IsNullOrWhiteSpace(t.Cmd)).ToList();
+            var failures = new List<string>();
+
+            LaunchTargetCount.Text = $"{validTargets.Count} TARGETS";
+            LaunchFeedText.Text = "";
+
+            for (int i = 0; i < validTargets.Count; i++)
             {
-                failures.Add(target.DisplayLabel);
-                _log.Write("Launch target failed: {0} ({1})", target.Cmd, ex.Message);
-            }
+                if (token.IsCancellationRequested)
+                    break;
 
-            SetLaunchProgress(launchedTargets + failures.Count, validTargets.Count);
-            // Small pause keeps UI responsive; keep same interval.
-            await DelaySafe(350, token);
-        }
+                var target = validTargets[i];
 
-if (token.IsCancellationRequested)
+                try
                 {
-                    LaunchStatus.Text = "Cancelled";
-                    // Close loading overlay and return to Ready UI.
-                    try
-                    {
-                        loadingWindow?.Close();
-                    }
-                    catch { }
-                    await ReturnToReady();
-                    return;
+                    _log.Write("Launch: {0}", target.Cmd);
+                    var psi = CreateLaunchStartInfo(target);
+                    var proc = Process.Start(psi);
+                    launchedTargets++;
+                    _log.Write(proc != null ? "OK: {0}" : "OK (no proc): {0}", target.Cmd);
+                    LaunchFeedText.Text += $"> {target.DisplayLabel}\n";
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(target.DisplayLabel);
+                    _log.Write("FAIL: {0}\n{1}", target.Cmd, ex);
+                    LaunchFeedText.Text += $"> {target.DisplayLabel}  [FAIL]\n";
                 }
 
-        _launchDotTimer?.Stop();
+                LaunchFeedScroll.ScrollToBottom();
+                SetLaunchProgress(launchedTargets + failures.Count, validTargets.Count);
+                await DelaySafe(350, token);
+            }
 
-        bool anySuccess = launchedTargets > 0;
-        bool success = failures.Count == 0 && anySuccess;
-        // Update status display
-        LaunchStatus.Text = success ? "Ready" : anySuccess ? "Partial" : "Fault";
-        LaunchStatus.Foreground = success ? _textPrimaryBrush : _accentLightBrush;
-        // Show failures if any, otherwise recent launch info
-        LaunchRecent.Text = failures.Count == 0
-            ? $"Recent: {mode.LastLaunchLabel}"
-            : $"Issue: {string.Join(", ", failures)}";
+            _launchDotTimer?.Stop();
 
-        mode.RecordLaunch(launchedTargets, validTargets.Count, success);
-        UpdateOperationalChrome();
+            if (token.IsCancellationRequested)
+            {
+                LaunchStatus.Text = "Cancelled";
+                await ReturnToReady();
+                return;
+            }
 
-        // Keep loading overlay visible for a maximum of 5 seconds (or 2 seconds on full success).
-int finalDelayMs = success ? 2000 : 5000;
-await DelaySafe(finalDelayMs, token);
-if (token.IsCancellationRequested)
-    return;
+            bool anySuccess = launchedTargets > 0;
+            bool success = failures.Count == 0 && anySuccess;
+            LaunchStatus.Text = success ? "Ready" : anySuccess ? "Partial" : "Fault";
+            LaunchStatus.Foreground = success ? _textPrimaryBrush : _accentLightBrush;
+            LaunchRecent.Text = failures.Count == 0
+                ? $"Recent: {mode.LastLaunchLabel}"
+                : $"Issue: {string.Join(", ", failures)}";
 
-// Exit after launch completes
-if (!_disposed)
-{
-    // Close the loading window if open, then exit the app.
-    try
-    {
-        // loadingWindow is defined in this method's scope.
-        if (loadingWindow != null && loadingWindow.IsVisible)
-            loadingWindow.Close();
-    }
-    catch { }
-    Dispatcher.Invoke(Close);
-}
-return;
+            mode.RecordLaunch(launchedTargets, validTargets.Count, success);
+            UpdateOperationalChrome();
+
+            int finalDelayMs = success ? 2000 : 5000;
+            await DelaySafe(finalDelayMs, token);
+
+            if (token.IsCancellationRequested)
+            {
+                await ReturnToReady();
+                return;
+            }
+
+            Close();
+        }
+        catch (Exception ex)
+        {
+            _log.Write("CRASH in SelectMode: {0}", ex);
+        }
+        finally
+        {
+            _isLaunching = false;
+        }
     }
 
     private async Task ReturnToReady()
@@ -668,8 +664,8 @@ return;
         {
             if (_state.Phase == AppPhase.Launching)
             {
-                _lifeCts?.Cancel();
-                _ = ReturnToReady();
+                LaunchStatus.Text = "Cancelling...";
+                _launchCts?.Cancel();
             }
             else if (_state.Phase != AppPhase.Closing)
             {
@@ -796,16 +792,15 @@ return;
 
 private static IEnumerable<string> GetCandidateConfigPaths()
 {
-    var baseDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-    var currentDir = Environment.CurrentDirectory.TrimEnd(Path.DirectorySeparatorChar);
+    var baseDir = AppContext.BaseDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar);
+    var currentDir = Environment.CurrentDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar);
 
-    // Primary locations – ordered by likelihood
     return new[]
     {
-        Path.Combine(baseDir, ConfigFileName),               // exe folder
-        Path.Combine(baseDir, "ARCYN", ConfigFileName),      // legacy subfolder
-        Path.Combine(currentDir, ConfigFileName),            // working folder
-        Path.Combine(currentDir, "ARCYN", ConfigFileName)   // legacy subfolder in cwd
+        System.IO.Path.Combine(baseDir, ConfigFileName),
+        System.IO.Path.Combine(baseDir, "ARCYN", ConfigFileName),
+        System.IO.Path.Combine(currentDir, ConfigFileName),
+        System.IO.Path.Combine(currentDir, "ARCYN", ConfigFileName)
     }.Distinct(StringComparer.OrdinalIgnoreCase);
 }
 
@@ -1058,6 +1053,8 @@ private static IEnumerable<string> GetCandidateConfigPaths()
 
         _lifeCts?.Cancel();
         _lifeCts?.Dispose();
+        _launchCts?.Cancel();
+        _launchCts?.Dispose();
         _idleTimer?.Stop();
         _launchDotTimer?.Stop();
         _render.Dispose();

@@ -31,7 +31,7 @@
 
         <Border CornerRadius="8" Background="#F0080808"
                 BorderThickness="1" BorderBrush="{StaticResource BorderSubtleBrush}"
-                Effect="{StaticResource GlowTealSoft}">
+                Effect="{StaticResource GlowAccentSoft}">
             <Grid Margin="36,28">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -93,7 +93,7 @@
                 </Border>
 
                 <Rectangle x:Name="ProgressBar" Grid.Row="3" Height="1"
-                           Fill="{StaticResource TealBrush}" Opacity="0"
+                           Fill="{StaticResource AccentBrush}" Opacity="0"
                            HorizontalAlignment="Stretch" Margin="0,8,0,0"
                            RenderTransformOrigin="0,0.5">
                     <Rectangle.RenderTransform>
