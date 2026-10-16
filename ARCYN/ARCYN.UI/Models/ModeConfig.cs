@@ -186,6 +186,13 @@ public sealed class ModeConfig : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    internal void RetainLaunchHistory(ModeConfig source)
+    {
+        _launchCount = source._launchCount;
+        _lastLaunchedAt = source._lastLaunchedAt;
+        _lastLaunchOutcome = source._lastLaunchOutcome;
+    }
+
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))

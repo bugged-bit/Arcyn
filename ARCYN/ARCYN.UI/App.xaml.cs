@@ -40,7 +40,7 @@ public partial class App : Application
                 Shutdown(); return;
             }
             _instance = new SingleInstance(() => Dispatcher.BeginInvoke(() => {
-                if (MainWindow is not { } window) return;
+                if (MainWindow is not { IsLoaded: true } window || Dispatcher.HasShutdownStarted) return;
                 if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
                 while (window.OwnedWindows.Cast<Window>().LastOrDefault(w => w.IsVisible) is { } child) window = child;
                 window.Activate(); window.Focus();

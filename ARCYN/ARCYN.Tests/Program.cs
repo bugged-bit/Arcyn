@@ -127,7 +127,9 @@ internal static class Program
             catch (ArgumentException) { Check(true, "theme cannot load external font resources"); }
             var quoted = target.Args.Select(LaunchService.QuoteArgument);
             Check(LaunchService.SplitCommandLine("target " + string.Join(" ", quoted)).Skip(1).SequenceEqual(target.Args), "argument editor round-trips quotes, spaces, empties and trailing slashes");
+            migrated.RecordLaunch(1, 1, true);
             var modeDraft = new EditModeWindow(migrated);
+            Check(modeDraft.Result.LaunchCountLabel == migrated.LaunchCountLabel && modeDraft.Result.LastLaunchLabel == migrated.LastLaunchLabel, "editing preserves session launch history");
             modeDraft.Result.Name = "DRAFT";
             Check(migrated.Name == "LEGACY", "workspace editor drafts do not mutate the loaded configuration");
             Directory.CreateDirectory(Path.Combine(directory, "apps"));

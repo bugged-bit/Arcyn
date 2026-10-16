@@ -12,6 +12,7 @@ public partial class EditModeWindow : Window
     public EditModeWindow(ModeConfig mode)
     {
         Result = JsonSerializer.Deserialize<ModeConfig>(JsonSerializer.Serialize(mode, ConfigService.JsonOptions), ConfigService.JsonOptions)!;
+        Result.RetainLaunchHistory(mode);
         InitializeComponent();
         NameInput.Text = mode.Name; DescInput.Text = mode.Description; TypeInput.Text = mode.Type;
         SessionInput.Text = mode.Session; StateInput.Text = mode.State; AccentInput.Text = mode.Accent;
