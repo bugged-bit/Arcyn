@@ -50,6 +50,8 @@ for ($run = 0; $run -lt ($Runs + $ExtractionColdRuns); $run++) {
 [ordered]@{
     RecordedAt = (Get-Date).ToString('o'); Executable = $Executable
     SHA256 = (Get-FileHash -LiteralPath $Executable -Algorithm SHA256).Hash
+    AssemblySHA256 = if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $Executable) 'ARCYN.dll')) { (Get-FileHash -LiteralPath (Join-Path (Split-Path -Parent $Executable) 'ARCYN.dll')).Hash } else { $null }
+    ConfigSHA256 = if ($ConfigPath -and (Test-Path -LiteralPath $ConfigPath)) { (Get-FileHash -LiteralPath $ConfigPath).Hash } else { $null }
     OS = [Environment]::OSVersion.VersionString; LogicalProcessors = [Environment]::ProcessorCount
     CPU = Get-ItemPropertyValue 'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0' -Name ProcessorNameString
     ColdDefinition = 'Fresh bundle extraction directory; OS caches are not cleared and the machine is not rebooted.'
