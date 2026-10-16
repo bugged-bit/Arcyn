@@ -3,9 +3,11 @@ param(
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\..\.arcyn-local\measurements'),
     [int]$Runs = 30,
     [int]$ExtractionColdRuns = 5,
-    [string]$ConfigPath
+    [string]$ConfigPath,
+    [switch]$AllowVisibleLauncher
 )
 $ErrorActionPreference = 'Stop'
+if (!$AllowVisibleLauncher) { throw 'This benchmark opens visible ARCYN windows. Run later with -AllowVisibleLauncher when the desktop is available.' }
 $Executable = [IO.Path]::GetFullPath($Executable)
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $hook = Join-Path $PSScriptRoot 'Probe\bin\Release\net8.0-windows\Probe.dll'

@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Management;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -19,9 +18,7 @@ public partial class LoadingWindow : Window, IDisposable
     private Storyboard? _spinnerStoryboard;
     private bool _disposed;
     private readonly CancellationTokenSource _cts = new();
-    private PerformanceCounter? _cpuCounter;
-    private PerformanceCounter? _ramAvailCounter;
-    private double _totalRamMb;
+    private readonly TelemetryMonitor _telemetry = new();
     private int _dotCount;
 
     public LoadingWindow(ModeConfig mode, int modeIndex)
@@ -45,7 +42,6 @@ public partial class LoadingWindow : Window, IDisposable
 
         ModeLabel.Text = $"MODE {_modeIndex + 1} · {_mode.Label}";
         StartSpinner();
-        InitCounters();
         StartTelemetry();
     }
 
@@ -60,27 +56,6 @@ public partial class LoadingWindow : Window, IDisposable
         _spinnerStoryboard = new Storyboard();
         _spinnerStoryboard.Children.Add(anim);
         _spinnerStoryboard.Begin(SpinnerArc);
-    }
-
-    private void InitCounters()
-    {
-        try
-        {
-            _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            _ = _cpuCounter.NextValue();
-        }
-        catch { _cpuCounter = null; }
-
-        try { _ramAvailCounter = new PerformanceCounter("Memory", "Available MBytes"); }
-        catch { _ramAvailCounter = null; }
-
-        try
-        {
-            using var searcher = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem");
-            foreach (var obj in searcher.Get())
-                _totalRamMb = Convert.ToDouble(obj["TotalPhysicalMemory"]) / (1024.0 * 1024.0);
-        }
-        catch { _totalRamMb = 16384; }
     }
 
     private void StartTelemetry()
@@ -100,18 +75,10 @@ public partial class LoadingWindow : Window, IDisposable
 
     private void UpdateTelemetry(object? sender, EventArgs e)
     {
-        try
-        {
-            if (_cpuCounter != null)
-                CpuText.Text = $"CPU {_cpuCounter.NextValue():F1}%";
-            if (_ramAvailCounter != null && _totalRamMb > 0)
-            {
-                var used = _totalRamMb - _ramAvailCounter.NextValue();
-                var pct = Math.Clamp(used / _totalRamMb * 100, 0, 100);
-                RamText.Text = $"RAM {pct:F1}%";
-            }
-        }
-        catch { }
+        if (!IsVisible || WindowState == WindowState.Minimized) return;
+        _telemetry.Sample();
+        CpuText.Text = $"CPU {_telemetry.CpuPercent:F1}%";
+        RamText.Text = $"RAM {_telemetry.RamPercent:F1}%";
     }
 
     public void Dispose()
@@ -122,8 +89,8 @@ public partial class LoadingWindow : Window, IDisposable
         _dotTimer?.Stop();
         _spinnerStoryboard?.Stop(SpinnerArc);
         _cts.Cancel();
-        _cpuCounter?.Dispose();
-        _ramAvailCounter?.Dispose();
+        _telemetry.Dispose();
+        _cts.Dispose();
         GC.SuppressFinalize(this);
     }
 }

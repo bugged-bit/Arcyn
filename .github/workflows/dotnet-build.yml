@@ -1,34 +1,29 @@
-name: Build
-
+name: Windows build and headless regression checks
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
-
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
-
-      - name: Restore
-        run: dotnet restore ARCYN\ARCYN.UI\ARCYN.UI.csproj
-
-      - name: Build
-        run: dotnet build ARCYN\ARCYN.UI\ARCYN.UI.csproj -c Release --no-restore
-
-      - name: Publish
-        run: dotnet publish ARCYN\ARCYN.UI\ARCYN.UI.csproj -c Release --no-build -o publish
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          global-json-file: global.json
+      - name: Restore tests and application
+        run: dotnet restore ARCYN/ARCYN.Tests/ARCYN.Tests.csproj
+      - name: Build and run regression checks (no windows)
+        run: dotnet run --project ARCYN/ARCYN.Tests -c Release --no-restore
+      - name: Publish and validate complete standalone artifact
+        run: ./ARCYN/tools/Publish-Arcyn.ps1
+      - uses: actions/upload-artifact@v4
         with:
-          name: ARCYN
-          path: publish\ARCYN.exe
+          name: ARCYN-win-x64
+          path: publish/*-release.zip
+          if-no-files-found: error
+

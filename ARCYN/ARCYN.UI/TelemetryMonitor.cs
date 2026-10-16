@@ -1,78 +1,36 @@
-using System.Diagnostics;
-
+using System.Runtime.InteropServices;
 namespace ARCYN.UI;
 
+// System-wide HUD readings; performance reports attribute ARCYN separately by PID.
 public sealed class TelemetryMonitor : IDisposable
 {
-    private PerformanceCounter? _cpuCounter;
-    private PerformanceCounter? _ramAvailCounter;
-    private readonly double _totalRamMb;
-    private bool _disposed;
-
-    public float CpuPercent { get; private set; }
-    public float RamPercent { get; private set; }
-
-    public TelemetryMonitor()
-    {
-        try
-        {
-            _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            _ = _cpuCounter.NextValue();
-        }
-        catch
-        {
-            _cpuCounter = null;
-        }
-
-        try
-        {
-            _ramAvailCounter = new PerformanceCounter("Memory", "Available MBytes");
-            _ = _ramAvailCounter.NextValue();
-        }
-        catch
-        {
-            _ramAvailCounter = null;
-        }
-
-        _totalRamMb = GetTotalRamMb();
-    }
-
-    private static double GetTotalRamMb()
-    {
-        try
-        {
-            using var searcher = new System.Management.ManagementObjectSearcher(
-                "SELECT TotalPhysicalMemory FROM Win32_ComputerSystem");
-            foreach (var obj in searcher.Get())
-                return Convert.ToDouble(obj["TotalPhysicalMemory"]) / (1024.0 * 1024.0);
-        }
-        catch { }
-        return 16384;
-    }
-
+    private ulong _idle, _kernel, _user;
+    private bool _primed, _disposed;
+    public float CpuPercent { get; private set; } = float.NaN;
+    public float RamPercent { get; private set; } = float.NaN;
+    public TelemetryMonitor() => Sample();
     public void Sample()
     {
         if (_disposed) return;
-        try
+        if (GetSystemTimes(out var idle, out var kernel, out var user))
         {
-            if (_cpuCounter != null)
-                CpuPercent = (float)Math.Round(_cpuCounter.NextValue(), 1);
-
-            if (_ramAvailCounter != null && _totalRamMb > 0)
-            {
-                var used = _totalRamMb - _ramAvailCounter.NextValue();
-                RamPercent = (float)Math.Round(Math.Clamp(used / _totalRamMb * 100.0, 0, 100), 1);
-            }
+            var total = kernel - _kernel + user - _user;
+            if (_primed && total > 0) CpuPercent = (float)Math.Clamp(100.0 * (total - Math.Min(total, idle - _idle)) / total, 0, 100);
+            _idle = idle; _kernel = kernel; _user = user; _primed = true;
         }
-        catch { }
+        else CpuPercent = float.NaN;
+        var memory = new MemoryStatus { Length = (uint)Marshal.SizeOf<MemoryStatus>() };
+        RamPercent = GlobalMemoryStatusEx(ref memory) ? memory.Load : float.NaN;
     }
-
-    public void Dispose()
+    public void Dispose() => _disposed = true;
+    [DllImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetSystemTimes(out ulong idle, out ulong kernel, out ulong user);
+    [DllImport("kernel32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MemoryStatus memory);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MemoryStatus
     {
-        if (_disposed) return;
-        _disposed = true;
-        _cpuCounter?.Dispose();
-        _ramAvailCounter?.Dispose();
-        GC.SuppressFinalize(this);
+        public uint Length, Load;
+        public ulong TotalPhysical, AvailablePhysical, TotalPageFile, AvailablePageFile, TotalVirtual, AvailableVirtual, AvailableExtendedVirtual;
     }
 }

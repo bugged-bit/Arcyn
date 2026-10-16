@@ -38,16 +38,18 @@ internal static class NativeMethods
         ACCENT_ENABLE_ACRYLICBLURBEHIND = 4
     }
 
-    internal static void EnableAcrylic(IntPtr hwnd, uint opacityColor = 0xEB000000)
+    internal static void EnableAcrylic(IntPtr hwnd, uint opacityColor = 0xEB000000, bool enabled = true)
     {
         var accent = new AccentPolicy
         {
-            AccentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND,
+            AccentState = enabled ? AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND : AccentState.ACCENT_DISABLED,
             GradientColor = (int)opacityColor
         };
 
         var accentStructSize = Marshal.SizeOf(accent);
         var accentPtr = Marshal.AllocHGlobal(accentStructSize);
+        try
+        {
         Marshal.StructureToPtr(accent, accentPtr, false);
 
         var data = new WindowCompositionAttributeData
@@ -58,7 +60,8 @@ internal static class NativeMethods
         };
 
         SetWindowCompositionAttribute(hwnd, ref data);
-        Marshal.FreeHGlobal(accentPtr);
+        }
+        finally { Marshal.FreeHGlobal(accentPtr); }
     }
 
     internal const int WS_EX_TRANSPARENT = 0x00000020;
