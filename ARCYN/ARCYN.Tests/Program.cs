@@ -19,7 +19,7 @@ internal static class Program
     [STAThread]
     private static int Main()
     {
-        try { Run(); Console.WriteLine($"{_passed} checks passed; no launcher windows or applications opened."); return 0; }
+        try { Run(); Console.WriteLine($"{_passed} checks passed on .NET {Environment.Version}; no launcher windows or applications opened."); return 0; }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
     }
     private static void Run()

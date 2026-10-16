@@ -18,7 +18,7 @@ jobs:
       - name: Restore tests and application
         run: dotnet restore ARCYN/ARCYN.Tests/ARCYN.Tests.csproj
       - name: Build and run regression checks (no windows)
-        run: dotnet run --project ARCYN/ARCYN.Tests -c Release --no-restore
+        run: ./ARCYN/tools/Test-Arcyn.ps1
       - name: Publish and validate complete standalone artifact
         run: ./ARCYN/tools/Publish-Arcyn.ps1
       - uses: actions/upload-artifact@v4

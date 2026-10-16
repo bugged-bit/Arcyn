@@ -7,6 +7,7 @@
     <PublishSelfContained>true</PublishSelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeFrameworkVersion>8.0.32</RuntimeFrameworkVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>

@@ -11,7 +11,7 @@ Copy-Item -LiteralPath (Join-Path $OutputDirectory 'native-build\ARCYN.Hotkey.ex
 $release = $OutputDirectory + '-release'
 if (Test-Path -LiteralPath $release) { throw 'Release staging directory already exists.' }
 New-Item -ItemType Directory -Path $release | Out-Null
-Get-ChildItem -LiteralPath $OutputDirectory -File | Copy-Item -Destination $release
+Get-ChildItem -LiteralPath $OutputDirectory -File | Where-Object Extension -ne '.pdb' | Copy-Item -Destination $release
 foreach ($folder in Get-ChildItem -LiteralPath $OutputDirectory -Directory | Where-Object Name -ne 'native-build') { Copy-Item -LiteralPath $folder.FullName -Destination $release -Recurse }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\scripts') -Destination $release -Recurse
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\LICENSE'), (Join-Path $PSScriptRoot '..\..\README.md') -Destination $release
