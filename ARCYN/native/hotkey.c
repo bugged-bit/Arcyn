@@ -25,7 +25,9 @@ static int launch(void) {
     wcscpy_s(slash + 1, 32768 - (size_t)(slash + 1 - path), L"ARCYN.exe");
     if (swprintf_s(command,32772,L"\"%s\"",path) < 0) return 0;
     *slash = 0;
-    if (!CreateProcessW(NULL,command,NULL,NULL,FALSE,0,NULL,path,&si,&pi)) return 0;
+    if (!CreateProcessW(NULL,command,NULL,NULL,FALSE,CREATE_SUSPENDED,NULL,path,&si,&pi)) return 0;
+    AllowSetForegroundWindow(pi.dwProcessId);
+    if (ResumeThread(pi.hThread) == (DWORD)-1) { TerminateProcess(pi.hProcess,1); CloseHandle(pi.hThread); CloseHandle(pi.hProcess); return 0; }
     CloseHandle(pi.hThread); CloseHandle(pi.hProcess); return 1;
 }
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR tail, int show) {

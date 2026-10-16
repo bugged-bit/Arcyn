@@ -18,6 +18,7 @@ public partial class SetupWindow : Window
     private readonly List<ModeConfig> _modes = [];
     private ModeConfig? _currentMode;
     private int _step;
+    private bool _finishing;
     private ParticleEngine? _particles;
     private DispatcherTimer? _particleTimer;
     private static readonly string[] StepTitles = ["Welcome", "Mode", "Apps", "Folders", "Websites", "Review"];
@@ -36,6 +37,8 @@ public partial class SetupWindow : Window
             _config = service ?? new ConfigService();
             InitializeComponent();
             Loaded += OnLoaded;
+            IsVisibleChanged += (_, _) => RefreshActivity();
+            StateChanged += (_, _) => RefreshActivity();
             _currentMode = NewMode();
             ShowStep(0);
         }
@@ -50,6 +53,13 @@ public partial class SetupWindow : Window
             _particleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
             _particleTimer.Tick += (_, _) => _particles?.Tick();
             _particleTimer.Start();
+            RefreshActivity();
+        }
+
+        private void RefreshActivity()
+        {
+            if (IsVisible && WindowState != WindowState.Minimized) _particleTimer?.Start();
+            else _particleTimer?.Stop();
         }
 
         private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
@@ -400,6 +410,7 @@ public partial class SetupWindow : Window
 
     private async void Finish_Click(object sender, RoutedEventArgs e)
     {
+        if (_finishing) return;
         if (_modes.Count == 0)
         {
             StatusBar.Text = "Create at least one mode to continue";
@@ -414,12 +425,15 @@ public partial class SetupWindow : Window
         for (int i = 0; i < config.Modes.Count; i++)
             config.Modes[i].Index = i + 1;
 
+        _finishing = true;
+        FinishButton.IsEnabled = false;
         try { await _config.SaveAsync(config); }
-        catch (Exception ex) { StatusBar.Text = "Save failed: " + ex.Message; return; }
+        catch (Exception ex) { StatusBar.Text = "Save failed: " + ex.Message; _finishing = false; FinishButton.IsEnabled = true; return; }
 
         StatusBar.Text = "Config saved. Launching ARCYN...";
 
         await Task.Delay(300);
+        if (!IsLoaded) return;
 
         _particleTimer?.Stop();
         _particles?.Dispose();

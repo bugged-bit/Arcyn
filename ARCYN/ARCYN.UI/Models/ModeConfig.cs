@@ -14,7 +14,15 @@ public sealed class ModeConfig : INotifyPropertyChanged
     [JsonPropertyName("name")] public string Name { get => Label; set => Label = value; }
     [JsonPropertyName("description")] public string Description { get => Subtitle; set => Subtitle = value; }
     [JsonPropertyName("accent")] public string Accent { get; set; } = "#D64545";
-    [JsonIgnore] public SolidColorBrush AccentBrush => new((Color)ColorConverter.ConvertFromString(Accent));
+    [JsonIgnore] public SolidColorBrush AccentBrush => CreateAccent(255);
+    [JsonIgnore] public SolidColorBrush AccentTintBrush => CreateAccent(42);
+    private SolidColorBrush CreateAccent(byte alpha)
+    {
+        Color color;
+        try { color = (Color)ColorConverter.ConvertFromString(Accent); }
+        catch { color = Color.FromRgb(0xD6, 0x45, 0x45); }
+        var brush = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B)); brush.Freeze(); return brush;
+    }
     [JsonPropertyName("apps")] public List<string> Apps { get; set; } = [];
     [JsonPropertyName("websites")] public List<string> Websites { get; set; } = [];
     [JsonPropertyName("folders")] public List<string> Folders { get; set; } = [];

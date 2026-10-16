@@ -11,6 +11,7 @@ public partial class App : Application
     private void Application_Startup(object sender, StartupEventArgs e)
     {
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        var terminalCommand = e.Args.Any(a => a is "--help" or "--version" or "--config-path" or "--setup");
         try
         {
             string? explicitPath = null;
@@ -30,12 +31,18 @@ public partial class App : Application
                 if (args.Contains("--help")) Console.WriteLine("ARCYN: --help | --version | --config-path | --config <file> | --setup (terminal setup)");
                 else if (args.Contains("--version")) Console.WriteLine("ARCYN " + typeof(App).Assembly.GetName().Version);
                 else if (args.Contains("--config-path")) Console.WriteLine(service.GetOrCreatePath());
-                else RunCliSetup(service);
+                else
+                {
+                    using var setupInstance = new SingleInstance(() => { });
+                    if (!setupInstance.IsFirst) { Console.Error.WriteLine("Close ARCYN before terminal setup to preserve active edits."); Shutdown(1); return; }
+                    RunCliSetup(service);
+                }
                 Shutdown(); return;
             }
             _instance = new SingleInstance(() => Dispatcher.BeginInvoke(() => {
                 if (MainWindow is not { } window) return;
                 if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                while (window.OwnedWindows.Cast<Window>().LastOrDefault(w => w.IsVisible) is { } child) window = child;
                 window.Activate(); window.Focus();
             }));
             if (!_instance.IsFirst) { Shutdown(); return; }
@@ -48,12 +55,13 @@ public partial class App : Application
             var config = service.Load();
             ShutdownMode = ShutdownMode.OnLastWindowClose;
             MainWindow = config == null ? new SetupWindow(service) : new MainWindow(service, config);
+            MainWindow.Title = "ARCYN";
             MainWindow.Show();
         }
         catch (Exception ex)
         {
             LogService.WriteStatic("Startup: {0}", ex);
-            if (e.Args.Length > 0) Console.Error.WriteLine(ex.Message);
+            if (terminalCommand) { AttachConsole(unchecked((uint)-1)); Console.Error.WriteLine(ex.Message); }
             else MessageBox.Show(ex.Message, "ARCYN — configuration preserved", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(-1);
         }
@@ -80,4 +88,3 @@ public partial class App : Application
         if (added) { service.Save(config); Console.WriteLine("Saved: " + service.GetOrCreatePath()); }
     }
 }
-

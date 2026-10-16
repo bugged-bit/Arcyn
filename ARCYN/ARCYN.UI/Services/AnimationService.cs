@@ -67,8 +67,10 @@ public sealed class AnimationService
     {
         if (toWidth.HasValue)
         {
+            var from = double.IsNaN(target.Width) ? target.ActualWidth : target.Width;
             target.BeginAnimation(FrameworkElement.WidthProperty, null);
-            var anim = new DoubleAnimation(toWidth.Value, TimeSpan.FromMilliseconds(durationMs))
+            target.Width = from;
+            var anim = new DoubleAnimation(from, toWidth.Value, TimeSpan.FromMilliseconds(durationMs))
             {
                 EasingFunction = new CubicEase { EasingMode = mode },
                 FillBehavior = FillBehavior.HoldEnd
@@ -77,8 +79,10 @@ public sealed class AnimationService
         }
         if (toHeight.HasValue)
         {
+            var from = double.IsNaN(target.Height) ? target.ActualHeight : target.Height;
             target.BeginAnimation(FrameworkElement.HeightProperty, null);
-            var anim = new DoubleAnimation(toHeight.Value, TimeSpan.FromMilliseconds(durationMs))
+            target.Height = from;
+            var anim = new DoubleAnimation(from, toHeight.Value, TimeSpan.FromMilliseconds(durationMs))
             {
                 EasingFunction = new CubicEase { EasingMode = mode },
                 FillBehavior = FillBehavior.HoldEnd

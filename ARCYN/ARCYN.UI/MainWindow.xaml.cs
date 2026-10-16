@@ -22,10 +22,12 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private readonly RenderService _render;
     private readonly Stopwatch _uptime = Stopwatch.StartNew();
     private readonly List<ModeConfig> _modes;
+    private readonly ModeService _modeService;
     private readonly ConfigService _configService;
     private readonly ArcynConfig _config;
     private readonly IdleDeadline _idle = new();
     private bool _editing;
+    private bool _menuOpen;
     private readonly List<ContentControl> _cardWrappers = [];
     private readonly List<Button> _cardButtons = [];
     private readonly List<TrailParticle> _cursorTrail = [];
@@ -47,8 +49,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private long _accelAmbient;
     private long _accelParticle;
-    private long _accelTelemetry;
-    private long _accelTime;
     private long _accelTrail;
 
 
@@ -73,6 +73,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _configService = service;
         _config = config ?? service.Load() ?? new ArcynConfig();
         _modes = _config.Modes;
+        _modeService = new ModeService(_state, _modes);
+        _currentTheme = _config.Theme;
         InitializeComponent();
         Topmost = _config.Behavior.AlwaysOnTop;
         PreviewMouseDown += (_, _) => ResetIdle();
@@ -87,6 +89,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         Loaded += OnLoaded;
         Deactivated += OnDeactivated;
         Closed += (_, _) => Dispose();
+        IsVisibleChanged += (_, _) => RefreshActivity();
+        StateChanged += (_, _) => RefreshActivity();
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -96,15 +100,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle | NativeMethods.WS_EX_TOOLWINDOW);
         NativeMethods.SetWindowPos(hwnd, Topmost ? NativeMethods.HWND_TOPMOST : IntPtr.Zero, 0, 0, 0, 0,
             NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_SHOWWINDOW);
-
-        try
-        {
-            NativeMethods.EnableAcrylic(hwnd, 0xE20A0A0A);
-        }
-        catch
-        {
-            _log.Write("Acrylic enable skipped");
-        }
 
         _log.Write("OnLoaded: start");
         Activate();
@@ -117,6 +112,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             ?? new SolidColorBrush(Color.FromRgb(0xF7, 0xA0, 0xA0));
         _textPrimaryBrush = TryFindResource("TextPrimaryBrush") as Brush ?? Brushes.White;
 
+        ApplyTheme(_config.Theme);
         LoadConfig();
 
         _telemetry = new TelemetryMonitor();
@@ -124,9 +120,13 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         _render.Subscribe(this);
         _render.Start();
+        _particles.Configure(_currentTheme.ReducedEffects ? 0 : _currentTheme.Particles, ThemeService.Map(Color.FromRgb(0xE8, 0x60, 0x60), _currentTheme));
         _particles.Start();
+        _runtimeStarted = true;
+        RefreshActivity();
         InitCursorTrail();
         UpdateOperationalChrome();
+        StartIdleTimer();
 
         _log.Write("OnLoaded: runtime initialized");
 
@@ -147,46 +147,30 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         if (_disposed || _state.Phase == AppPhase.Closing)
             return;
 
+        var effects = _currentTheme.Animations && !_currentTheme.ReducedEffects;
         _accelParticle += dt;
         var particleInterval = Math.Clamp((long)(30 / _modeParticleMul), 8, 60);
-        if (_accelParticle >= particleInterval)
+        if (effects && _accelParticle >= particleInterval)
         {
             _accelParticle -= particleInterval;
-            _particles?.Tick();
+            _particles?.Tick(_currentTheme.MotionAmount);
         }
 
         _accelAmbient += dt;
         var ambientInterval = Math.Clamp((long)(30 / _modeAmbientMul), 10, 50);
-        if (_accelAmbient >= ambientInterval)
+        if (effects && _accelAmbient >= ambientInterval)
         {
             _accelAmbient = 0;
-            _ambientPhase += 0.025 * _modeGlowMul;
+            _ambientPhase += 0.025 * _modeGlowMul * _currentTheme.MotionAmount;
             var baseGlow = 0.26 * _modeGlowMul;
-            AmbientGlow.Opacity = Math.Clamp(baseGlow + Math.Sin(_ambientPhase) * 0.12 * _modeGlowMul, 0.08, 0.45);
+            AmbientGlow.Opacity = Math.Clamp(Math.Clamp(baseGlow + Math.Sin(_ambientPhase) * 0.12 * _modeGlowMul, 0.08, 0.45) * _currentTheme.GlowOpacity / .28, 0, 1);
         }
 
         _accelTrail += dt;
-        if (_accelTrail >= 16 && _state.Phase == AppPhase.Ready)
+        if (effects && _currentTheme.CursorTrail && _accelTrail >= 16 && _state.Phase == AppPhase.Ready)
         {
             _accelTrail = 0;
             UpdateCursorTrail();
-        }
-
-        _accelTelemetry += dt;
-        if (_accelTelemetry >= 1000 && _state.Phase != AppPhase.Boot)
-        {
-            _accelTelemetry -= 1000;
-            _telemetry?.Sample();
-            UpdateTelemetryUI();
-        }
-
-        _accelTime += dt;
-        if (_accelTime >= 1000)
-        {
-            _accelTime -= 1000;
-            TimeDisplay.Text = DateTime.Now.ToString("HH:mm:ss");
-            HeaderUptime.Text = $"UP {_uptime.Elapsed:hh\\:mm\\:ss}";
-            RuntimeStrip.Text = $"RUNTIME {_uptime.Elapsed:hh\\:mm\\:ss}";
         }
 
         if (_state.Phase == AppPhase.Launching)
@@ -201,6 +185,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _log.Write("State: {0} -> {1}", previous, next);
         PhaseLabel.Text = _state.PhaseLabel;
         UpdateOperationalChrome();
+        RefreshActivity();
 
         if (next == AppPhase.Ready)
         {
@@ -332,8 +317,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     {
         UpdateLayout();
 
-        var targetWidth = Math.Max(ShellHost.ActualWidth, 880);
-        var targetHeight = Math.Max(ShellHost.ActualHeight, 450);
+        var targetWidth = Math.Max(ShellHost.ActualWidth, Width - 40);
+        var targetHeight = Math.Max(ShellHost.ActualHeight, Height - 40);
 
         MainBorder.Width = 6;
         MainBorder.Height = 6;
@@ -369,7 +354,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private async void SelectMode(int index)
     {
-        if (index < 0 || index >= _modes.Count || _isLaunching || _editing || _isClosing) return;
+        if (index < 0 || index >= _modes.Count || _isLaunching || _editing || _menuOpen || _isClosing) return;
         if (!_state.TransitionTo(AppPhase.Selecting)) return;
         _isLaunching = true;
         _state.SelectedModeIndex = index;
@@ -448,6 +433,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         ApplyModeVisuals(null);
         UpdateOperationalChrome();
         ResetIdle();
+        FocusModeButton(_state.SelectedModeIndex);
     }
 
     private void InitCursorTrail()
@@ -483,10 +469,11 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             var ratio = particle.Life / particle.MaxLife;
             particle.Element.Opacity = 0.6 * (1 - ratio);
             var size = 2.5 * (1 - ratio * 0.6);
-            particle.Element.Width = size;
-            particle.Element.Height = size;
-            Canvas.SetLeft(particle.Element, particle.X);
-            Canvas.SetTop(particle.Element, particle.Y);
+            var transform = (TransformGroup)particle.Element.RenderTransform;
+            var scale = (ScaleTransform)transform.Children[0];
+            scale.ScaleX = scale.ScaleY = size / 2.5;
+            var position = (TranslateTransform)transform.Children[1];
+            position.X = particle.X; position.Y = particle.Y;
         }
 
         if (!_mouseMoved)
@@ -515,8 +502,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             Vy = (Random.Shared.NextDouble() - 0.5) * 0.4
         };
 
-        Canvas.SetLeft(newParticle.Element, newParticle.X);
-        Canvas.SetTop(newParticle.Element, newParticle.Y);
+        newParticle.Element.RenderTransform = new TransformGroup { Children = new TransformCollection {
+            new ScaleTransform(1, 1), new TranslateTransform(newParticle.X, newParticle.Y) } };
         TrailCanvas.Children.Add(newParticle.Element);
         _cursorTrail.Add(newParticle);
 
@@ -536,12 +523,13 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         var cpu = _telemetry.CpuPercent;
         var ram = _telemetry.RamPercent;
 
-        HeaderCpu.Text = $"CPU {cpu,4:F1}%";
-        HeaderRam.Text = $"RAM {ram,4:F1}%";
-        HeaderSys.Text = cpu < 75 && ram < 85 ? "ONLINE" : "LOAD";
+        var known = !float.IsNaN(cpu) && !float.IsNaN(ram);
+        HeaderCpu.Text = float.IsNaN(cpu) ? "CPU --" : $"CPU {cpu,4:F1}%";
+        HeaderRam.Text = float.IsNaN(ram) ? "RAM --" : $"RAM {ram,4:F1}%";
+        HeaderSys.Text = !known ? "UNKNOWN" : cpu < 75 && ram < 85 ? "ONLINE" : "LOAD";
         HeaderSys.Foreground = cpu < 75 && ram < 85 ? _accentBrightBrush : _accentLightBrush;
 
-        SystemStrip.Text = cpu < 75 && ram < 85
+        SystemStrip.Text = !known ? "SYS TELEMETRY UNAVAILABLE" : cpu < 75 && ram < 85
             ? $"SYS {HeaderSys.Text}  -  HUD STABLE"
             : $"SYS {HeaderSys.Text}  -  CPU {cpu:F0}% / RAM {ram:F0}%";
 
@@ -561,7 +549,12 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _idleTimer?.Stop();
         _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _idleTimer.Tick += (_, _) => {
-            if (_state.Phase == AppPhase.Ready && !_editing && _idle.Expired(_config.Behavior.IdleTimeoutSeconds)) CloseWithAnimation();
+            if (_state.Phase != AppPhase.Boot) { _telemetry?.Sample(); UpdateTelemetryUI(); }
+            TimeDisplay.Text = DateTime.Now.ToString("HH:mm:ss");
+            HeaderUptime.Text = $"UP {_uptime.Elapsed:hh\\:mm\\:ss}";
+            RuntimeStrip.Text = $"RUNTIME {_uptime.Elapsed:hh\\:mm\\:ss}";
+
+            if (_state.Phase == AppPhase.Ready && !_editing && !_menuOpen && _idle.Expired(_config.Behavior.IdleTimeoutSeconds)) CloseWithAnimation();
         };
         _idleTimer.Start();
     }
@@ -596,6 +589,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         ResetIdle();
+        if (HandleEditorKey(e)) { e.Handled = true; return; }
+        if (_editing) return;
 
         if (e.Key == Key.Escape)
         {
@@ -711,30 +706,39 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         if (_modes.Count == 0)
             return;
 
-        DashboardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var columns = _currentTheme.Layout == "grid" ? 2 : 1;
+        for (var c = 0; c < columns; c++) DashboardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         var template = (DataTemplate)FindResource("ModeCardTemplate");
 
         for (int i = 0; i < _modes.Count; i++)
         {
-            DashboardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            if (i % columns == 0) DashboardGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
             var wrapper = new ContentControl
             {
                 Content = _modes[i],
                 ContentTemplate = template,
-                Margin = new Thickness(0, 0, 0, 6),
+                Margin = new Thickness(0, 0, columns > 1 && i % columns == 0 ? _currentTheme.Spacing : 0, _currentTheme.Spacing),
                 Opacity = _state.Phase == AppPhase.Boot ? 0 : 1,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Top
             };
 
-            Grid.SetColumn(wrapper, 0);
-            Grid.SetRow(wrapper, i);
+            Grid.SetColumn(wrapper, i % columns);
+            wrapper.ContextMenu = MakeWorkspaceMenu(_modes[i]);
+            Grid.SetRow(wrapper, i / columns);
             DashboardGrid.Children.Add(wrapper);
             _cardWrappers.Add(wrapper);
         }
 
         DashboardGrid.UpdateLayout();
+        foreach (var wrapper in _cardWrappers) wrapper.Loaded += (_, _) => ResolveCardButtons();
+        ResolveCardButtons();
+    }
+
+    private void ResolveCardButtons()
+    {
+        _cardButtons.Clear();
 
         foreach (var wrapper in _cardWrappers)
         {
@@ -745,14 +749,12 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private void UpdateOperationalChrome()
     {
-        var totalProcesses = _modes.Sum(mode => mode.ProcessCount);
-        var activeMode = _state.SelectedModeIndex >= 0 && _state.SelectedModeIndex < _modes.Count
-            ? _modes[_state.SelectedModeIndex].Label.ToUpperInvariant()
-            : "STANDBY";
+        var totalProcesses = _modeService.TotalProcesses;
+        var activeMode = _modeService.ActiveLabel;
 
         ModeCountRun.Text = _modes.Count.ToString("D2");
         ProcessStrip.Text = $"PROC {totalProcesses:D2}  -  ACTIVE {activeMode}";
-        FooterHint.Text = $"{ShortcutSpan()} select  -  ENTER launch  -  ESC close";
+        FooterHint.Text = $"{ShortcutSpan()} select  -  F2 edit  -  Ctrl+N new  -  Ctrl+, theme  -  ESC close";
         LaunchRecent.Text = _state.SelectedModeIndex >= 0 && _state.SelectedModeIndex < _modes.Count
             ? $"Recent: {_modes[_state.SelectedModeIndex].LastLaunchLabel}"
             : "Recent: none";

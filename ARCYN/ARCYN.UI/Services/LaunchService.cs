@@ -25,8 +25,13 @@ public static class LaunchService
             var directory = Environment.ExpandEnvironmentVariables(target.WorkingDirectory ?? "");
             if (directory.Length > 0 && !Directory.Exists(directory)) throw new DirectoryNotFoundException("Working directory is unavailable.");
             if (Directory.Exists(cmd)) { arguments.Insert(0, cmd); cmd = "explorer.exe"; }
-            if (cmd.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) && arguments.Count > 0 && !Directory.Exists(Environment.ExpandEnvironmentVariables(arguments[0])))
-                throw new DirectoryNotFoundException("Folder is unavailable. It remains saved for repair.");
+            if (cmd.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) && arguments.Count > 0 && !arguments[0].StartsWith('/') && !arguments[0].StartsWith('-'))
+            {
+                var folder = Environment.ExpandEnvironmentVariables(arguments[0]);
+                if (Path.IsPathRooted(folder) && !Directory.Exists(folder) && !File.Exists(folder))
+                    throw new DirectoryNotFoundException("Folder is unavailable. It remains saved for repair.");
+                arguments[0] = folder;
+            }
             if (Path.IsPathRooted(cmd) && !File.Exists(cmd)) throw new FileNotFoundException("Target is unavailable.", cmd);
             psi = new ProcessStartInfo(cmd) { UseShellExecute = true, WorkingDirectory = directory.Length > 0 ? directory :
                 File.Exists(cmd) ? Path.GetDirectoryName(Path.GetFullPath(cmd))! : Path.GetDirectoryName(Environment.ProcessPath)! };
@@ -37,6 +42,19 @@ public static class LaunchService
         { error = ex.Message; return false; }
     }
     private static bool IsProtocol(string cmd) => Uri.TryCreate(cmd, UriKind.Absolute, out var uri) && !uri.IsFile;
+    public static string QuoteArgument(string value)
+    {
+        var result = new System.Text.StringBuilder("\"");
+        var slashes = 0;
+        foreach (var c in value)
+        {
+            if (c == '\\') { slashes++; continue; }
+            result.Append('\\', c == '"' ? slashes * 2 + 1 : slashes);
+            result.Append(c); slashes = 0;
+        }
+        result.Append('\\', slashes * 2); result.Append('"');
+        return result.ToString();
+    }
     public static string[] SplitCommandLine(string command)
     {
         var pointer = CommandLineToArgvW(command, out var count);
@@ -48,4 +66,3 @@ public static class LaunchService
     private static extern IntPtr CommandLineToArgvW(string command, out int count);
     [DllImport("kernel32.dll")] private static extern IntPtr LocalFree(IntPtr memory);
 }
-

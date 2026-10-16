@@ -4,7 +4,7 @@ namespace ARCYN.UI.Services;
 
 public sealed class ModeService
 {
-    private readonly List<ModeConfig> _modes = [];
+    private readonly List<ModeConfig> _modes;
     private readonly AppState _state;
 
     public int Count => _modes.Count;
@@ -31,15 +31,15 @@ public sealed class ModeService
     public int TotalProcesses => _modes.Sum(m => m.ProcessCount);
     public string ShortcutHint => Count == 0 ? "[1]" : Count == 1 ? "[1]" : $"[1-{Count}]";
 
-    public ModeService(AppState state)
+    public ModeService(AppState state, List<ModeConfig>? modes = null)
     {
         _state = state;
+        _modes = modes ?? [];
     }
 
     public void Load(List<ModeConfig> modes)
     {
-        _modes.Clear();
-        _modes.AddRange(modes);
+        if (!ReferenceEquals(_modes, modes)) { _modes.Clear(); _modes.AddRange(modes); }
         Reindex();
     }
 

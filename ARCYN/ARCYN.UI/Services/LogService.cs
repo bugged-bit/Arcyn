@@ -17,11 +17,10 @@ public sealed class LogService : IDisposable
                 Directory.CreateDirectory(DirectoryPath);
                 var path = Path.Combine(DirectoryPath, "arcyn.log");
                 if (File.Exists(path) && new FileInfo(path).Length > 512 * 1024) File.Move(path, path + ".old", true);
-                File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {string.Format(format, args)}{Environment.NewLine}");
+                File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {(args.Length == 0 ? format : string.Format(format, args))}{Environment.NewLine}");
             }
         }
         catch (Exception) { /* Logging must never prevent startup or recovery. */ }
     }
     public void Dispose() => _disposed = true;
 }
-

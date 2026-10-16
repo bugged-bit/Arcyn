@@ -1,49 +1,109 @@
+using System.IO;
+using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
-
+using System.Windows.Media.Animation;
+using System.Windows.Media.Effects;
+using ARCYN.UI.Models;
 namespace ARCYN.UI.Services;
 
 public sealed class ThemeService
 {
-    private static readonly Dictionary<string, string> PresetAccents = new()
+    public static IReadOnlyDictionary<string, string> Presets { get; } = new Dictionary<string, string> {
+        ["Classic Red"] = "#D64545", ["Cyber Blue"] = "#4580D6", ["Matrix Green"] = "#45D680", ["Phosphor Orange"] = "#D6A045", ["Void Purple"] = "#A045D6" };
+    public static void ValidateColor(string value)
     {
-        ["Classic Red"] = "#D64545",
-        ["Cyber Blue"] = "#4580D6",
-        ["Matrix Green"] = "#45D680",
-        ["Phosphor Orange"] = "#D6A045",
-        ["Void Purple"] = "#A045D6"
-    };
-
-    public static IReadOnlyDictionary<string, string> Presets => PresetAccents;
-
-    public Brush AccentBright { get; private set; } = Brushes.White;
-    public Brush AccentLight { get; private set; } = Brushes.White;
-    public Brush TextPrimary { get; private set; } = Brushes.White;
-
-    public void LoadResources(FrameworkElement element)
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value ?? "", "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"))
+            throw new ArgumentException("Use a hexadecimal colour: #RRGGBB or #AARRGGBB.");
+    }
+    public static Color ParseColor(string hex) { ValidateColor(hex); return (Color)ColorConverter.ConvertFromString(hex); }
+    public static SolidColorBrush HexToBrush(string hex) { var b = new SolidColorBrush(ParseColor(hex)); b.Freeze(); return b; }
+    public static ThemeConfig Clone(ThemeConfig theme) => JsonSerializer.Deserialize<ThemeConfig>(JsonSerializer.Serialize(theme, ConfigService.JsonOptions), ConfigService.JsonOptions)!;
+    public static void Validate(ThemeConfig t)
     {
-        AccentBright = (element.TryFindResource("AccentBrightBrush") as Brush)
-            ?? new SolidColorBrush(Color.FromRgb(0xF0, 0x80, 0x80));
-        AccentLight = (element.TryFindResource("AccentLightBrush") as Brush)
-            ?? new SolidColorBrush(Color.FromRgb(0xF7, 0xA0, 0xA0));
-        TextPrimary = (element.TryFindResource("TextPrimaryBrush") as Brush)
-            ?? Brushes.White;
+        ValidateColor(t.Accent); ValidateColor(t.Background); ValidateColor(t.Text);
+        static void Range(double n, double min, double max, string field) { if (!double.IsFinite(n) || n < min || n > max) throw new ArgumentException($"{field}: use {min}–{max}."); }
+        Range(t.FontScale, .7, 1.8, "Font scale"); Range(t.Width, 640, 1920, "Width"); Range(t.Height, 360, 1080, "Height");
+        Range(t.CornerRadius, 0, 30, "Corners"); Range(t.BorderWidth, 0, 4, "Border width");
+        Range(t.CardHeight, 64, 160, "Card height"); Range(t.Spacing, 0, 24, "Spacing");
+        Range(t.Particles, 0, 120, "Particles"); Range(t.GlowOpacity, 0, 1, "Glow opacity"); Range(t.MotionAmount, 0, 2, "Motion amount");
+        if (t.Layout is not ("rows" or "compact" or "grid")) throw new ArgumentException("Layout: rows, compact or grid.");
+        if (string.IsNullOrWhiteSpace(t.FontFamily) || t.FontFamily.Length > 100 || t.FontFamily.IndexOfAny(['/', ':', '\\']) >= 0)
+            throw new ArgumentException("Use an installed font family name. External font resources are unsupported.");
+    }
+    public static ThemeConfig Import(string path)
+    {
+        if (new FileInfo(path).Length > 64 * 1024) throw new InvalidDataException("Theme exceeds 64 KiB.");
+        var json = File.ReadAllText(path);
+        using var document = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
+        if (document.RootElement.ValueKind != JsonValueKind.Object || document.RootElement.EnumerateObject().Any(p => p.Name.Equals("modes", StringComparison.OrdinalIgnoreCase))) throw new InvalidDataException("Import a visual theme, rather than a workspace configuration.");
+        var theme = JsonSerializer.Deserialize<ThemeConfig>(json, ConfigService.JsonOptions) ?? throw new InvalidDataException("Empty theme.");
+        Validate(theme); return theme;
+    }
+    public static void Export(string path, ThemeConfig theme)
+    {
+        Validate(theme);
+        if (Path.GetFileName(path).Equals("arcyn.json", StringComparison.OrdinalIgnoreCase) || Path.GetFileName(path).Equals("protocoll.json", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Choose a theme filename; arcyn.json and protocoll.json are reserved for workspace configurations.");
+        if (File.Exists(path))
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
+            if (document.RootElement.ValueKind != JsonValueKind.Object || document.RootElement.EnumerateObject().Any(p => p.Name.Equals("modes", StringComparison.OrdinalIgnoreCase))) throw new InvalidDataException("Theme export cannot overwrite a workspace configuration.");
+        }
+        var json = JsonSerializer.Serialize(theme, ConfigService.JsonOptions);
+        if (System.Text.Encoding.UTF8.GetByteCount(json) > 64 * 1024) throw new InvalidDataException("Theme exceeds 64 KiB.");
+        File.WriteAllText(path, json);
     }
 
-    public static Color ParseColor(string hex)
+    public static Color Map(Color color, ThemeConfig theme)
     {
-        try
+        var accent = ParseColor(theme.Accent);
+        static byte Channel(int n) => (byte)Math.Clamp(n, 0, 255);
+        if (color.R > color.G * 1.2 && Math.Abs(color.G - color.B) < 8)
+            return Color.FromArgb(color.A, Channel(accent.R + color.R - 214), Channel(accent.G + color.G - 69), Channel(accent.B + color.B - 69));
+        if (color.R == color.G && color.G == color.B)
         {
-            return (Color)ColorConverter.ConvertFromString(hex);
+            if (color.R >= 170) { var text = ParseColor(theme.Text); return Color.FromArgb(color.A, text.R, text.G, text.B); }
+            if (color.R > 0 && color.R <= 10) { var bg = ParseColor(theme.Background); var delta = color.R - 10; return Color.FromArgb(color.A, Channel(bg.R + delta), Channel(bg.G + delta), Channel(bg.B + delta)); }
         }
-        catch
-        {
-            return Color.FromRgb(0xD6, 0x45, 0x45);
-        }
+        return color;
     }
-
-    public static SolidColorBrush HexToBrush(string hex)
+    public static void Apply(FrameworkElement target, ThemeConfig theme)
     {
-        return new SolidColorBrush(ParseColor(hex));
+        Validate(theme);
+        // One palette rebuild per edit, never per frame. Fresh templates keep hover/focus colours coherent.
+        var source = new ResourceDictionary { Source = new Uri("/ARCYN;component/Styles/Theme.xaml", UriKind.Relative) };
+        foreach (var key in source.Keys.Cast<object>().ToArray())
+        {
+            var value = source[key];
+            if (value is Color c) target.Resources[key] = Map(c, theme);
+            else if (value is SolidColorBrush brush) { var b = new SolidColorBrush(Map(brush.Color, theme)); b.Freeze(); target.Resources[key] = b; }
+            else if (value is DropShadowEffect shadow)
+            {
+                if (theme.ReducedEffects || theme.GlowOpacity == 0) { target.Resources[key] = null; continue; }
+                var effect = shadow.Clone(); effect.Color = Map(effect.Color, theme);
+                effect.Opacity *= theme.GlowOpacity / .28;
+                effect.Freeze(); target.Resources[key] = effect;
+            }
+            else if (key is string name && name.StartsWith("FontSize") && value is double size) target.Resources[key] = size * theme.FontScale;
+        }
+        target.Resources["UIFont"] = theme.FontFamily == "JetBrainsMono NF" ? source["UIFont"] : new FontFamily(theme.FontFamily);
+        target.Resources["CardHeight"] = theme.CompactMode || theme.Layout == "compact" ? Math.Min(theme.CardHeight, 72) : theme.CardHeight;
+        // Templates are freshly loaded and have not yet been applied/sealed.
+        var style = (Style)source["WorkstationPanelStyle"];
+        foreach (var setter in style.Setters.OfType<Setter>())
+            if (setter.Value is SolidColorBrush brush)
+            { var mapped = new SolidColorBrush(Map(brush.Color, theme)); mapped.Freeze(); setter.Value = mapped; }
+        var template = (ControlTemplate)style.Setters.OfType<Setter>().Single(s => s.Property == Control.TemplateProperty).Value;
+        foreach (var trigger in template.Triggers.OfType<Trigger>())
+            foreach (var action in trigger.EnterActions.Concat(trigger.ExitActions).OfType<BeginStoryboard>())
+            {
+                var storyboard = action.Storyboard.Clone();
+                foreach (var animation in storyboard.Children.OfType<ColorAnimation>())
+                    if (animation.To is Color to) animation.To = Map(to, theme);
+                action.Storyboard = storyboard;
+            }
+        target.Resources["WorkstationPanelStyle"] = style;
     }
 }

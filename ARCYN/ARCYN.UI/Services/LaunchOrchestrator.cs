@@ -16,17 +16,22 @@ public sealed class LaunchOrchestrator(LogService log)
             foreach (var target in targets)
             {
                 token.ThrowIfCancellationRequested();
-                string? failure;
-                if (LaunchService.TryPrepare(target, out var psi, out failure))
+                string? failure = null;
+                try
                 {
-                    try
+                    var dispatched = await Task.Run(() =>
                     {
-                        await Task.Run(() => { token.ThrowIfCancellationRequested(); using var process = Dispatch(psi); }, token);
-                        result.LaunchedTargets++;
-                    }
-                    catch (OperationCanceledException) { throw; }
-                    catch (Exception ex) { failure = ex.Message; }
+                        token.ThrowIfCancellationRequested();
+                        if (!LaunchService.TryPrepare(target, out var psi, out var error)) return error;
+                        token.ThrowIfCancellationRequested();
+                        using var process = Dispatch(psi);
+                        return (string?)null;
+                    }, token).WaitAsync(token);
+                    failure = dispatched;
+                    if (failure == null) result.LaunchedTargets++;
                 }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) { failure = ex.Message; }
                 if (failure != null) { result.Failures.Add(target.DisplayLabel + ": " + failure); log.Write("Launch failed: {0}", failure); }
                 progress?.Report(new LaunchProgress { CompletedTargets = ++completed, TotalTargets = targets.Count, CurrentLabel = target.DisplayLabel, Error = failure });
                 await Cadence(token);
@@ -51,4 +56,3 @@ public sealed class LaunchProgress
     public string? CurrentLabel { get; set; }
     public string? Error { get; set; }
 }
-

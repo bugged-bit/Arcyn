@@ -7,21 +7,21 @@
         Width="920"
         Height="490"
         WindowStyle="None"
-        Background="#FF0A0A0A"
+        Background="{DynamicResource LiteralBrushFF0A0A0A}"
         ShowInTaskbar="False"
         Topmost="True"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
-        FontFamily="{StaticResource UIFont}"
+        FontFamily="{DynamicResource UIFont}"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
         <DataTemplate x:Key="ModeCardTemplate">
-            <Button Style="{StaticResource WorkstationPanelStyle}"
+            <Button Style="{DynamicResource WorkstationPanelStyle}"
                     Click="ModeButton_Click"
                     Tag="{Binding}"
-                    MinHeight="94"
+                    MinHeight="{DynamicResource CardHeight}"
                     Margin="0">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -29,18 +29,18 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Border Background="#2AD64545" CornerRadius="2,0,0,2">
+                    <Border Background="{Binding AccentTintBrush}" CornerRadius="2,0,0,2">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding IndexLabel}"
-                                       FontSize="14"
+                                       FontSize="{DynamicResource FontSize14}"
                                        FontWeight="Bold"
-                                       Foreground="#D8F08080"
+                                       Foreground="{DynamicResource LiteralBrushD8F08080}"
                                        HorizontalAlignment="Center" />
                             <Ellipse Width="3"
                                      Height="3"
                                      Margin="0,2,0,0"
-                                     Fill="{StaticResource AccentBrightBrush}"
-                                     Effect="{StaticResource GlowAccentSharp}" />
+                                     Fill="{DynamicResource AccentBrightBrush}"
+                                     Effect="{DynamicResource GlowAccentSharp}" />
                         </StackPanel>
                     </Border>
 
@@ -61,31 +61,31 @@
 
                             <StackPanel>
                                 <TextBlock Text="{Binding Label}"
-                                           FontSize="15"
+                                           FontSize="{DynamicResource FontSize15}"
                                            FontWeight="Bold"
-                                           Foreground="{StaticResource TextBrightBrush}" />
+                                           Foreground="{DynamicResource TextBrightBrush}" />
                                 <TextBlock Text="{Binding Subtitle}"
-                                           FontSize="8"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           FontSize="{DynamicResource FontSize8}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            Margin="0,1,0,0" />
                             </StackPanel>
 
                             <TextBlock Grid.Column="1"
                                        Text="{Binding StateLabel}"
-                                       FontSize="8"
-                                       Foreground="{StaticResource AccentBrush}"
+                                       FontSize="{DynamicResource FontSize8}"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        VerticalAlignment="Top"
                                        Margin="0,1,10,0" />
 
                             <Border Grid.Column="2"
                                     BorderThickness="1"
-                                    BorderBrush="{StaticResource BorderSubtleBrush}"
-                                    Background="#18000000"
+                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                    Background="{DynamicResource LiteralBrush18000000}"
                                     Padding="6,1"
                                     CornerRadius="2">
                                 <TextBlock Text="{Binding ProcessLabel}"
-                                           FontSize="7"
-                                           Foreground="{StaticResource TextPrimaryBrush}" />
+                                           FontSize="{DynamicResource FontSize7}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" />
                             </Border>
                         </Grid>
 
@@ -100,32 +100,32 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Text="{Binding SessionLabel}"
-                                       FontSize="7"
-                                       Foreground="{StaticResource TextMutedBrush}" />
+                                       FontSize="{DynamicResource FontSize7}"
+                                       Foreground="{DynamicResource TextMutedBrush}" />
                             <TextBlock Grid.Column="1"
                                        Text="|"
-                                       FontSize="7"
+                                       FontSize="{DynamicResource FontSize7}"
                                        Margin="6,0"
-                                       Foreground="{StaticResource AccentBrush}"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        Opacity="0.2" />
                             <TextBlock Grid.Column="2"
                                        Text="{Binding TypeLabel}"
-                                       FontSize="7"
-                                       Foreground="{StaticResource TextDimBrush}" />
+                                       FontSize="{DynamicResource FontSize7}"
+                                       Foreground="{DynamicResource TextDimBrush}" />
                             <TextBlock Grid.Column="3"
                                        Text="|"
-                                       FontSize="7"
+                                       FontSize="{DynamicResource FontSize7}"
                                        Margin="6,0"
-                                       Foreground="{StaticResource AccentBrush}"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        Opacity="0.2" />
                             <TextBlock Grid.Column="4"
                                        Text="{Binding LastOutcomeLabel}"
-                                       FontSize="7"
-                                       Foreground="{StaticResource TextDimBrush}" />
+                                       FontSize="{DynamicResource FontSize7}"
+                                       Foreground="{DynamicResource TextDimBrush}" />
                             <TextBlock Grid.Column="5"
                                        Text="{Binding LaunchCountLabel}"
-                                       FontSize="7"
-                                       Foreground="{StaticResource TextMutedBrush}" />
+                                       FontSize="{DynamicResource FontSize7}"
+                                       Foreground="{DynamicResource TextMutedBrush}" />
                         </Grid>
 
                         <ItemsControl Grid.Row="2"
@@ -142,16 +142,16 @@
                                             Padding="5,1"
                                             CornerRadius="2"
                                             BorderThickness="1"
-                                            BorderBrush="{StaticResource BorderSubtleBrush}"
-                                            Background="#14000000">
+                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                            Background="{DynamicResource LiteralBrush14000000}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text=">"
-                                                       FontSize="7"
-                                                       Foreground="{StaticResource AccentBrush}"
+                                                       FontSize="{DynamicResource FontSize7}"
+                                                       Foreground="{DynamicResource AccentBrush}"
                                                        Margin="0,0,3,0" />
                                             <TextBlock Text="{Binding DisplayLabel}"
-                                                       FontSize="7"
-                                                       Foreground="{StaticResource TextDimBrush}" />
+                                                       FontSize="{DynamicResource FontSize7}"
+                                                       Foreground="{DynamicResource TextDimBrush}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -168,25 +168,25 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Rectangle Width="90"
                                            Height="1"
-                                           Fill="{StaticResource BorderSubtleBrush}"
+                                           Fill="{DynamicResource BorderSubtleBrush}"
                                            VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding LastLaunchLabel}"
-                                           FontSize="7"
+                                           FontSize="{DynamicResource FontSize7}"
                                            Margin="8,0,0,0"
-                                           Foreground="{StaticResource TextMutedBrush}" />
+                                           Foreground="{DynamicResource TextMutedBrush}" />
                             </StackPanel>
 
                             <TextBlock Grid.Column="1"
                                        Text="{Binding ShortcutHint}"
-                                       FontSize="7"
+                                       FontSize="{DynamicResource FontSize7}"
                                        Margin="0,0,10,0"
-                                       Foreground="{StaticResource TextMutedBrush}" />
+                                       Foreground="{DynamicResource TextMutedBrush}" />
 
                             <TextBlock Grid.Column="2"
                                        Text="LAUNCH"
-                                       FontSize="8"
+                                       FontSize="{DynamicResource FontSize8}"
                                        FontWeight="SemiBold"
-                                       Foreground="{StaticResource AccentBrush}" />
+                                       Foreground="{DynamicResource AccentBrush}" />
                         </Grid>
                     </Grid>
                 </Grid>
@@ -197,9 +197,9 @@
     <Grid x:Name="RootGrid" Background="Transparent" MouseDown="RootGrid_MouseDown">
         <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" />
         <Rectangle x:Name="AmbientGlow" Style="{StaticResource AmbientGlow}" />
-        <Rectangle x:Name="StartupFlash" Fill="#D64545" Opacity="0" IsHitTestVisible="False" />
-        <Rectangle Style="{StaticResource Scanlines}" />
-        <Rectangle Style="{StaticResource Vignette}" />
+        <Rectangle x:Name="StartupFlash" Fill="{DynamicResource LiteralBrushD64545}" Opacity="0" IsHitTestVisible="False" />
+        <Rectangle x:Name="ScanlineLayer" Style="{StaticResource Scanlines}" />
+        <Rectangle x:Name="VignetteLayer" Style="{StaticResource Vignette}" />
         <Canvas x:Name="TrailCanvas" IsHitTestVisible="False" Panel.ZIndex="100" />
 
         <Grid x:Name="ShellHost" Margin="16,12">
@@ -209,10 +209,10 @@
                     Height="6"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Background="#D6080808"
+                    Background="{DynamicResource LiteralBrushD6080808}"
                     BorderThickness="1"
-                    BorderBrush="{StaticResource BorderGlowBrush}"
-                    Effect="{StaticResource GlowAccent}">
+                    BorderBrush="{DynamicResource BorderGlowBrush}"
+                    Effect="{DynamicResource GlowAccent}">
                 <Grid>
                     <Grid x:Name="BootOverlay" Margin="16,12" Opacity="0" IsHitTestVisible="False" Panel.ZIndex="20">
                         <Grid.RowDefinitions>
@@ -232,32 +232,32 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"
                                        Text="+-- [BOOT]: ARCYN --"
-                                       FontSize="9"
-                                       Foreground="{StaticResource TextDimBrush}"
+                                       FontSize="{DynamicResource FontSize9}"
+                                       Foreground="{DynamicResource TextDimBrush}"
                                        VerticalAlignment="Center" />
                             <TextBlock Grid.Column="2"
                                        Text="-- v1.0 --+"
-                                       FontSize="9"
-                                       Foreground="{StaticResource TextDimBrush}"
+                                       FontSize="{DynamicResource FontSize9}"
+                                       Foreground="{DynamicResource TextDimBrush}"
                                        VerticalAlignment="Center" />
                             <Rectangle Grid.Column="1"
                                        Height="1"
-                                       Fill="{StaticResource BorderSubtleBrush}"
+                                       Fill="{DynamicResource BorderSubtleBrush}"
                                        VerticalAlignment="Center"
                                        Margin="4,0" />
                         </Grid>
 
                         <TextBlock x:Name="BootTitle"
                                    Grid.Row="1"
-                                   FontSize="20"
+                                   FontSize="{DynamicResource FontSize20}"
                                    FontWeight="Light"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,4" />
                         <TextBlock x:Name="BootSubtitle"
                                    Grid.Row="2"
-                                   FontSize="9"
-                                   Foreground="{StaticResource TextDimBrush}"
+                                   FontSize="{DynamicResource FontSize9}"
+                                   Foreground="{DynamicResource TextDimBrush}"
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,14" />
 
@@ -268,11 +268,11 @@
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0"
                                     Height="2"
-                                    Background="#08000000"
+                                    Background="{DynamicResource LiteralBrush08000000}"
                                     BorderThickness="1"
-                                    BorderBrush="{StaticResource BorderSubtleBrush}">
+                                    BorderBrush="{DynamicResource BorderSubtleBrush}">
                                 <Rectangle x:Name="BootProgress"
-                                           Fill="{StaticResource AccentBrightBrush}"
+                                           Fill="{DynamicResource AccentBrightBrush}"
                                            HorizontalAlignment="Stretch">
                                     <Rectangle.RenderTransform>
                                         <ScaleTransform ScaleX="0" />
@@ -281,17 +281,17 @@
                             </Border>
                             <TextBlock x:Name="BootPercent"
                                        Grid.Column="1"
-                                       FontSize="9"
-                                       Foreground="{StaticResource TextDimBrush}"
+                                       FontSize="{DynamicResource FontSize9}"
+                                       Foreground="{DynamicResource TextDimBrush}"
                                        Margin="10,0,0,0"
                                        Text="0%" />
                         </Grid>
 
                         <TextBlock x:Name="BootLog"
                                    Grid.Row="4"
-                                   FontSize="9"
+                                   FontSize="{DynamicResource FontSize9}"
                                    FontWeight="Light"
-                                   Foreground="{StaticResource TextDimBrush}"
+                                   Foreground="{DynamicResource TextDimBrush}"
                                    Margin="0,0,0,8"
                                    LineHeight="15" />
 
@@ -303,22 +303,22 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="BootReady"
                                        Grid.Column="0"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource FontSize11}"
                                        FontWeight="Light"
-                                       Foreground="{StaticResource AccentBrightBrush}"
+                                       Foreground="{DynamicResource AccentBrightBrush}"
                                        Opacity="0"
                                        Text="SYSTEM READY"
                                        HorizontalAlignment="Left" />
                             <TextBlock x:Name="BootCpu"
                                        Grid.Column="1"
-                                       FontSize="8"
-                                       Foreground="{StaticResource TextMutedBrush}"
+                                       FontSize="{DynamicResource FontSize8}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
                                        Text="CPU: --%"
                                        Margin="0,0,10,0" />
                             <TextBlock x:Name="BootRam"
                                        Grid.Column="2"
-                                       FontSize="8"
-                                       Foreground="{StaticResource TextMutedBrush}"
+                                       FontSize="{DynamicResource FontSize8}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
                                        Text="RAM: --%" />
                         </Grid>
                     </Grid>
@@ -333,7 +333,7 @@
 
                         <Border Grid.Row="0"
                                 CornerRadius="2"
-                                Background="#12000000"
+                                Background="{DynamicResource LiteralBrush12000000}"
                                 Padding="8,3">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -351,68 +351,68 @@
 
                                 <Ellipse Width="4"
                                          Height="4"
-                                         Fill="{StaticResource AccentBrightBrush}"
+                                         Fill="{DynamicResource AccentBrightBrush}"
                                          VerticalAlignment="Center"
-                                         Effect="{StaticResource GlowAccentSoft}" />
+                                         Effect="{DynamicResource GlowAccentSoft}" />
                                 <TextBlock Grid.Column="1"
                                            Text="ARCYN"
-                                           FontSize="9"
+                                           FontSize="{DynamicResource FontSize9}"
                                            FontWeight="Bold"
                                            Margin="6,0,10,0"
-                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
                                            VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="2"
                                            x:Name="ModeCountRun"
-                                           FontSize="8"
+                                           FontSize="{DynamicResource FontSize8}"
                                            Margin="0,0,10,0"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            VerticalAlignment="Center"
                                            Text="00" />
                                 <TextBlock Grid.Column="3"
                                            x:Name="PhaseLabel"
-                                           FontSize="8"
+                                           FontSize="{DynamicResource FontSize8}"
                                            Margin="0,0,14,0"
-                                           Foreground="{StaticResource AccentBrush}"
+                                           Foreground="{DynamicResource AccentBrush}"
                                            VerticalAlignment="Center"
                                            Text="BOOT" />
                                 <TextBlock Grid.Column="4"
                                            x:Name="HeaderCpu"
-                                           FontSize="8"
+                                           FontSize="{DynamicResource FontSize8}"
                                            Margin="0,0,10,0"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            VerticalAlignment="Center"
                                            Text="CPU --%" />
                                 <TextBlock Grid.Column="5"
                                            x:Name="HeaderRam"
-                                           FontSize="8"
+                                           FontSize="{DynamicResource FontSize8}"
                                            Margin="0,0,10,0"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            VerticalAlignment="Center"
                                            Text="RAM --%" />
                                 <TextBlock Grid.Column="6"
                                            x:Name="HeaderUptime"
-                                           FontSize="8"
+                                           FontSize="{DynamicResource FontSize8}"
                                            Margin="0,0,10,0"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            VerticalAlignment="Center"
                                            Text="UP 00:00:00" />
                                 <TextBlock Grid.Column="7"
                                            x:Name="HeaderSys"
-                                           FontSize="8"
+                                           FontSize="{DynamicResource FontSize8}"
                                            FontWeight="Bold"
                                            Margin="0,0,10,0"
-                                           Foreground="{StaticResource AccentBrightBrush}"
+                                           Foreground="{DynamicResource AccentBrightBrush}"
                                            VerticalAlignment="Center"
                                            Text="ONLINE" />
                                 <Rectangle Grid.Column="8"
                                            Height="1"
-                                           Fill="{StaticResource BorderSubtleBrush}"
+                                           Fill="{DynamicResource BorderSubtleBrush}"
                                            VerticalAlignment="Center"
                                            Margin="0,0,10,0" />
                                 <TextBlock Grid.Column="9"
                                            x:Name="TimeDisplay"
-                                           FontSize="8"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           FontSize="{DynamicResource FontSize8}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            VerticalAlignment="Center"
                                            Text="00:00:00" />
                             </Grid>
@@ -422,8 +422,8 @@
                             <Border x:Name="ModePanel"
                                     CornerRadius="3"
                                     BorderThickness="1"
-                                    BorderBrush="{StaticResource BorderSubtleBrush}"
-                                    Background="#E9080808"
+                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                    Background="{DynamicResource LiteralBrushE9080808}"
                                     Padding="8">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled"
@@ -438,8 +438,8 @@
                                     Opacity="0"
                                     Visibility="Collapsed"
                                     BorderThickness="1"
-                                    BorderBrush="{StaticResource BorderSubtleBrush}"
-                                    Background="#E9080808"
+                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                    Background="{DynamicResource LiteralBrushE9080808}"
                                     Padding="10">
                                  <Grid>
                                     <Grid.RowDefinitions>
@@ -460,22 +460,22 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="â–² LAUNCH SEQUENCE"
-                                                   FontSize="9" FontWeight="Bold"
-                                                   Foreground="{StaticResource AccentBrightBrush}"
+                                                   FontSize="{DynamicResource FontSize9}" FontWeight="Bold"
+                                                   Foreground="{DynamicResource AccentBrightBrush}"
                                                    VerticalAlignment="Center" />
                                         <Ellipse Width="4" Height="4"
-                                                 Fill="{StaticResource AccentBrightBrush}"
-                                                 Effect="{StaticResource GlowAccentSharp}"
+                                                 Fill="{DynamicResource AccentBrightBrush}"
+                                                 Effect="{DynamicResource GlowAccentSharp}"
                                                  Margin="6,0" VerticalAlignment="Center" />
                                         <Rectangle Grid.Column="2"
                                                    Height="1"
-                                                   Fill="{StaticResource BorderSubtleBrush}"
+                                                   Fill="{DynamicResource BorderSubtleBrush}"
                                                    VerticalAlignment="Center"
                                                    Margin="0,0,8,0" />
                                         <TextBlock Grid.Column="3"
                                                    x:Name="LaunchTargetCount"
-                                                   FontSize="8"
-                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   FontSize="{DynamicResource FontSize8}"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
                                                    VerticalAlignment="Center"
                                                    Text="00 TARGETS" />
                                     </Grid>
@@ -488,22 +488,22 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                             <TextBlock x:Name="LaunchModeLabel"
-                                                       FontSize="22" FontWeight="Light"
-                                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                                       FontSize="{DynamicResource FontSize22}" FontWeight="Light"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
                                                        Text="" />
                                             <TextBlock x:Name="LaunchSessionLabel"
-                                                       FontSize="9" Margin="0,2,0,0"
-                                                       Foreground="{StaticResource TextDimBrush}"
+                                                       FontSize="{DynamicResource FontSize9}" Margin="0,2,0,0"
+                                                       Foreground="{DynamicResource TextDimBrush}"
                                                        Text="" />
                                         </StackPanel>
                                         <Grid Grid.Column="1" VerticalAlignment="Center">
                                             <Ellipse Width="36" Height="36"
-                                                     Stroke="{StaticResource BorderSubtleBrush}"
+                                                     Stroke="{DynamicResource BorderSubtleBrush}"
                                                      StrokeThickness="0.5" Opacity="0.3" />
                                             <Viewbox Width="28" Height="28">
                                                 <Canvas Width="28" Height="28">
                                                     <Path x:Name="SpinnerArc"
-                                                          Stroke="{StaticResource AccentBrightBrush}"
+                                                          Stroke="{DynamicResource AccentBrightBrush}"
                                                           StrokeThickness="2.5"
                                                           StrokeEndLineCap="Round"
                                                           StrokeStartLineCap="Round"
@@ -522,17 +522,17 @@
 
                                     <!-- Row 2: Target feed -->
                                     <Border Grid.Row="2" CornerRadius="2"
-                                            Background="#0A000000"
+                                            Background="{DynamicResource LiteralBrush0A000000}"
                                             BorderThickness="1"
-                                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
                                             Padding="8,6" MinHeight="56">
                                         <ScrollViewer x:Name="LaunchFeedScroll"
                                                       VerticalScrollBarVisibility="Hidden"
                                                       HorizontalScrollBarVisibility="Disabled"
                                                       Background="Transparent">
                                             <TextBlock x:Name="LaunchFeedText"
-                                                       FontSize="8"
-                                                       Foreground="{StaticResource TextDimBrush}"
+                                                       FontSize="{DynamicResource FontSize8}"
+                                                       Foreground="{DynamicResource TextDimBrush}"
                                                        LineHeight="14" />
                                         </ScrollViewer>
                                     </Border>
@@ -547,40 +547,40 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock x:Name="LaunchCpu"
                                                    Grid.Column="0"
-                                                   FontSize="8"
-                                                   Foreground="{StaticResource TextDimBrush}"
+                                                   FontSize="{DynamicResource FontSize8}"
+                                                   Foreground="{DynamicResource TextDimBrush}"
                                                    Text="CPU --%" />
                                         <TextBlock x:Name="LaunchRam"
                                                    Grid.Column="1"
-                                                   FontSize="8"
+                                                   FontSize="{DynamicResource FontSize8}"
                                                    Margin="10,0,0,0"
-                                                   Foreground="{StaticResource TextDimBrush}"
+                                                   Foreground="{DynamicResource TextDimBrush}"
                                                    Text="RAM --%" />
                                         <TextBlock x:Name="LaunchStatus"
                                                    Grid.Column="2"
-                                                   FontSize="9"
+                                                   FontSize="{DynamicResource FontSize9}"
                                                    FontWeight="Medium"
                                                    HorizontalAlignment="Right"
-                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                                    Text="Launching" />
                                         <TextBlock x:Name="LaunchProgressText"
                                                    Grid.Column="3"
-                                                   FontSize="8"
+                                                   FontSize="{DynamicResource FontSize8}"
                                                    Margin="12,0,0,0"
-                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Foreground="{DynamicResource AccentBrush}"
                                                    Text="PROC 00/00" />
                                     </Grid>
 
                                     <!-- Row 4: Segmented progress bar -->
                                     <Border Grid.Row="4" Height="6" CornerRadius="2"
-                                            Background="#06000000"
+                                            Background="{DynamicResource LiteralBrush06000000}"
                                             BorderThickness="0.5"
-                                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
                                             Padding="1">
                                         <Grid>
-                                            <Rectangle Fill="{StaticResource BorderSubtleBrush}"
+                                            <Rectangle Fill="{DynamicResource BorderSubtleBrush}"
                                                        RadiusX="1" RadiusY="1" Opacity="0.3" />
-                                            <Rectangle Fill="{StaticResource AccentBrush}"
+                                            <Rectangle Fill="{DynamicResource AccentBrush}"
                                                        RadiusX="1" RadiusY="1"
                                                        HorizontalAlignment="Stretch"
                                                        RenderTransformOrigin="0,0.5">
@@ -598,13 +598,13 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="ESC aborts Â· targets launch sequentially"
-                                                   FontSize="7"
-                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   FontSize="{DynamicResource FontSize7}"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
                                                    Opacity="0.5" />
                                         <TextBlock Grid.Column="1"
                                                    x:Name="LaunchRecent"
-                                                   FontSize="7"
-                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   FontSize="{DynamicResource FontSize7}"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
                                                    Text="" />
                                     </Grid>
                                 </Grid>
@@ -619,34 +619,34 @@
                             </Grid.ColumnDefinitions>
 
                             <Border CornerRadius="2"
-                                    Background="#12000000"
+                                    Background="{DynamicResource LiteralBrush12000000}"
                                     Padding="6,2"
                                     Margin="0,0,4,0">
                                 <TextBlock x:Name="RuntimeStrip"
-                                           FontSize="7"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           FontSize="{DynamicResource FontSize7}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            Text="RUNTIME 00:00:00" />
                             </Border>
 
                             <Border Grid.Column="1"
                                     CornerRadius="2"
-                                    Background="#12000000"
+                                    Background="{DynamicResource LiteralBrush12000000}"
                                     Padding="6,2"
                                     Margin="2,0,2,0">
                                 <TextBlock x:Name="ProcessStrip"
-                                           FontSize="7"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           FontSize="{DynamicResource FontSize7}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            Text="PROC 00  -  ACTIVE STANDBY" />
                             </Border>
 
                             <Border Grid.Column="2"
                                     CornerRadius="2"
-                                    Background="#12000000"
+                                    Background="{DynamicResource LiteralBrush12000000}"
                                     Padding="6,2"
                                     Margin="4,0,0,0">
                                 <TextBlock x:Name="SystemStrip"
-                                           FontSize="7"
-                                           Foreground="{StaticResource TextDimBrush}"
+                                           FontSize="{DynamicResource FontSize7}"
+                                           Foreground="{DynamicResource TextDimBrush}"
                                            Text="SYS ONLINE  -  HUD STABLE" />
                             </Border>
                         </Grid>
@@ -658,15 +658,15 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="FooterHint"
                                        Grid.Column="0"
-                                       FontSize="7"
-                                       Foreground="{StaticResource TextDimBrush}"
+                                       FontSize="{DynamicResource FontSize7}"
+                                       Foreground="{DynamicResource TextDimBrush}"
                                        Opacity="0.45"
                                        VerticalAlignment="Center"
                                        Text="[1-3] select  -  ENTER launch  -  ESC close" />
                             <TextBlock x:Name="FooterIdle"
                                        Grid.Column="1"
-                                       FontSize="7"
-                                       Foreground="{StaticResource TextDimBrush}"
+                                       FontSize="{DynamicResource FontSize7}"
+                                       Foreground="{DynamicResource TextDimBrush}"
                                        Opacity="0.30"
                                        VerticalAlignment="Center" />
                         </Grid>
