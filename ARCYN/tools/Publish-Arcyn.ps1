@@ -17,8 +17,6 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\scripts') -Destination $rele
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\LICENSE'), (Join-Path $PSScriptRoot '..\..\README.md') -Destination $release
 New-Item -ItemType Directory -Path (Join-Path $release 'docs\performance') -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\implementation-validation.md') -Destination (Join-Path $release 'docs')
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\headless-validation.md') -Destination (Join-Path $release 'docs')
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\net10-migration.md') -Destination (Join-Path $release 'docs')
 Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\performance') -Filter '*.json' -File | Copy-Item -Destination (Join-Path $release 'docs\performance')
 & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $release
 Compress-Archive -LiteralPath $release -DestinationPath ($release + '.zip')

@@ -7,17 +7,7 @@ public sealed class ModeService
     private readonly List<ModeConfig> _modes;
     private readonly AppState _state;
 
-    public int Count => _modes.Count;
-    public IReadOnlyList<ModeConfig> Modes => _modes;
-    public bool HasSelection => _state.SelectedModeIndex >= 0 && _state.SelectedModeIndex < _modes.Count;
-
-    public int SelectedIndex
-    {
-        get => _state.SelectedModeIndex;
-        set => _state.SelectedModeIndex = value;
-    }
-
-    public ModeConfig? SelectedMode => HasSelection ? _modes[_state.SelectedModeIndex] : null;
+    private bool HasSelection => _state.SelectedModeIndex >= 0 && _state.SelectedModeIndex < _modes.Count;
 
     public string ActiveLabel
     {
@@ -29,18 +19,11 @@ public sealed class ModeService
     }
 
     public int TotalProcesses => _modes.Sum(m => m.ProcessCount);
-    public string ShortcutHint => Count == 0 ? "[1]" : Count == 1 ? "[1]" : $"[1-{Count}]";
 
     public ModeService(AppState state, List<ModeConfig>? modes = null)
     {
         _state = state;
         _modes = modes ?? [];
-    }
-
-    public void Load(List<ModeConfig> modes)
-    {
-        if (!ReferenceEquals(_modes, modes)) { _modes.Clear(); _modes.AddRange(modes); }
-        Reindex();
     }
 
     public void Add(ModeConfig mode)
@@ -80,13 +63,6 @@ public sealed class ModeService
         Reindex();
         return true;
     }
-
-    public ModeConfig? Get(int index)
-    {
-        return index >= 0 && index < _modes.Count ? _modes[index] : null;
-    }
-
-    public int IndexOf(ModeConfig mode) => _modes.IndexOf(mode);
 
     private void Reindex()
     {

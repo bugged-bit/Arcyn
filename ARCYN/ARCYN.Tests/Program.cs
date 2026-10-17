@@ -81,7 +81,7 @@ internal static partial class Program
             idle.Reset(); Check(!idle.Expired(10), "returning to Ready resets idle deadline");
             var workspaces = new List<ModeConfig> { new() { Name = "ONE" }, new() { Name = "TWO" } };
             var manager = new ModeService(new AppState(), workspaces);
-            manager.Load(workspaces); manager.Add(new() { Name = "THREE" }); manager.MoveUp(2); manager.RemoveAt(0);
+            manager.Add(new() { Name = "THREE" }); manager.MoveUp(2); manager.RemoveAt(0);
             Check(workspaces.Count == 2 && workspaces[0].Name == "THREE" && workspaces.Select(m => m.Index).SequenceEqual(new[] { 1, 2 }), "workspace add, reorder and delete preserve the shared configuration list");
             LaunchChecks().GetAwaiter().GetResult();
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
@@ -92,11 +92,9 @@ internal static partial class Program
             PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/ARCYN;component/Styles/Theme.xaml", UriKind.Relative) });
             var setup = new SetupWindow(service);
-            using var legacyLoading = new LoadingWindow(config.Modes[0], 0);
-            Check(new System.Windows.Interop.WindowInteropHelper(setup).Handle == IntPtr.Zero &&
-                new System.Windows.Interop.WindowInteropHelper(legacyLoading).Handle == IntPtr.Zero,
-                "setup and legacy loading XAML initialize without windows or runtime resource errors");
-            setup.Close(); legacyLoading.Close();
+            Check(new System.Windows.Interop.WindowInteropHelper(setup).Handle == IntPtr.Zero,
+                "setup XAML initializes without a window or runtime resource errors");
+            setup.Close();
             using var window = new MainWindow(service, config);
             var dashboard = (Grid)window.FindName("DashboardGrid");
             typeof(MainWindow).GetMethod("LoadConfig", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(window, null);

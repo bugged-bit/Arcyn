@@ -62,4 +62,4 @@ The regression runner opens no windows or target applications. Publishing create
 
 See [validation and performance notes](docs/implementation-validation.md). WPF remains the framework; Windows interop stays in the existing services. Linux support and a framework migration are outside this change.
 
-The standalone artifact bundles .NET 10 LTS runtime 10.0.13; the development SDK is pinned to 10.0.402. Updating a self-contained release requires republishing its bundled runtime. The validated .NET 8 artifact remains separately recoverable. See the [migration and original-plan checklist](docs/net10-migration.md) for measured comparisons and release-readiness limits.
+The standalone artifact bundles .NET 10 LTS runtime 10.0.13; the development SDK is pinned to 10.0.402. Updating a self-contained release requires republishing its bundled runtime. The known-good .NET 8 checkpoint is Git tag `arcyn-net8-validated` (`01b75e9`), with one retained local release ZIP. Use Git for source recovery; build outputs are disposable. Keep user configuration and valuable uncommitted files outside cleanup operations.
