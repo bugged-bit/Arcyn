@@ -57,11 +57,11 @@ The [workspace orchestration comparison](performance/20261018-workspace-orchestr
 | Unshown HUD construction | 199.25 ms | 206.32 ms |
 | Validate ten workspaces, 1,000 iterations | 56.96 ms / 11,064,504 allocated bytes | 110.05 ms / 27,727,656 allocated bytes |
 | Application assembly | 2,637,824 bytes | 2,758,144 bytes |
-| Local standalone ZIP | 66,707,540 bytes | 66,765,761 bytes |
+| Local standalone ZIP | 66,707,540 bytes | 66,768,657 bytes |
 
 Elapsed ranges overlap (2.23–3.89 s baseline; 2.25–3.28 s changed). Unchanged telemetry, target preparation and particle code also vary; CPU is quantized and the desktop remained in use, so these results do not establish a whole-app speed regression or gain. Added stable IDs, serialized policies and trust-boundary validation explain the repeatable configuration allocation increase: approximately 16.7 KB per ten-workspace load. Avoiding unnecessary graph construction for simple workspaces reduced the initial changed allocation from 40.7 MB to 27.7 MB across the 1,000-iteration fixture. No idle polling was added.
 
-Separately, 10,000 synthetic identity matches among 100 fake windows took 76.52 ms and 13,361,064 allocated bytes; 10,000 two-monitor layout calculations took 2.65 ms and 1,200,096 bytes. Native enumeration, responsiveness and placement costs remain unmeasured. The local standalone artifact passed package/runtime checks, helper self-test, and all four malformed-metadata rejection cases; metadata bytes were restored. ZIP measurements precede the final report edit and are not claims of byte-identical CI output.
+Separately, 10,000 synthetic identity matches among 100 fake windows took 76.52 ms and 13,361,064 allocated bytes; 10,000 two-monitor layout calculations took 2.65 ms and 1,200,096 bytes. Native enumeration, responsiveness and placement costs remain unmeasured. The local standalone artifact passed package/runtime checks, bundled example/schema checks, helper self-test, and all four malformed-metadata rejection cases; metadata bytes were restored. A missing schema also rejects before helper execution. ZIP measurements precede the final report edit and are not claims of byte-identical CI output.
 
 ## Pending release gates
 

@@ -715,8 +715,8 @@
   ],
   "localValidationPackage": {
     "baselineBytes": 66707540,
-    "currentBytes": 66765761,
-    "source": "1ecaa5cee558df6aa7719fe4ec855cce441db482",
-    "checks": "Standalone artifact validated, native helper self-test without registration, four malformed runtime-metadata cases rejected and bytes restored."
+    "currentBytes": 66768657,
+    "source": "c1071297e56bc7046ce0c7028c248608bd7d16b6",
+    "checks": "Standalone artifact and bundled example/schema validated; missing schema rejected before helper execution; native helper self-test without registration; four malformed runtime-metadata cases rejected and bytes restored."
   }
 }
