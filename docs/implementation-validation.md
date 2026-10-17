@@ -47,6 +47,22 @@ Hardware: i3-1115G4, four logical processors. Measurements attribute CPU/memory 
 
 The migration's self-contained ZIP was approximately 63.64 MiB versus 70.28 MiB for the retained .NET 8 checkpoint, about 9.45% smaller. Documentation/source cleanup can change final bytes. Unshown construction excludes startup/first paint/boot; particle ticks exclude pacing/presentation; harness memory includes runtime and fixtures. Budgets must follow controlled baselines, never guessed thresholds.
 
+The [workspace orchestration comparison](performance/20261018-workspace-orchestration.json) records five alternating process pairs against `59a05ba`, using the same benchmark source. These are harness medians, not live ARCYN budgets:
+
+| Measurement | Baseline | Workspace orchestration + UI |
+| --- | ---: | ---: |
+| Harness elapsed / process CPU | 2.40 / 2.45 s | 2.71 / 2.80 s |
+| Sampled peak private memory / working set | 37.93 / 82.48 MiB | 40.44 / 84.14 MiB |
+| Sampled peak handles | 362 | 362 |
+| Unshown HUD construction | 199.25 ms | 206.32 ms |
+| Validate ten workspaces, 1,000 iterations | 56.96 ms / 11,064,504 allocated bytes | 110.05 ms / 27,727,656 allocated bytes |
+| Application assembly | 2,637,824 bytes | 2,758,144 bytes |
+| Local standalone ZIP | 66,707,540 bytes | 66,765,761 bytes |
+
+Elapsed ranges overlap (2.23–3.89 s baseline; 2.25–3.28 s changed). Unchanged telemetry, target preparation and particle code also vary; CPU is quantized and the desktop remained in use, so these results do not establish a whole-app speed regression or gain. Added stable IDs, serialized policies and trust-boundary validation explain the repeatable configuration allocation increase: approximately 16.7 KB per ten-workspace load. Avoiding unnecessary graph construction for simple workspaces reduced the initial changed allocation from 40.7 MB to 27.7 MB across the 1,000-iteration fixture. No idle polling was added.
+
+Separately, 10,000 synthetic identity matches among 100 fake windows took 76.52 ms and 13,361,064 allocated bytes; 10,000 two-monitor layout calculations took 2.65 ms and 1,200,096 bytes. Native enumeration, responsiveness and placement costs remain unmeasured. The local standalone artifact passed package/runtime checks, helper self-test, and all four malformed-metadata rejection cases; metadata bytes were restored. ZIP measurements precede the final report edit and are not claims of byte-identical CI output.
+
 ## Pending release gates
 
 No visible application, configured workspace target or real hotkey is exercised by headless checks. A separately authorized GUI session must cover clean-machine startup, wizard/file-picker/keyboard interaction, real reuse and single-instance/broker behavior, application sizing restrictions, mixed-DPI and taskbar placement, disconnected displays, final foreground denial, UIPI/UAC, custom chrome/popups, accessibility extremes and complete cinematic comparison. Measure five cold and thirty warm launches, Ready CPU/private memory/working set, presentation/frame intervals and process/handle cleanup with consistent hardware, DPI, configuration and artifact. `Measure-Arcyn.ps1` requires explicit `-AllowVisibleLauncher`; do not run it while the desktop must remain uninterrupted. Workspace orchestration is implemented but is **not production-validated** until these native/GUI checks pass.
