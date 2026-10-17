@@ -20,6 +20,7 @@ internal static partial class Program
     private static int Main(string[] args)
     {
         if (args is ["--benchmark"]) return Benchmark();
+        if (args is ["--workspace-benchmark"]) return WorkspaceBenchmark();
         try { Run(); Console.WriteLine($"{_passed} checks passed on .NET {Environment.Version}; no launcher windows or applications opened."); return 0; }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
     }
@@ -84,6 +85,7 @@ internal static partial class Program
             manager.Add(new() { Name = "THREE" }); manager.MoveUp(2); manager.RemoveAt(0);
             Check(workspaces.Count == 2 && workspaces[0].Name == "THREE" && workspaces.Select(m => m.Index).SequenceEqual(new[] { 1, 2 }), "workspace add, reorder and delete preserve the shared configuration list");
             LaunchChecks().GetAwaiter().GetResult();
+            OrchestrationChecks(directory).GetAwaiter().GetResult();
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
             using var bindingOutput = new StringWriter();
@@ -182,6 +184,7 @@ internal static partial class Program
             using (var stream = File.Create(imagePath)) encoder.Save(stream);
             Check(new FileInfo(imagePath).Length > 5000, "HUD templates render offscreen without opening a window");
             ReviewChecks(directory, service, config, window);
+            WorkspaceEditorChecks(directory);
             bindingTrace.Flush();
             Check(bindingOutput.ToString().Length == 0, "offscreen HUD and editor bindings produce no warnings or errors");
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingTrace);

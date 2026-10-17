@@ -10,6 +10,9 @@ namespace ARCYN.UI.Models;
 
 public sealed class ModeConfig : INotifyPropertyChanged
 {
+    [JsonPropertyName("id")] public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    [JsonPropertyName("layout")] public List<WindowLayout> Layout { get; set; } = [];
+    [JsonPropertyName("actions")] public List<WorkspaceActionConfig> Actions { get; set; } = [];
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
     [JsonPropertyName("name")] public string Name { get => Label; set => Label = value; }
     [JsonPropertyName("description")] public string Description { get => Subtitle; set => Subtitle = value; }
@@ -27,9 +30,9 @@ public sealed class ModeConfig : INotifyPropertyChanged
     [JsonPropertyName("websites")] public List<string> Websites { get; set; } = [];
     [JsonPropertyName("folders")] public List<string> Folders { get; set; } = [];
     [JsonIgnore] public IEnumerable<TargetConfig> LaunchTargets => Targets
-        .Concat(Apps.Select(a => new TargetConfig { Cmd = a, LegacyCommandLine = true }))
-        .Concat(Websites.Select(a => new TargetConfig { Cmd = a }))
-        .Concat(Folders.Select(a => new TargetConfig { Cmd = "explorer.exe", Args = [a] }));
+        .Concat(Apps.Select((a, i) => new TargetConfig { Id = Id + ".app." + i, Cmd = a, LegacyCommandLine = true }))
+        .Concat(Websites.Select((a, i) => new TargetConfig { Id = Id + ".url." + i, Cmd = a, Kind = TargetKind.Url }))
+        .Concat(Folders.Select((a, i) => new TargetConfig { Id = Id + ".folder." + i, Cmd = "explorer.exe", Args = [a], Kind = TargetKind.Folder }));
     private string _label = string.Empty;
     private string _subtitle = string.Empty;
     private string _type = "default";
@@ -174,7 +177,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
         _launchCount++;
         _lastLaunchedAt = DateTime.Now;
         _lastLaunchOutcome = fullSuccess
-            ? "SYNCED"
+            ? "COMPLETE"
             : launchedTargets > 0
                 ? $"PARTIAL {launchedTargets:D2}/{totalTargets:D2}"
                 : "FAULT";
@@ -221,6 +224,13 @@ public sealed class ModeConfig : INotifyPropertyChanged
 
 public sealed class TargetConfig
 {
+    [JsonPropertyName("id")] public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    [JsonPropertyName("kind")] public TargetKind Kind { get; set; }
+    [JsonPropertyName("instance_policy")] public InstancePolicy InstancePolicy { get; set; }
+    [JsonPropertyName("match")] public WindowMatch? Match { get; set; }
+    [JsonPropertyName("readiness")] public Readiness Readiness { get; set; }
+    [JsonPropertyName("timeout_ms")] public int TimeoutMs { get; set; } = 30000;
+    [JsonPropertyName("depends_on")] public List<string> DependsOn { get; set; } = [];
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
     [JsonPropertyName("working_directory")] public string? WorkingDirectory { get; set; }
     [JsonIgnore] public bool LegacyCommandLine { get; set; }

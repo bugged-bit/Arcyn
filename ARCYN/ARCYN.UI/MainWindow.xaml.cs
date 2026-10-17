@@ -19,6 +19,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 {
     private readonly AppState _state = new();
     private readonly LogService _log;
+    private readonly LaunchOrchestrator _orchestrator;
+    private readonly Dictionary<string, string> _runReports = [];
     private readonly RenderService _render;
     private readonly Stopwatch _uptime = Stopwatch.StartNew();
     private readonly List<ModeConfig> _modes;
@@ -83,6 +85,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         Activated += (_, _) => ResetIdle();
 
         _log = new LogService();
+        _orchestrator = new LaunchOrchestrator(_log) { AuthorizeCommands = ReviewCommandsAsync };
         _render = new RenderService();
         _lifeCts = new CancellationTokenSource();
         _launchCts = new CancellationTokenSource();
@@ -390,24 +393,25 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
                 LaunchStatus.Text = "Launching" + new string('.', _launchDotIndex);
             };
             _launchDotTimer.Start();
-            LaunchTargetCount.Text = $"{mode.ProcessCount} TARGETS";
+            LaunchTargetCount.Text = $"{mode.ProcessCount + mode.Actions.Count} STEPS";
             LaunchFeedText.Text = "";
             var progress = new Progress<LaunchProgress>(p => {
                 if (_disposed || token.IsCancellationRequested) return;
-                LaunchFeedText.Text += $"> {p.CurrentLabel}{(p.Error == null ? "" : "  [" + p.Error + "]")}\n";
+                LaunchFeedText.Text += $"> {p.CurrentLabel}  [{p.Evidence}]{(p.Error == null ? "" : "  " + p.Error)}\n";
                 LaunchFeedScroll.ScrollToBottom();
                 SetLaunchProgress(p.CompletedTargets, p.TotalTargets);
             });
-            var result = await new LaunchOrchestrator(_log).LaunchModeAsync(mode, token, progress);
+            var result = await _orchestrator.LaunchModeAsync(mode, token, progress);
+            _runReports[mode.Id] = FormatReport(result);
             _launchDotTimer.Stop();
             if (result.Canceled || token.IsCancellationRequested) { await ReturnToReady(); return; }
-            LaunchStatus.Text = result.Success ? "Ready" : result.LaunchedTargets > 0 ? "Partial" : "Fault";
+            LaunchStatus.Text = result.Success ? "Complete" : result.CompletedSteps > 0 ? "Partial" : "Fault";
             LaunchStatus.Foreground = result.Success ? _textPrimaryBrush : _accentLightBrush;
-            mode.RecordLaunch(result.LaunchedTargets, result.TotalTargets, result.Success);
+            mode.RecordLaunch(result.CompletedSteps, result.TotalTargets, result.Success);
             UpdateOperationalChrome();
-            if (result.Failures.Count > 0) LaunchRecent.Text = "Issue: " + string.Join(", ", result.Failures);
+            if (result.Failures.Count + result.Warnings.Count > 0) LaunchRecent.Text = "Issue: " + string.Join(", ", result.Failures.Concat(result.Warnings));
             await DelaySafe(result.Success ? 2000 : 5000, token);
-            if (token.IsCancellationRequested || !_config.Behavior.CloseOnLaunch) await ReturnToReady();
+            if (token.IsCancellationRequested || !_config.Behavior.CloseOnLaunch || !result.Success) await ReturnToReady();
             else if (!_disposed) Close();
         }
         catch (OperationCanceledException) { await ReturnToReady(); }
@@ -596,7 +600,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         if (e.Key == Key.Escape)
         {
-            if (_state.Phase is AppPhase.Launching or AppPhase.Selecting)
+            if (_isLaunching || _state.Phase is AppPhase.Launching or AppPhase.Selecting)
             {
                 LaunchStatus.Text = "Cancelling...";
                 _launchCts?.Cancel();

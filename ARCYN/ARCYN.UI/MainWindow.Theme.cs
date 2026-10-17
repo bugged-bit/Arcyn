@@ -59,9 +59,7 @@ public partial class MainWindow
         if (handle != IntPtr.Zero)
             try
             {
-                var bg = ThemeService.ParseColor(theme.Background);
-                var acrylicColor = 0xE2000000u | (uint)bg.B << 16 | (uint)bg.G << 8 | bg.R;
-                NativeMethods.EnableAcrylic(handle, acrylicColor, theme.Acrylic && !theme.ReducedEffects);
+                NativeMethods.EnableAcrylic(handle, theme.Acrylic && !theme.ReducedEffects);
             }
             catch (Exception ex) { _log.Write("Acrylic: {0}", ex.Message); }
         if (_runtimeStarted || _state.Phase == AppPhase.Ready) BuildDashboard();

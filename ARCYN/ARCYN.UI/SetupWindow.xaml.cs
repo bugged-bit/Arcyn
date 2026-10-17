@@ -37,7 +37,7 @@ public partial class SetupWindow : Window
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            try { NativeMethods.EnableAcrylic(hwnd, 0xE20A0A0A); } catch { }
+            try { NativeMethods.EnableAcrylic(hwnd); } catch { }
 
             _particles = new ParticleEngine(ParticleCanvas);
             _particles.Start();

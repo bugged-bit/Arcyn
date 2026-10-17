@@ -12,6 +12,7 @@ public sealed class ConfigService
         WriteIndented = true, PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower, allowIntegerValues: false) },
         TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { static type => {
             if (type.Type != typeof(ModeConfig)) return;
             // Read both generations of field names; write each value only once.
@@ -89,7 +90,7 @@ public sealed class ConfigService
     }
     public static void Validate(ArcynConfig config)
     {
-        if (config.SchemaVersion != 1) throw new InvalidDataException("Unsupported configuration schema version. This file was preserved.");
+        if (config.SchemaVersion is not (1 or 2)) throw new InvalidDataException("Unsupported configuration schema version. This file was preserved.");
         if (config.Modes == null || config.Modes.Any(m => m == null)) throw new InvalidDataException("Modes must be a list of objects.");
         config.Theme ??= new(); config.Behavior ??= new();
         ThemeService.Validate(config.Theme);
@@ -103,13 +104,16 @@ public sealed class ConfigService
                 mode.Apps.Any(a => a == null) || mode.Websites.Any(a => a == null) || mode.Folders.Any(a => a == null))
                 throw new InvalidDataException("Targets and arguments must contain valid objects and strings.");
             mode.Index = i + 1;
+            WorkspaceDefinition.Validate(mode);
         }
+        if (config.Modes.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() != config.Modes.Count) throw new InvalidDataException("Workspace IDs must be unique.");
         // Availability is a launch concern; offline drives, duplicates and empty workspaces remain editable.
     }
     public void Save(ArcynConfig config) => SaveAsync(config).GetAwaiter().GetResult();
     public async Task SaveAsync(ArcynConfig config)
     {
         Validate(config);
+        config.SchemaVersion = 2;
         var json = JsonSerializer.SerializeToUtf8Bytes(config, JsonOptions);
         if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("Configuration exceeds 4 MiB; previous file was retained.");
         await _saveLock.WaitAsync().ConfigureAwait(false);

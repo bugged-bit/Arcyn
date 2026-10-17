@@ -13,12 +13,42 @@
   },
   "modes": [
     {
-      "name": "CODE",
       "description": "Development stack online",
       "accent": "#D64545",
-      "apps": ["wt.exe", "code"],
-      "websites": ["https://github.com", "https://chatgpt.com"],
-      "folders": []
+      "websites": [
+        "https://github.com",
+        "https://chatgpt.com"
+      ],
+      "folders": [],
+      "label": "CODE",
+      "targets": [
+        {
+          "instance_policy": "reuse_or_launch",
+          "cmd": "wt.exe",
+          "args": [],
+          "kind": "application",
+          "id": "terminal"
+        },
+        {
+          "instance_policy": "reuse_or_launch",
+          "cmd": "code",
+          "args": [],
+          "kind": "application",
+          "id": "editor"
+        }
+      ],
+      "actions": [
+        {
+          "kind": "wait",
+          "timeout_ms": 1000,
+          "label": "Brief pause after editor window",
+          "depends_on": [
+            "editor"
+          ],
+          "id": "settle",
+          "delay_ms": 200
+        }
+      ]
     },
     {
       "name": "BROWSE",
@@ -36,9 +66,14 @@
       "name": "CREATE",
       "description": "Design and media workspace",
       "accent": "#D6A045",
-      "apps": ["mspaint"],
-      "websites": ["https://www.pinterest.com"],
+      "apps": [
+        "mspaint"
+      ],
+      "websites": [
+        "https://www.pinterest.com"
+      ],
       "folders": []
     }
-  ]
+  ],
+  "schema_version": 2
 }

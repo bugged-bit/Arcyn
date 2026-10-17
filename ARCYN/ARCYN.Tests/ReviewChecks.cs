@@ -66,7 +66,7 @@ internal static partial class Program
         }
         Check(true, "200 deterministic Unicode and Windows quoting round trips");
 
-        foreach (var json in new[] { "{\"schema_version\":0}", "{\"schema_version\":2}", "{\"modes\":[null]}", "{\"modes\":[{\"targets\":[{\"args\":[null]}]}]}", "{\"theme\":{\"width\":0}}" })
+        foreach (var json in new[] { "{\"schema_version\":0}", "{\"schema_version\":3}", "{\"modes\":[null]}", "{\"modes\":[{\"targets\":[{\"args\":[null]}]}]}", "{\"theme\":{\"width\":0}}" })
         {
             var path = Path.Combine(directory, "invalid.json"); File.WriteAllText(path, json);
             try { new ConfigService(path).Load(); throw new Exception("Invalid configuration accepted."); }

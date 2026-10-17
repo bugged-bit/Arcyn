@@ -8,7 +8,7 @@
         "schema_version": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 1
+          "maximum": 2
         },
         "theme": {
           "type": "object",
@@ -157,86 +157,7 @@
         "modes": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "default": ""
-              },
-              "label": {
-                "type": "string",
-                "default": ""
-              },
-              "description": {
-                "type": "string",
-                "default": ""
-              },
-              "subtitle": {
-                "type": "string",
-                "default": ""
-              },
-              "type": {
-                "type": "string",
-                "default": ""
-              },
-              "session": {
-                "type": "string",
-                "default": ""
-              },
-              "state": {
-                "type": "string",
-                "default": ""
-              },
-              "accent": {
-                "type": "string",
-                "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
-                "default": "#D64545"
-              },
-              "targets": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "cmd": {
-                      "type": "string",
-                      "default": ""
-                    },
-                    "args": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "working_directory": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "additionalProperties": true
-                }
-              },
-              "apps": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "websites": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "folders": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "additionalProperties": true
+            "$ref": "#/definitions/workspace"
           }
         }
       },
@@ -245,87 +166,384 @@
     {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "default": ""
-          },
-          "label": {
-            "type": "string",
-            "default": ""
-          },
-          "description": {
-            "type": "string",
-            "default": ""
-          },
-          "subtitle": {
-            "type": "string",
-            "default": ""
-          },
-          "type": {
-            "type": "string",
-            "default": ""
-          },
-          "session": {
-            "type": "string",
-            "default": ""
-          },
-          "state": {
-            "type": "string",
-            "default": ""
-          },
-          "accent": {
-            "type": "string",
-            "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
-            "default": "#D64545"
-          },
-          "targets": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "cmd": {
-                  "type": "string",
-                  "default": ""
-                },
-                "args": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "working_directory": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
-              "additionalProperties": true
-            }
-          },
-          "apps": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "websites": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "folders": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "additionalProperties": true
+        "$ref": "#/definitions/workspace"
       }
     }
-  ]
+  ],
+  "definitions": {
+    "workspace": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "label": {
+          "type": "string",
+          "default": ""
+        },
+        "description": {
+          "type": "string",
+          "default": ""
+        },
+        "subtitle": {
+          "type": "string",
+          "default": ""
+        },
+        "type": {
+          "type": "string",
+          "default": ""
+        },
+        "session": {
+          "type": "string",
+          "default": ""
+        },
+        "state": {
+          "type": "string",
+          "default": ""
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "default": "#D64545"
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "cmd": {
+                "type": "string",
+                "default": ""
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "working_directory": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "auto",
+                  "application",
+                  "url",
+                  "file",
+                  "folder"
+                ],
+                "default": "auto"
+              },
+              "instance_policy": {
+                "enum": [
+                  "reuse_or_launch",
+                  "reuse_only",
+                  "launch_new"
+                ],
+                "default": "reuse_or_launch"
+              },
+              "readiness": {
+                "enum": [
+                  "automatic",
+                  "window",
+                  "dispatch"
+                ],
+                "default": "automatic"
+              },
+              "timeout_ms": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 30000,
+                "maximum": 300000
+              },
+              "depends_on": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "match": {
+                "type": "object",
+                "additionalProperties": true,
+                "anyOf": [
+                  {
+                    "required": [
+                      "executable"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "app_id"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "app_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "class": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "title_contains": {
+                    "type": "boolean"
+                  },
+                  "executable": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "apps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "websites": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "folders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "layout": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "enum": [
+                  "normal",
+                  "maximized",
+                  "minimized"
+                ]
+              },
+              "y": {
+                "type": "number",
+                "minimum": -10,
+                "maximum": 10
+              },
+              "x": {
+                "type": "number",
+                "minimum": -10,
+                "maximum": 10
+              },
+              "monitor": {
+                "type": "string"
+              },
+              "target_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "focus": {
+                "type": "boolean"
+              },
+              "dpi": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "height": {
+                "type": "number",
+                "maximum": 10,
+                "exclusiveMinimum": 0
+              },
+              "width": {
+                "type": "number",
+                "maximum": 10,
+                "exclusiveMinimum": 0
+              }
+            },
+            "additionalProperties": true,
+            "required": [
+              "target_id",
+              "monitor",
+              "x",
+              "y",
+              "width",
+              "height"
+            ]
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "window"
+                  },
+                  "depends_on": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "target_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "timeout_ms": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 30000,
+                    "maximum": 300000
+                  },
+                  "operation": {
+                    "enum": [
+                      "apply_layout",
+                      "minimize",
+                      "restore",
+                      "focus"
+                    ]
+                  }
+                },
+                "additionalProperties": true,
+                "required": [
+                  "kind",
+                  "target_id"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "wait"
+                  },
+                  "depends_on": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "target_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "delay_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 300000
+                  },
+                  "timeout_ms": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 30000,
+                    "maximum": 300000
+                  }
+                },
+                "additionalProperties": true,
+                "required": [
+                  "kind"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "elevate": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "kind": {
+                    "const": "command"
+                  },
+                  "depends_on": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cmd": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "timeout_ms": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 30000,
+                    "maximum": 300000
+                  },
+                  "working_directory": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": true,
+                "required": [
+                  "kind",
+                  "cmd"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
 }
