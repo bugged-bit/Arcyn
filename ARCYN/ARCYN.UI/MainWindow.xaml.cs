@@ -78,7 +78,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _modeService = new ModeService(_state, _modes);
         _currentTheme = _config.Theme;
         InitializeComponent();
-        WorkspaceError = message => MessageBox.Show(this, message, "ARCYN");
+        WorkspaceError = message => WindowSurface.Show(this, "Workspace details", message);
         Topmost = _config.Behavior.AlwaysOnTop;
         PreviewMouseDown += (_, _) => ResetIdle();
         PreviewMouseWheel += (_, _) => ResetIdle();
@@ -377,9 +377,11 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             token.ThrowIfCancellationRequested();
             ModePanel.IsHitTestVisible = false;
             ModePanel.Visibility = Visibility.Collapsed;
-            LaunchModeLabel.Text = mode.Label.ToUpperInvariant();
+            LaunchModeLabel.Text = mode.Label;
             LaunchSessionLabel.Text = $"{mode.SessionLabel}  -  {mode.StateLabel}";
-            LaunchStatus.Text = "Launching";
+            var currentStage = "Opening workspace";
+            var acceptProgress = true;
+            LaunchStatus.Text = currentStage;
             LaunchStatus.Foreground = _textPrimaryBrush;
             LaunchPanel.Opacity = 0;
             LaunchPanel.Visibility = Visibility.Visible;
@@ -390,18 +392,24 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             _launchDotTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
             _launchDotTimer.Tick += (_, _) => {
                 _launchDotIndex = (_launchDotIndex + 1) % 4;
-                LaunchStatus.Text = "Launching" + new string('.', _launchDotIndex);
+                LaunchStatus.Text = currentStage + new string('.', _launchDotIndex);
             };
             _launchDotTimer.Start();
             LaunchTargetCount.Text = $"{mode.ProcessCount + mode.Actions.Count} STEPS";
             LaunchFeedText.Text = "";
             var progress = new Progress<LaunchProgress>(p => {
-                if (_disposed || token.IsCancellationRequested) return;
-                LaunchFeedText.Text += $"> {p.CurrentLabel}  [{p.Evidence}]{(p.Error == null ? "" : "  " + p.Error)}\n";
-                LaunchFeedScroll.ScrollToBottom();
+                if (_disposed || token.IsCancellationRequested || !acceptProgress) return;
+                currentStage = p.StepCompleted ? "Opening workspace" : p.Evidence ?? "Opening workspace";
+                LaunchStatus.Text = currentStage;
+                if (p.StepCompleted)
+                {
+                    LaunchFeedText.Text += $"> {p.CurrentLabel}  [{p.Evidence}]{(p.Error == null ? "" : "  " + p.Error)}\n";
+                    LaunchFeedScroll.ScrollToBottom();
+                }
                 SetLaunchProgress(p.CompletedTargets, p.TotalTargets);
             });
             var result = await _orchestrator.LaunchModeAsync(mode, token, progress);
+            acceptProgress = false;
             _runReports[mode.Id] = FormatReport(result);
             _launchDotTimer.Stop();
             if (result.Canceled || token.IsCancellationRequested) { await ReturnToReady(); return; }
@@ -535,9 +543,9 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         HeaderSys.Text = !known ? "UNKNOWN" : cpu < 75 && ram < 85 ? "ONLINE" : "LOAD";
         HeaderSys.Foreground = cpu < 75 && ram < 85 ? _accentBrightBrush : _accentLightBrush;
 
-        SystemStrip.Text = !known ? "SYS TELEMETRY UNAVAILABLE" : cpu < 75 && ram < 85
-            ? $"SYS {HeaderSys.Text}  -  HUD STABLE"
-            : $"SYS {HeaderSys.Text}  -  CPU {cpu:F0}% / RAM {ram:F0}%";
+        SystemStrip.Text = !known ? "System readings unavailable" : cpu < 75 && ram < 85
+            ? "Everything in balance"
+            : $"System load · CPU {cpu:F0}% / RAM {ram:F0}%";
 
         if (_state.Phase == AppPhase.Launching)
         {
@@ -759,8 +767,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         var activeMode = _modeService.ActiveLabel;
 
         ModeCountRun.Text = _modes.Count.ToString("D2");
-        ProcessStrip.Text = $"PROC {totalProcesses:D2}  -  ACTIVE {activeMode}";
-        FooterHint.Text = $"{ShortcutSpan()} select  -  F2 edit  -  Ctrl+N new  -  Ctrl+, theme  -  ESC close";
+        ProcessStrip.Text = $"{totalProcesses} targets  ·  {activeMode}";
+        FooterHint.Text = $"{ShortcutSpan()} open  ·  F2 edit  ·  Ctrl+N new  ·  Ctrl+, appearance  ·  Esc close";
         LaunchRecent.Text = _state.SelectedModeIndex >= 0 && _state.SelectedModeIndex < _modes.Count
             ? $"Recent: {_modes[_state.SelectedModeIndex].LastLaunchLabel}"
             : "Recent: none";

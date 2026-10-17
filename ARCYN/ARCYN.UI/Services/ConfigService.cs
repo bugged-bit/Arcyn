@@ -9,7 +9,7 @@ namespace ARCYN.UI.Services;
 public sealed class ConfigService
 {
     public static readonly JsonSerializerOptions JsonOptions = new() {
-        WriteIndented = true, PropertyNameCaseInsensitive = true,
+        WriteIndented = true, PropertyNameCaseInsensitive = true, AllowOutOfOrderMetadataProperties = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower, allowIntegerValues: false) },

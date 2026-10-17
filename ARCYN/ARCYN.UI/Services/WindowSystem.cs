@@ -51,7 +51,10 @@ public static class WindowMatching
     {
         var path = match.Executable == null ? null : Path.GetFullPath(Environment.ExpandEnvironmentVariables(match.Executable));
         var candidates = windows.Where(w => exclude?.Contains(w.Handle) != true).ToList();
-        if (path != null && candidates.Any(w => w.Executable == null && w.ProcessName.Equals(Path.GetFileNameWithoutExtension(path), StringComparison.OrdinalIgnoreCase)))
+        if (candidates.Any(w => w.Executable == null &&
+            (path != null && (w.ProcessName.Length == 0 || w.ProcessName.Equals(Path.GetFileNameWithoutExtension(path), StringComparison.OrdinalIgnoreCase)) ||
+             match.AppId != null && w.AppId == null && (match.ClassName == null || match.ClassName == w.ClassName) &&
+             (match.Title == null || (match.TitleContains ? w.Title.Contains(match.Title, StringComparison.OrdinalIgnoreCase) : w.Title.Equals(match.Title, StringComparison.OrdinalIgnoreCase))))))
             return (null, "A possible application window has inaccessible identity; select a stronger application identity or repair access.");
         candidates = candidates.Where(w => (path == null || string.Equals(path, w.Executable, StringComparison.OrdinalIgnoreCase)) &&
             (match.AppId == null || string.Equals(match.AppId, w.AppId, StringComparison.Ordinal)) &&
@@ -227,8 +230,8 @@ public sealed class WindowsWindowSystem : IWindowSystem
         [StructLayout(LayoutKind.Sequential)] internal struct Placement { public int Length, Flags, Show; public Point Min, Max; public Rect Normal; }
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] internal struct MonitorInfo { public int Size; public Rect Monitor, Work; public uint Flags; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string Device; }
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] internal struct DisplayDevice { public int Size; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string Name; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string Description; public int Flags; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string Id; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string Key; }
-        [DllImport("user32.dll")] internal static extern bool EnumWindows(EnumProc callback, nint data);
-        [DllImport("user32.dll")] internal static extern bool EnumDisplayMonitors(nint dc, nint clip, MonitorProc callback, nint data);
+        [DllImport("user32.dll", SetLastError = true)] internal static extern bool EnumWindows(EnumProc callback, nint data);
+        [DllImport("user32.dll", SetLastError = true)] internal static extern bool EnumDisplayMonitors(nint dc, nint clip, MonitorProc callback, nint data);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern bool GetMonitorInfo(nint monitor, ref MonitorInfo info);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern bool EnumDisplayDevices(string device, uint number, ref DisplayDevice info, uint flags);
         [DllImport("user32.dll")] internal static extern nint MonitorFromWindow(nint window, uint flags);

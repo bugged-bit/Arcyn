@@ -13,8 +13,8 @@ public sealed class ModeService
     {
         get
         {
-            if (!HasSelection) return "STANDBY";
-            return _modes[_state.SelectedModeIndex].Name.ToUpperInvariant();
+            if (!HasSelection) return "Choose a workspace";
+            return _modes[_state.SelectedModeIndex].Name;
         }
     }
 

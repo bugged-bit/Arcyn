@@ -1,42 +1,7 @@
 <Window x:Class="ARCYN.UI.EditModeWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  Title="ARCYN — Workspace" Width="980" Height="740" MinWidth="760" MinHeight="560" WindowStartupLocation="CenterOwner"
- Background="#FF0A0A0A" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="{DynamicResource UIFont}">
+ Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="{DynamicResource UIFont}">
  <Window.Resources>
-  <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/></Style>
-  <Style TargetType="TextBox"><Setter Property="Background" Value="#181818"/><Setter Property="Foreground" Value="White"/><Setter Property="CaretBrush" Value="White"/><Setter Property="Padding" Value="6"/><Setter Property="Margin" Value="0,3,0,8"/></Style>
-  <Style TargetType="Button"><Setter Property="Padding" Value="10,7"/><Setter Property="Margin" Value="3"/><Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="#211919"/><Setter Property="BorderBrush" Value="#665050"/>
-   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}" CornerRadius="3"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers>
-    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource AccentBrightBrush}"/></Trigger>
-    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="White"/></Trigger>
-    <Trigger Property="IsPressed" Value="True"><Setter TargetName="Surface" Property="Background" Value="#633030"/></Trigger>
-    <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
-   </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
-  </Style>
-  <Style TargetType="ListBox"><Setter Property="Background" Value="#181818"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#443333"/></Style>
-  <Style TargetType="ComboBox"><Setter Property="Margin" Value="0,3,0,8"/><Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="#181818"/>
-   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox"><Grid>
-    <ToggleButton Focusable="False" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" Background="#202020" Foreground="White" BorderBrush="#554444" HorizontalContentAlignment="Stretch" Padding="6">
-     <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="20"/></Grid.ColumnDefinitions>
-      <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="⌄" HorizontalAlignment="Right"/>
-     </Grid>
-    </ToggleButton>
-    <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False">
-     <Border Background="#181818" BorderBrush="#665555" BorderThickness="1" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
-      <ScrollViewer MaxHeight="240"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
-     </Border>
-    </Popup>
-   </Grid></ControlTemplate></Setter.Value></Setter>
-  </Style>
-  <Style TargetType="ComboBoxItem"><Setter Property="Background" Value="#181818"/><Setter Property="Foreground" Value="White"/><Setter Property="Padding" Value="6"/></Style>
-  <Style TargetType="DataGrid"><Setter Property="Background" Value="#101010"/><Setter Property="Foreground" Value="White"/><Setter Property="RowBackground" Value="#151515"/><Setter Property="AlternatingRowBackground" Value="#191919"/><Setter Property="BorderBrush" Value="#443333"/><Setter Property="AutoGenerateColumns" Value="False"/><Setter Property="SelectionMode" Value="Single"/><Setter Property="SelectionUnit" Value="FullRow"/><Setter Property="HeadersVisibility" Value="Column"/><Setter Property="GridLinesVisibility" Value="Horizontal"/><Setter Property="HorizontalGridLinesBrush" Value="#332828"/></Style>
-  <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#282020"/><Setter Property="Foreground" Value="White"/><Setter Property="Padding" Value="7"/></Style>
-  <Style TargetType="TabControl"><Setter Property="Background" Value="#101010"/><Setter Property="BorderBrush" Value="#443333"/><Setter Property="Foreground" Value="White"/></Style>
-  <Style TargetType="TabItem"><Setter Property="Foreground" Value="#BBBBBB"/><Setter Property="Padding" Value="18,9"/>
-   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem"><Border x:Name="TabSurface" Background="#171313" BorderBrush="#443333" BorderThickness="0,0,0,2" Padding="{TemplateBinding Padding}"><ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/></Border><ControlTemplate.Triggers>
-    <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="White"/><Setter TargetName="TabSurface" Property="BorderBrush" Value="{DynamicResource AccentBrightBrush}"/><Setter TargetName="TabSurface" Property="Background" Value="#2B1B1B"/></Trigger>
-    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabSurface" Property="BorderBrush" Value="White"/></Trigger>
-   </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
-  </Style>
   <Style x:Key="CommandFields" TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Kind}" Value="command"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style>
   <Style x:Key="WindowFields" TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Kind}" Value="window"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style>
   <Style x:Key="WaitFields" TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Kind}" Value="wait"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style>
@@ -44,7 +9,6 @@
  <Grid Margin="18">
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <StackPanel>
-   <TextBlock Text="WORKSPACE / EDIT" Foreground="{DynamicResource AccentBrightBrush}" FontWeight="Bold" Margin="0,0,0,10"/>
    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
     <StackPanel Margin="0,0,10,0"><TextBlock Text="Name"/><TextBox x:Name="NameInput" AutomationProperties.Name="Workspace name"/></StackPanel>
     <StackPanel Grid.Column="1"><TextBlock Text="Description"/><TextBox x:Name="DescInput" AutomationProperties.Name="Description"/></StackPanel>
@@ -57,10 +21,10 @@
    </Grid>
   </StackPanel>
   <TabControl Grid.Row="1" x:Name="EditorTabs" SelectionChanged="Tabs_SelectionChanged">
-   <TabItem Header="TARGETS">
+   <TabItem Header="Targets">
     <Grid Margin="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions>
      <Grid Margin="0,0,12,0"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-      <TextBlock Text="Targets run in row order unless prerequisites require another order. Reuse never sends new arguments to an existing window." Margin="0,0,0,8"/>
+      <TextBlock TextWrapping="Wrap" Text="Targets run in row order unless prerequisites require another order. Reuse never sends new arguments to an existing window." Margin="0,0,0,8"/>
       <DataGrid Grid.Row="1" x:Name="TargetsGrid" CanUserAddRows="True" CanUserDeleteRows="False" SelectionChanged="Target_SelectionChanged" AutomationProperties.Name="Ordered launch targets">
        <DataGrid.Columns>
         <DataGridTextColumn Header="Application, URL, file or folder" Binding="{Binding Command}" Width="2*" MinWidth="250"/>
@@ -74,29 +38,29 @@
      </Grid>
      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
       <StackPanel x:Name="TargetInspector">
-       <TextBlock Text="SELECTED TARGET" Foreground="{DynamicResource AccentBrightBrush}"/>
+       <TextBlock Text="Target details" Foreground="{DynamicResource AccentBrightBrush}"/>
        <TextBlock Text="Kind"/><ComboBox x:Name="KindInput" SelectedValue="{Binding Target.Kind}" AutomationProperties.Name="Target kind"/>
        <TextBlock Text="Instance policy"/><ComboBox x:Name="PolicyInput" SelectedValue="{Binding Target.InstancePolicy}" AutomationProperties.Name="Instance policy"/>
        <TextBlock Text="Readiness"/><ComboBox x:Name="ReadinessInput" SelectedValue="{Binding Target.Readiness}" AutomationProperties.Name="Readiness requirement"/>
        <TextBlock Text="Timeout (ms)"/><TextBox Text="{Binding Target.TimeoutMs}" AutomationProperties.Name="Target timeout milliseconds"/>
        <TextBlock Text="Working directory"/><TextBox Text="{Binding WorkingDirectory}" AutomationProperties.Name="Target working directory"/>
-       <Expander Header="Window matching" IsExpanded="True" Foreground="White"><StackPanel Margin="0,8,0,0">
+       <Expander Header="Window matching" IsExpanded="True" Foreground="{DynamicResource TextPrimaryBrush}"><StackPanel Margin="0,8,0,0">
         <Button Content="Choose running window" Click="Bind_Click"/>
         <TextBlock Text="Executable identity (full path)"/><TextBox Text="{Binding MatchExecutable}" AutomationProperties.Name="Matching executable path"/>
         <TextBlock Text="Application identity (optional)"/><TextBox Text="{Binding MatchAppId}" AutomationProperties.Name="Matching application identity"/>
         <TextBlock Text="Window class (optional)"/><TextBox Text="{Binding MatchClass}" AutomationProperties.Name="Matching window class"/>
         <TextBlock Text="Window title (optional)"/><TextBox Text="{Binding MatchTitle}" AutomationProperties.Name="Matching window title"/>
-        <CheckBox Content="Title contains text" IsChecked="{Binding TitleContains}" Foreground="White"/>
+        <CheckBox Content="Title contains text" IsChecked="{Binding TitleContains}" Foreground="{DynamicResource TextPrimaryBrush}"/>
        </StackPanel></Expander>
        <TextBlock Text="Run after" Margin="0,12,0,4"/><ListBox x:Name="TargetDependencies" SelectionMode="Multiple" DisplayMemberPath="Label" Height="90" SelectionChanged="Dependencies_Changed" AutomationProperties.Name="Target prerequisites"/>
       </StackPanel>
      </ScrollViewer>
     </Grid>
    </TabItem>
-   <TabItem Header="LAYOUT">
+   <TabItem Header="Layout">
     <Grid Margin="10"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="150"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
      <WrapPanel><Button Content="Capture matched windows" Click="Capture_Click"/><Button Content="Refresh displays" Click="Displays_Click"/><Button Content="Add selected target" Click="AddLayout_Click"/><Button Content="Remove placement" Click="RemoveLayout_Click"/></WrapPanel>
-     <Border Grid.Row="1" Background="#141111" BorderBrush="#443333" BorderThickness="1" Margin="0,6">
+     <Border Grid.Row="1" Background="{DynamicResource FieldBrush}" BorderBrush="{DynamicResource SurfaceLineBrush}" BorderThickness="1" CornerRadius="14" Margin="0,6">
       <Canvas x:Name="LayoutMap" ClipToBounds="True" SizeChanged="Map_SizeChanged" AutomationProperties.Name="Saved workspace monitor layout"/>
      </Border>
      <DataGrid Grid.Row="2" x:Name="LayoutGrid" CanUserAddRows="False" CanUserDeleteRows="False" AutomationProperties.Name="Editable window placements">
@@ -111,20 +75,20 @@
        <DataGridCheckBoxColumn Header="Focus" Binding="{Binding Focus}" Width="50"/>
       </DataGrid.Columns>
      </DataGrid>
-     <TextBlock Grid.Row="3" Text="Drag windows; resize from lower-right corner. Numeric controls provide keyboard editing. Changes affect saved layout only; disconnected displays fall back to primary on restore." Margin="0,8,0,0"/>
+     <TextBlock Grid.Row="3" TextWrapping="Wrap" Text="Drag windows; resize from lower-right corner. Numeric controls provide keyboard editing. Changes affect saved layout only; disconnected displays fall back to primary on restore." Margin="0,8,0,0"/>
     </Grid>
    </TabItem>
-   <TabItem Header="ACTIONS">
+   <TabItem Header="Actions">
     <Grid Margin="10"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions>
      <Grid Margin="0,0,12,0"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-      <TextBlock Text="Small, ordered steps. Commands require exact-command review before workspace execution." Margin="0,0,0,8"/>
+      <TextBlock TextWrapping="Wrap" Text="Small, ordered steps. Commands require exact-command review before workspace execution." Margin="0,0,0,8"/>
       <DataGrid Grid.Row="1" x:Name="ActionsGrid" CanUserAddRows="False" CanUserDeleteRows="False" SelectionChanged="Action_SelectionChanged" AutomationProperties.Name="Workspace actions">
        <DataGrid.Columns><DataGridTextColumn Header="Kind" Binding="{Binding Kind}" IsReadOnly="True" Width="90"/><DataGridTextColumn Header="Label" Binding="{Binding Action.Label}" Width="*" MinWidth="200"/></DataGrid.Columns>
       </DataGrid>
       <WrapPanel Grid.Row="2" Margin="0,8,0,0"><Button Content="Window" Click="AddWindow_Click"/><Button Content="Wait" Click="AddWait_Click"/><Button Content="Command" Click="AddCommand_Click"/><Button Content="↑" AutomationProperties.Name="Move action up" Click="ActionUp_Click"/><Button Content="↓" AutomationProperties.Name="Move action down" Click="ActionDown_Click"/><Button Content="Remove" Click="RemoveAction_Click"/></WrapPanel>
      </Grid>
      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"><StackPanel x:Name="ActionInspector">
-      <TextBlock Text="SELECTED ACTION" Foreground="{DynamicResource AccentBrightBrush}"/>
+      <TextBlock Text="Action details" Foreground="{DynamicResource AccentBrightBrush}"/>
       <TextBlock Text="Timeout (ms)"/><TextBox Text="{Binding Action.TimeoutMs}" AutomationProperties.Name="Action timeout milliseconds"/>
       <StackPanel Style="{StaticResource WindowFields}"><TextBlock Text="Window operation"/><ComboBox x:Name="OperationInput" SelectedValue="{Binding Operation}" AutomationProperties.Name="Window operation"/></StackPanel>
       <StackPanel x:Name="ActionTargetPanel"><TextBlock Text="Target (empty = fixed wait)"/><ComboBox x:Name="ActionTargetInput" DisplayMemberPath="Label" SelectedValuePath="Target.Id" SelectedValue="{Binding TargetId}" AutomationProperties.Name="Action target"/><Button Content="Use fixed delay" Click="FixedWait_Click"/></StackPanel>
@@ -133,7 +97,7 @@
        <TextBlock Text="Executable"/><TextBox Text="{Binding Command}" AutomationProperties.Name="Command executable"/>
        <TextBlock Text="Arguments (Windows quoting)"/><TextBox Text="{Binding Arguments}" AutomationProperties.Name="Command arguments"/>
        <TextBlock Text="Working directory"/><TextBox Text="{Binding WorkingDirectory}" AutomationProperties.Name="Command working directory"/>
-       <CheckBox Content="Request elevation (UAC)" IsChecked="{Binding Elevate}" Foreground="White"/>
+       <CheckBox Content="Request elevation (UAC)" IsChecked="{Binding Elevate}" Foreground="{DynamicResource TextPrimaryBrush}"/>
       </StackPanel>
       <TextBlock Text="Run after" Margin="0,12,0,4"/><ListBox x:Name="ActionDependencies" SelectionMode="Multiple" DisplayMemberPath="Label" Height="110" SelectionChanged="Dependencies_Changed" AutomationProperties.Name="Action prerequisites"/>
      </StackPanel></ScrollViewer>
@@ -141,7 +105,7 @@
    </TabItem>
   </TabControl>
   <DockPanel Grid.Row="2" Margin="0,10,0,0">
-   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Cancel" IsCancel="True" Click="Cancel_Click"/><Button Content="Save workspace" IsDefault="True" Click="Save_Click"/></StackPanel>
+   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Cancel" IsCancel="True" Click="Cancel_Click"/><Button Content="Save workspace" Style="{DynamicResource PrimaryActionButton}" IsDefault="True" Click="Save_Click"/></StackPanel>
    <TextBlock x:Name="Status" Foreground="{DynamicResource AccentBrightBrush}" VerticalAlignment="Center" MaxHeight="70"/>
   </DockPanel>
  </Grid>

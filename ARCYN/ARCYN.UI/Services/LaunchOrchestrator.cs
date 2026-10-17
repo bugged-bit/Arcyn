@@ -67,18 +67,20 @@ public sealed class LaunchOrchestrator
                 token.ThrowIfCancellationRequested();
                 var step = remaining.First(s => s.Dependencies.All(completed.ContainsKey)); remaining.Remove(step);
                 string? failure = null; var evidence = "Completed";
+                void Stage(string stage) => progress?.Report(new() { CompletedTargets = completed.Count, TotalTargets = steps.Count, CurrentLabel = step.Label, Evidence = stage });
                 try
                 {
                     if (step.Dependencies.Any(id => !completed[id])) { failure = "A prerequisite failed; step skipped."; evidence = "Skipped"; }
                     else if (step.Target is { } target)
                     {
-                        var resolved = await RunTarget(mode.Id, target, assigned, token);
+                        var resolved = await RunTarget(mode.Id, target, assigned, token, Stage);
                         evidence = resolved.Evidence;
                         if (resolved.Window is { } window)
                         {
                             bindings[target.Id] = window; assigned.Add(window.Handle);
                             if (mode.Layout.FirstOrDefault(l => l.TargetId == target.Id) is { } layout)
                             {
+                                Stage("Arranging");
                                 await ApplyLayout(window, layout, result, token);
                                 if (layout.Focus) finalFocus = window;
                             }
@@ -87,6 +89,7 @@ public sealed class LaunchOrchestrator
                     }
                     else if (step.Action is CommandActionConfig command)
                     {
+                        Stage("Running reviewed command");
                         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
                         deadline.CancelAfter(command.TimeoutMs);
                         try
@@ -100,6 +103,7 @@ public sealed class LaunchOrchestrator
                     }
                     else if (step.Action is WaitActionConfig wait)
                     {
+                        Stage("Waiting");
                         if (wait.TargetId == null) await Delay(wait.DelayMs, token);
                         else
                         {
@@ -112,6 +116,7 @@ public sealed class LaunchOrchestrator
                     }
                     else if (step.Action is WindowActionConfig action)
                     {
+                        Stage("Managing window");
                         var window = Bound(bindings, action.TargetId);
                         if (action.Operation == WindowOperation.Focus) finalFocus = window;
                         else if (action.Operation == WindowOperation.ApplyLayout)
@@ -120,13 +125,17 @@ public sealed class LaunchOrchestrator
                         else await OperateAsync(window, action.Operation, token);
                     }
                 }
-                catch (OperationCanceledException) { throw; }
+                catch (OperationCanceledException)
+                {
+                    result.Outcomes.Add(new(step.Id, step.Label, "Canceled", "Already-dispatched work was left running."));
+                    throw;
+                }
                 catch (Exception ex) { failure = ex.Message; if (evidence != "Skipped") evidence = ex is TimeoutException ? "Timed out" : "Failed"; }
                 completed[step.Id] = failure == null;
                 if (failure != null) { result.Failures.Add(step.Label + ": " + failure); _log.Write("Workspace step: {0}", failure); }
                 else result.CompletedSteps++;
                 result.Outcomes.Add(new(step.Id, step.Label, evidence, failure));
-                progress?.Report(new() { CompletedTargets = completed.Count, TotalTargets = steps.Count, CurrentLabel = step.Label, Evidence = evidence, Error = failure });
+                progress?.Report(new() { CompletedTargets = completed.Count, TotalTargets = steps.Count, CurrentLabel = step.Label, Evidence = evidence, Error = failure, StepCompleted = true });
                 await Cadence(token);
             }
             token.ThrowIfCancellationRequested();
@@ -142,8 +151,9 @@ public sealed class LaunchOrchestrator
         return result;
     }
 
-    private async Task<(WindowSnapshot? Window, string Evidence)> RunTarget(string workspaceId, TargetConfig target, HashSet<nint> assigned, CancellationToken token)
+    private async Task<(WindowSnapshot? Window, string Evidence)> RunTarget(string workspaceId, TargetConfig target, HashSet<nint> assigned, CancellationToken token, Action<string> stage)
     {
+        stage("Finding application");
         var started = Milliseconds();
         var kind = WindowMatching.Kind(target);
         var identity = WindowMatching.Identity(target, _windows);
@@ -156,8 +166,9 @@ public sealed class LaunchOrchestrator
         {
             var selection = WindowMatching.Select(identity!, before, assigned);
             if (selection.Error != null) throw new InvalidOperationException(selection.Error);
-            if (selection.Window is { } existing)
+            if (selection.Window is { } existing && (kind == TargetKind.Application || target.InstancePolicy == InstancePolicy.ReuseOnly))
             {
+                stage("Reusing · waiting for window");
                 var ready = await WaitWindow(identity!, assigned, target.TimeoutMs, token, existing.Handle);
                 _uncertain.Remove(key); return (ready, "Reused · window available");
             }
@@ -166,6 +177,7 @@ public sealed class LaunchOrchestrator
         if (_uncertain.Contains(key) && target.InstancePolicy != InstancePolicy.LaunchNew) throw new InvalidOperationException("Earlier dispatch outcome is unknown. Reattach its window or explicitly select Launch new before retrying.");
         if (!LaunchService.TryPrepare(target, out var info, out var error)) throw new InvalidOperationException(error);
         token.ThrowIfCancellationRequested();
+        stage("Dispatching");
         _uncertain.Add(key);
         try { await Task.Run(() => { token.ThrowIfCancellationRequested(); using var process = Dispatch(info); }, token).WaitAsync(TimeSpan.FromMilliseconds(target.TimeoutMs), token); }
         catch (Exception ex) when (ex is not OperationCanceledException and not TimeoutException) { _uncertain.Remove(key); throw; }
@@ -173,6 +185,7 @@ public sealed class LaunchOrchestrator
         if (!needsWindow) { _uncertain.Remove(key); return (null, "Dispatched"); }
         // A broker may hand off to another process; only a distinct matching window establishes a new launch.
         var excluded = before.Select(w => w.Handle).Concat(assigned).ToHashSet();
+        stage("Waiting for window");
         var window = await WaitWindow(identity!, excluded, Math.Max(1, target.TimeoutMs - (int)Math.Min(int.MaxValue, Milliseconds() - started)), token);
         _uncertain.Remove(key); return (window, "Window available");
     }
@@ -320,8 +333,8 @@ public sealed class LaunchOrchestrator
         if (shortcut && resolved == null) throw new InvalidOperationException("Shortcut identity cannot be inspected. Select its executable or configure an explicit command action.");
         var extension = Path.GetExtension(cmd).ToLowerInvariant();
         var name = Path.GetFileNameWithoutExtension(resolved ?? cmd).ToLowerInvariant();
-        var review = extension is ".bat" or ".cmd" or ".ps1" or ".vbs" or ".js" or ".wsf" or ".hta" or ".reg" or ".msi" ||
-            name is "cmd" or "powershell" or "pwsh" or "wscript" or "cscript" or "mshta" or "reg" or "regsvr32" or "rundll32" or "diskpart" or "bcdedit" or "schtasks" or "sc" or "shutdown" or "format";
+        var review = extension is ".bat" or ".cmd" or ".ps1" or ".psm1" or ".vbs" or ".vbe" or ".js" or ".jse" or ".wsf" or ".wsh" or ".hta" or ".reg" or ".msi" or ".py" or ".pyw" or ".rb" or ".pl" or ".php" or ".sh" ||
+            name is "cmd" or "powershell" or "pwsh" or "wscript" or "cscript" or "mshta" or "reg" or "regsvr32" or "rundll32" or "diskpart" or "bcdedit" or "schtasks" or "sc" or "shutdown" or "format" or "python" or "python3" or "py" or "node" or "nodejs" or "ruby" or "perl" or "php" or "bash" or "sh" or "wsl" or "dotnet";
         if (shortcut && review) throw new InvalidOperationException("Shortcut targets a command host. Configure executable and arguments as an explicit command action for review.");
         return review;
     }
@@ -354,6 +367,7 @@ public sealed class LaunchResult
 }
 public sealed class LaunchProgress
 {
+    public bool StepCompleted { get; set; }
     public int CompletedTargets { get; set; }
     public int TotalTargets { get; set; }
     public string? CurrentLabel { get; set; }

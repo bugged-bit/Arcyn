@@ -34,17 +34,18 @@ internal sealed class ThemeWindow : Window
     {
         _draft = ThemeService.Clone(theme); _behavior = new BehaviorConfig { IdleTimeoutSeconds = behavior.IdleTimeoutSeconds, AlwaysOnTop = behavior.AlwaysOnTop, CloseOnLaunch = behavior.CloseOnLaunch, Extra = behavior.Extra };
         _preview = preview; _save = save;
-        Title = "ARCYN — HUD controls"; Width = 500; Height = 700; MinWidth = 400; MinHeight = 450;
+        Title = "ARCYN — Appearance & behavior"; Width = 660; Height = 760; MinWidth = 520; MinHeight = 450;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = System.Windows.Media.Brushes.Black; Foreground = System.Windows.Media.Brushes.White;
         var root = new DockPanel { Margin = new Thickness(14) };
-        var heading = new TextBlock { Text = "HUD CONTROLS / LIVE PREVIEW", FontWeight = FontWeights.Bold, Margin = new Thickness(4, 4, 4, 12) };
+        var heading = new TextBlock { Text = "Make room for your own rhythm. Changes preview as you edit.", Margin = new Thickness(4, 4, 4, 18) };
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         var buttons = new WrapPanel();
         Button Button(string title, Action action) { var b = new Button { Content = title, Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(4) }; b.Click += (_, _) => action(); buttons.Children.Add(b); return b; }
         Button("Import theme", Import); Button("Export theme", Export);
         Button("Reset theme", () => { _draft = new(); BuildForm(); Schedule(); });
-        Button("Cancel", () => Close()).IsCancel = true; Button("Apply", Save).IsDefault = true;
+        Button("Cancel", () => Close()).IsCancel = true;
+        var apply = Button("Apply changes", Save); apply.IsDefault = true; apply.SetResourceReference(StyleProperty, "PrimaryActionButton");
         DockPanel.SetDock(buttons, Dock.Bottom); root.Children.Add(buttons);
         DockPanel.SetDock(_status, Dock.Bottom); root.Children.Add(_status);
         root.Children.Add(new ScrollViewer { Content = _form, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); Content = root;
@@ -54,16 +55,25 @@ internal sealed class ThemeWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(_idle, "Idle timeout in seconds (0 disables)");
         System.Windows.Automation.AutomationProperties.SetLiveSetting(_status, System.Windows.Automation.AutomationLiveSetting.Polite);
         BuildForm();
+        WindowSurface.Prepare(this, theme);
         _coalesce.Tick += (_, _) => { _coalesce.Stop(); Preview(); };
         Closed += (_, _) => _coalesce.Stop();
     }
     private void BuildForm()
     {
         _loading = true; _form.Children.Clear(); _inputs.Clear();
-        foreach (var property in typeof(ThemeConfig).GetProperties().Where(p => Labels.ContainsKey(p.Name)))
+        var groups = new[] {
+            (Title: "Color & type", Fields: new[] { "Accent", "Background", "Text", "FontFamily", "FontScale" }),
+            (Title: "Workspace proportions", Fields: new[] { "Width", "Height", "CornerRadius", "BorderWidth", "CardHeight", "Spacing", "Layout", "CompactMode" }),
+            (Title: "Motion & depth", Fields: new[] { "Acrylic", "Vignette", "GlowOpacity", "Particles", "CursorTrail", "Scanlines", "Animations", "MotionAmount", "ReducedEffects" }) };
+        foreach (var group in groups)
         {
+            _form.Children.Add(new TextBlock { Text = group.Title, FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new(4, 18, 4, 10) });
+            foreach (var name in group.Fields)
+            {
+            var property = typeof(ThemeConfig).GetProperty(name)!;
             var row = new DockPanel { Margin = new Thickness(4, 5, 4, 5) };
-            row.Children.Add(new TextBlock { Text = Labels[property.Name], Width = 245, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
+            row.Children.Add(new TextBlock { Text = Labels[property.Name], Width = 280, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
             Control input;
             if (property.PropertyType == typeof(bool))
             { var check = new CheckBox { IsChecked = (bool)property.GetValue(_draft)! }; check.Checked += (_, _) => Schedule(); check.Unchecked += (_, _) => Schedule(); input = check; }
@@ -71,8 +81,9 @@ internal sealed class ThemeWindow : Window
             { var box = new TextBox { Text = Convert.ToString(property.GetValue(_draft), CultureInfo.InvariantCulture), Padding = new Thickness(4) }; box.TextChanged += (_, _) => Schedule(); input = box; }
             System.Windows.Automation.AutomationProperties.SetName(input, Labels[property.Name]);
             _inputs[property] = input; row.Children.Add(input); _form.Children.Add(row);
+            }
         }
-        _form.Children.Add(new TextBlock { Text = "BEHAVIOR", FontWeight = FontWeights.Bold, Margin = new Thickness(4, 14, 4, 5) });
+        _form.Children.Add(new TextBlock { Text = "Behavior", FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(4, 18, 4, 10) });
         _topmost.IsChecked = _behavior.AlwaysOnTop; _close.IsChecked = _behavior.CloseOnLaunch; _idle.Text = _behavior.IdleTimeoutSeconds.ToString();
         _form.Children.Add(_topmost); _form.Children.Add(_close);
         _form.Children.Add(new TextBlock { Text = "Idle timeout in seconds (0 disables)", Margin = new Thickness(0, 6, 0, 4) }); _form.Children.Add(_idle);
@@ -90,6 +101,7 @@ internal sealed class ThemeWindow : Window
             ThemeService.Validate(next);
             if (!int.TryParse(_idle.Text, out var timeout) || timeout < 0 || timeout > 86400) throw new ArgumentException("Idle timeout: use 0–86400 seconds.");
             _draft = next; _behavior.IdleTimeoutSeconds = timeout; _behavior.AlwaysOnTop = _topmost.IsChecked == true; _behavior.CloseOnLaunch = _close.IsChecked == true;
+            ThemeService.Apply(this, next); WindowSurface.RefreshBackdrop(this, next);
             _preview(_draft, _behavior); _status.Text = "Preview active. Apply saves; Cancel restores."; return true;
         }
         catch (Exception ex) { _status.Text = ex.Message; return false; }

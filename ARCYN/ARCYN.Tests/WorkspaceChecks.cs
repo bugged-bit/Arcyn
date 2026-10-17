@@ -12,6 +12,11 @@ using ARCYN.UI.Services;
 
 internal static partial class Program
 {
+    private sealed class RecordedProgress : IProgress<LaunchProgress>
+    {
+        internal readonly List<LaunchProgress> Items = [];
+        public void Report(LaunchProgress value) => Items.Add(value);
+    }
     private sealed class FakeWindows : IWindowSystem
     {
         internal readonly List<WindowSnapshot> Items = [];
@@ -65,6 +70,8 @@ internal static partial class Program
         platform.Items.Clear(); platform.Items.Add(original with { Executable = null });
         result = await Engine(platform).LaunchModeAsync(mode, default);
         Check(!result.Success && calls == 0 && result.Failures.Single().Contains("inaccessible"), "inaccessible possible identity blocks blind launch");
+        Check(WindowMatching.Select(new() { AppId = "fixture.app", ClassName = original.ClassName }, platform.Items).Error != null,
+            "inaccessible application identity with matching class cannot trigger blind duplication");
         platform.Items.Clear(); target.InstancePolicy = InstancePolicy.ReuseOnly;
         result = await Engine(platform).LaunchModeAsync(mode, default);
         Check(!result.Success && calls == 0, "reuse-only target never dispatches when missing");
@@ -82,6 +89,12 @@ internal static partial class Program
         engine = Engine(platform); engine.Dispatch = _ => { calls++; platform.Items.Add(original with { Handle = 20, ProcessId = 999, ProcessStarted = 999 }); return null; };
         result = await engine.LaunchModeAsync(mode, default);
         Check(result.Success && result.Outcomes.Single().Evidence == "Window available", "broker handoff accepts distinct matching window in another process");
+        platform.Items.Clear(); platform.Items.Add(original); calls = 0;
+        var website = new TargetConfig { Cmd = "https://example.com", Kind = TargetKind.Url, Match = new() { Executable = executable }, Readiness = Readiness.Window };
+        engine = Engine(platform); engine.Dispatch = _ => { calls++; platform.Items.Add(original with { Handle = 21 }); return null; };
+        result = await engine.LaunchModeAsync(new() { Targets = [website] }, default);
+        Check(result.Success && calls == 1 && result.Outcomes.Single().Evidence == "Window available",
+            "configured website readiness does not suppress URL dispatch merely because a browser window exists");
         platform.Items.Clear(); platform.Items.Add(original); target.InstancePolicy = InstancePolicy.ReuseOrLaunch;
         var capture = WorkspaceLayout.Capture(target.Id, original, platform.Displays);
         Check(capture.Monitor == "left" && capture.Dpi == 144 && Math.Abs(capture.Y - 40d / 1040) < .00001, "capture uses monitor work area, negative coordinates and physical bounds");
@@ -125,7 +138,7 @@ internal static partial class Program
             engine = Engine(platform); calls = 0;
             engine.Delay = (_, _) => { canceled.Cancel(); return Task.FromCanceled(canceled.Token); };
             result = await engine.LaunchModeAsync(mode, canceled.Token);
-            Check(result.Canceled && calls == 0 && platform.Operations.Count == 0, "cancellation during prerequisite wait stops future dispatch and window mutation");
+            Check(result.Canceled && result.Outcomes.Single().Evidence == "Canceled" && calls == 0 && platform.Operations.Count == 0, "cancellation during prerequisite wait stops future dispatch and records canceled step");
         }
 
         var command = new CommandActionConfig { Cmd = executable, Args = ["original argument", ""], Elevate = true };
@@ -143,6 +156,15 @@ internal static partial class Program
         mode = new() { Targets = [new() { Cmd = "cmd.exe", Kind = TargetKind.File, Readiness = Readiness.Dispatch }] }; calls = 0;
         result = await Engine(platform).LaunchModeAsync(mode, default);
         Check(result.Canceled && calls == 0, "interpreter target cannot bypass command review by changing kind");
+        var variable = "ARCYN_COMMAND_FIXTURE_" + Guid.NewGuid().ToString("N");
+        Environment.SetEnvironmentVariable(variable, "python.exe");
+        try
+        {
+            mode.Targets[0].Cmd = "%" + variable + "%";
+            result = await Engine(platform).LaunchModeAsync(mode, default);
+            Check(result.Canceled && calls == 0, "environment-expanded interpreter requires review even when labeled as a file");
+        }
+        finally { Environment.SetEnvironmentVariable(variable, null); }
         mode = new() { Actions = [new CommandActionConfig { Cmd = executable }] }; engine = Engine(platform);
         engine.AuthorizeCommands = (_, _) => Task.FromResult(true);
         result = await engine.LaunchModeAsync(mode, default);
@@ -156,10 +178,31 @@ internal static partial class Program
         var path = Path.Combine(directory, "orchestration.json"); var service = new ConfigService(path);
         service.Save(new() { Modes = [mode] }); var loaded = service.Load()!;
         Check(loaded.SchemaVersion == 2 && loaded.Modes[0].Targets[0].Id == target.Id && loaded.Modes[0].Actions[0] is WindowActionConfig, "new schema round-trips typed actions and stable identities");
+        Check(System.Text.Json.JsonSerializer.Deserialize<WorkspaceActionConfig>("{\"delay_ms\":25,\"kind\":\"wait\"}", ConfigService.JsonOptions) is WaitActionConfig { DelayMs: 25 },
+            "editable action JSON accepts kind after ordinary fields");
         var invalid = WorkspaceDefinition.Clone(mode); invalid.Layout[0].Width = double.NaN;
         try { WorkspaceDefinition.Validate(invalid); throw new Exception("NaN layout accepted"); } catch (InvalidDataException) { Check(true, "nonfinite layout rejected at trust boundary"); }
         invalid = WorkspaceDefinition.Clone(mode); invalid.Targets[0].Match = new() { Title = "Project" };
         try { WorkspaceDefinition.Validate(invalid); throw new Exception("Title-only match accepted"); } catch (InvalidDataException) { Check(true, "title-only selectors rejected at trust boundary"); }
+        invalid = WorkspaceDefinition.Clone(mode); invalid.Targets[0].Readiness = Readiness.Dispatch;
+        try { WorkspaceDefinition.Validate(invalid); throw new Exception("Dispatch-only layout accepted"); } catch (InvalidDataException) { Check(true, "layout cannot silently upgrade an explicit dispatch-only target"); }
+        invalid.Layout.Clear(); invalid.Actions.Clear(); invalid.Targets[0].InstancePolicy = InstancePolicy.ReuseOnly;
+        invalid.Targets.Insert(0, new() { Cmd = "ms-clock:" }); calls = 0;
+        result = await Engine(platform).LaunchModeAsync(invalid, default);
+        Check(!result.Success && calls == 0, "invalid dispatch-only reuse policy fails preflight before independent side effects");
+
+        var prerequisite = new WaitActionConfig { DelayMs = 1 };
+        target.DependsOn = [prerequisite.Id];
+        var windowAction = new WindowActionConfig { TargetId = target.Id, Operation = WindowOperation.Focus };
+        mode = new() { Targets = [target], Actions = [windowAction, prerequisite] };
+        platform.Items.Clear(); platform.Items.Add(original); platform.Operations.Clear(); calls = 0;
+        var progress = new RecordedProgress();
+        result = await Engine(platform).LaunchModeAsync(mode, default, progress);
+        Check(result.Success && result.Outcomes.Select(o => o.Id).SequenceEqual(new[] { prerequisite.Id, target.Id, windowAction.Id }),
+            "window actions implicitly wait for referenced targets even when their prerequisite appears later");
+        Check(progress.Items.Any(p => !p.StepCompleted && p.Evidence == "Reusing · waiting for window") && progress.Items.Count(p => p.StepCompleted) == 3,
+            "active progress distinguishes observed readiness stages from completed steps");
+        target.DependsOn.Clear();
 
         platform.Items.Clear(); platform.Items.Add(original with { State = WindowShowState.Maximized }); platform.Operations.Clear();
         mode.Layout.Clear(); mode.Actions.Clear(); engine = Engine(platform); calls = 0;
@@ -195,14 +238,17 @@ internal static partial class Program
         Await(editor.CaptureLayoutAsync());
         Check(mode.Layout.Count == 0 && fake.Operations.Count == 0 && Field<ObservableCollection<EditModeWindow.LayoutRow>>(editor, "_layouts").Count == 1, "editor captures layout into isolated draft without moving real or fake windows");
         var tabs = (TabControl)editor.FindName("EditorTabs");
-        var hud = (Grid)editor.Content; editor.Content = null; hud.Resources = editor.Resources;
-        TextElement.SetForeground(hud, editor.Foreground); TextElement.SetFontFamily(hud, editor.FontFamily);
+        var hud = Detach(editor);
         hud.Measure(new Size(980, 740)); hud.Arrange(new Rect(0, 0, 980, 740)); hud.UpdateLayout();
         foreach (var index in new[] { 0, 1, 2 })
         {
             tabs.SelectedIndex = index;
             if (index == 2) ((DataGrid)editor.FindName("ActionsGrid")).SelectedIndex = 0;
             hud.Measure(new Size(980, 740)); hud.Arrange(new Rect(0, 0, 980, 740)); hud.UpdateLayout(); editor.DrawMap(); hud.UpdateLayout();
+            if (index == 0) Check(Descendants(hud).OfType<TextBlock>().Any(t => t.Text == "Reuse or launch"),
+                "shared choice template displays friendly policy labels instead of record internals");
+            if (index == 0) Check(tabs.Items.Cast<TabItem>().All(t => t.ActualHeight >= t.Padding.Top + t.Padding.Bottom + 13),
+                "workspace tab headers have room for text and padding without clipping");
             var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(980, 740, 96, 96, PixelFormats.Pbgra32); bitmap.Render(hud);
             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
             using var file = File.Create(Path.Combine(AppContext.BaseDirectory, "offscreen-editor-" + index + ".png")); encoder.Save(file);

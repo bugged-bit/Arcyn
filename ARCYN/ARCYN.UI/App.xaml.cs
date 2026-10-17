@@ -49,7 +49,7 @@ public partial class App : Application
             AppDomain.CurrentDomain.UnhandledException += (_, a) => LogService.WriteStatic("Fatal: {0}", a.ExceptionObject);
             DispatcherUnhandledException += (_, a) => {
                 LogService.WriteStatic("Dispatcher: {0}", a.Exception);
-                MessageBox.Show(a.Exception.Message, "ARCYN", MessageBoxButton.OK, MessageBoxImage.Error);
+                WindowSurface.Show(MainWindow, "Something needs attention", a.Exception.Message);
                 a.Handled = true; Shutdown(-1);
             };
             var config = service.Load();
@@ -62,7 +62,7 @@ public partial class App : Application
         {
             LogService.WriteStatic("Startup: {0}", ex);
             if (terminalCommand) { AttachConsole(unchecked((uint)-1)); Console.Error.WriteLine(ex.Message); }
-            else MessageBox.Show(ex.Message, "ARCYN — configuration preserved", MessageBoxButton.OK, MessageBoxImage.Error);
+            else WindowSurface.Show(null, "Configuration preserved", ex.Message);
             Shutdown(-1);
         }
     }

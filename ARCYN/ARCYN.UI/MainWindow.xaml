@@ -7,7 +7,7 @@
         Width="920"
         Height="490"
         WindowStyle="None"
-        Background="{DynamicResource LiteralBrushFF0A0A0A}"
+        Background="{DynamicResource WindowBrush}"
         ShowInTaskbar="False"
         Topmost="True"
         WindowStartupLocation="CenterScreen"
@@ -18,181 +18,34 @@
         PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
         <DataTemplate x:Key="ModeCardTemplate">
-            <Button Style="{DynamicResource WorkstationPanelStyle}"
-                    Click="ModeButton_Click"
-                    Tag="{Binding}"
-                    AutomationProperties.Name="{Binding Label}"
-                    AutomationProperties.HelpText="{Binding Subtitle}"
-                    MinHeight="{DynamicResource CardHeight}"
-                    Margin="0">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="34" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <Border Background="{Binding AccentTintBrush}" CornerRadius="2,0,0,2">
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="{Binding IndexLabel}"
-                                       FontSize="{DynamicResource FontSize14}"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource LiteralBrushD8F08080}"
-                                       HorizontalAlignment="Center" />
-                            <Ellipse Width="3"
-                                     Height="3"
-                                     Margin="0,2,0,0"
-                                     Fill="{DynamicResource AccentBrightBrush}"
-                                     Effect="{DynamicResource GlowAccentSharp}" />
-                        </StackPanel>
+            <Button Style="{DynamicResource WorkstationPanelStyle}" Click="ModeButton_Click" Tag="{Binding}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Subtitle}" MinHeight="{DynamicResource CardHeight}" Margin="0">
+                <Grid Margin="16,12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Border Width="34" Height="34" CornerRadius="12" Background="{Binding AccentTintBrush}" VerticalAlignment="Top" HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding IndexLabel}" FontSize="{DynamicResource FontSize14}" FontWeight="SemiBold" Foreground="{DynamicResource AccentLightBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Border>
-
-                    <Grid Grid.Column="1" Margin="10,6,10,6">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel>
-                                <TextBlock Text="{Binding Label}"
-                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}"
-                                           FontSize="{DynamicResource FontSize15}"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource TextBrightBrush}" />
-                                <TextBlock Text="{Binding Subtitle}"
-                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Subtitle}"
-                                           FontSize="{DynamicResource FontSize8}"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           Margin="0,1,0,0" />
-                            </StackPanel>
-
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding StateLabel}"
-                                       FontSize="{DynamicResource FontSize8}"
-                                       Foreground="{DynamicResource AccentBrush}"
-                                       VerticalAlignment="Top"
-                                       Margin="0,1,10,0" />
-
-                            <Border Grid.Column="2"
-                                    BorderThickness="1"
-                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                    Background="{DynamicResource LiteralBrush18000000}"
-                                    Padding="6,1"
-                                    CornerRadius="2">
-                                <TextBlock Text="{Binding ProcessLabel}"
-                                           FontSize="{DynamicResource FontSize7}"
-                                           Foreground="{DynamicResource TextPrimaryBrush}" />
-                            </Border>
-                        </Grid>
-
-                        <Grid Grid.Row="1" Margin="0,5,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Text="{Binding SessionLabel}"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Foreground="{DynamicResource TextMutedBrush}" />
-                            <TextBlock Grid.Column="1"
-                                       Text="|"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Margin="6,0"
-                                       Foreground="{DynamicResource AccentBrush}"
-                                       Opacity="0.2" />
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding TypeLabel}"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Foreground="{DynamicResource TextDimBrush}" />
-                            <TextBlock Grid.Column="3"
-                                       Text="|"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Margin="6,0"
-                                       Foreground="{DynamicResource AccentBrush}"
-                                       Opacity="0.2" />
-                            <TextBlock Grid.Column="4"
-                                       Text="{Binding LastOutcomeLabel}"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Foreground="{DynamicResource TextDimBrush}" />
-                            <TextBlock Grid.Column="5"
-                                       Text="{Binding LaunchCountLabel}"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Foreground="{DynamicResource TextMutedBrush}" />
-                        </Grid>
-
-                        <ItemsControl Grid.Row="2"
-                                      ItemsSource="{Binding LaunchTargets}"
-                                      Margin="0,7,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,0,6,4"
-                                            Padding="5,1"
-                                            CornerRadius="2"
-                                            BorderThickness="1"
-                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                            Background="{DynamicResource LiteralBrush14000000}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text=">"
-                                                       FontSize="{DynamicResource FontSize7}"
-                                                       Foreground="{DynamicResource AccentBrush}"
-                                                       Margin="0,0,3,0" />
-                                            <TextBlock Text="{Binding DisplayLabel}"
-                                                       FontSize="{DynamicResource FontSize7}"
-                                                       Foreground="{DynamicResource TextDimBrush}" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}" FontSize="{DynamicResource FontSize15}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrightBrush}"/>
+                        <TextBlock Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Subtitle}" FontSize="{DynamicResource FontSize9}" Foreground="{DynamicResource TextDimBrush}" Margin="0,2,0,0"/>
+                        <ItemsControl ItemsSource="{Binding LaunchTargets}" Margin="0,8,0,0">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate><DataTemplate>
+                                <Border Margin="0,0,6,4" Padding="8,3" CornerRadius="20" Background="{DynamicResource FieldBrush}">
+                                    <TextBlock Text="{Binding DisplayLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextDimBrush}"/>
+                                </Border>
+                            </DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
-
-                        <Grid Grid.Row="3" Margin="0,5,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Rectangle Width="90"
-                                           Height="1"
-                                           Fill="{DynamicResource BorderSubtleBrush}"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding LastLaunchLabel}"
-                                           FontSize="{DynamicResource FontSize7}"
-                                           Margin="8,0,0,0"
-                                           Foreground="{DynamicResource TextMutedBrush}" />
-                            </StackPanel>
-
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding ShortcutHint}"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Margin="0,0,10,0"
-                                       Foreground="{DynamicResource TextMutedBrush}" />
-
-                            <TextBlock Grid.Column="2"
-                                       Text="LAUNCH"
-                                       FontSize="{DynamicResource FontSize8}"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource AccentBrush}" />
-                        </Grid>
-                    </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding StateLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/>
+                            <TextBlock Text=" · " Foreground="{DynamicResource TextMutedBrush}"/>
+                            <TextBlock Text="{Binding LastOutcomeLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/>
+                            <TextBlock Text="{Binding SessionLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}" Margin="12,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Margin="18,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <Border Background="{DynamicResource AccentSurfaceBrush}" CornerRadius="14" Padding="14,8"><TextBlock Text="Open ↗" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="{DynamicResource FontSize9}"/></Border>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,7,0,0"><TextBlock Text="{Binding ProcessLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/><TextBlock Text="{Binding ShortcutHint}" Margin="8,0,0,0" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/></StackPanel>
+                    </StackPanel>
                 </Grid>
             </Button>
         </DataTemplate>
@@ -208,14 +61,14 @@
 
         <Grid x:Name="ShellHost" Margin="16,12">
             <Border x:Name="MainBorder"
-                    CornerRadius="9"
+                    CornerRadius="20"
                     Width="6"
                     Height="6"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Background="{DynamicResource LiteralBrushD6080808}"
+                    Background="{DynamicResource SurfaceBrush}"
                     BorderThickness="1"
-                    BorderBrush="{DynamicResource BorderGlowBrush}"
+                    BorderBrush="{DynamicResource SurfaceLineBrush}"
                     Effect="{DynamicResource GlowAccent}">
                 <Grid>
                     <Grid x:Name="BootOverlay" Margin="16,12" Opacity="0" IsHitTestVisible="False" Panel.ZIndex="20">
@@ -235,12 +88,12 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"
-                                       Text="+-- [BOOT]: ARCYN --"
+                                       Text="ARCYN / Welcome back"
                                        FontSize="{DynamicResource FontSize9}"
                                        Foreground="{DynamicResource TextDimBrush}"
                                        VerticalAlignment="Center" />
                             <TextBlock Grid.Column="2"
-                                       Text="-- v1.0 --+"
+                                       Text="Workspace launcher"
                                        FontSize="{DynamicResource FontSize9}"
                                        Foreground="{DynamicResource TextDimBrush}"
                                        VerticalAlignment="Center" />
@@ -336,7 +189,7 @@
                         </Grid.RowDefinitions>
 
                         <Border Grid.Row="0"
-                                CornerRadius="2"
+                                CornerRadius="12"
                                 Background="{DynamicResource LiteralBrush12000000}"
                                 Padding="8,3">
                             <Grid>
@@ -424,11 +277,11 @@
 
                         <Grid Grid.Row="1">
                             <Border x:Name="ModePanel"
-                                    CornerRadius="3"
-                                    BorderThickness="1"
+                                    CornerRadius="16"
+                                    BorderThickness="0"
                                     BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                    Background="{DynamicResource LiteralBrushE9080808}"
-                                    Padding="8">
+                                    Background="Transparent"
+                                    Padding="8,4">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled"
                                               Background="Transparent"
@@ -438,7 +291,7 @@
                             </Border>
 
                             <Border x:Name="LaunchPanel"
-                                    CornerRadius="3"
+                                    CornerRadius="12"
                                     Opacity="0"
                                     Visibility="Collapsed"
                                     BorderThickness="1"
@@ -463,7 +316,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="&#x25B2; LAUNCH SEQUENCE"
+                                        <TextBlock Text="Opening your workspace"
                                                    FontSize="{DynamicResource FontSize9}" FontWeight="Bold"
                                                    Foreground="{DynamicResource AccentBrightBrush}"
                                                    VerticalAlignment="Center" />
@@ -525,7 +378,7 @@
                                     </Grid>
 
                                     <!-- Row 2: Target feed -->
-                                    <Border Grid.Row="2" CornerRadius="2"
+                                    <Border Grid.Row="2" CornerRadius="12"
                                             Background="{DynamicResource LiteralBrush0A000000}"
                                             BorderThickness="1"
                                             BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -576,7 +429,7 @@
                                     </Grid>
 
                                     <!-- Row 4: Segmented progress bar -->
-                                    <Border Grid.Row="4" Height="6" CornerRadius="2"
+                                    <Border Grid.Row="4" Height="6" CornerRadius="12"
                                             Background="{DynamicResource LiteralBrush06000000}"
                                             BorderThickness="0.5"
                                             BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -622,7 +475,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <Border CornerRadius="2"
+                            <Border CornerRadius="12"
                                     Background="{DynamicResource LiteralBrush12000000}"
                                     Padding="6,2"
                                     Margin="0,0,4,0">
@@ -633,7 +486,7 @@
                             </Border>
 
                             <Border Grid.Column="1"
-                                    CornerRadius="2"
+                                    CornerRadius="12"
                                     Background="{DynamicResource LiteralBrush12000000}"
                                     Padding="6,2"
                                     Margin="2,0,2,0">
@@ -644,7 +497,7 @@
                             </Border>
 
                             <Border Grid.Column="2"
-                                    CornerRadius="2"
+                                    CornerRadius="12"
                                     Background="{DynamicResource LiteralBrush12000000}"
                                     Padding="6,2"
                                     Margin="4,0,0,0">

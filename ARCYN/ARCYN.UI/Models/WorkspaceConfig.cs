@@ -103,11 +103,13 @@ public static class WorkspaceDefinition
         {
             Add(t.Id, t.DependsOn, t.TimeoutMs);
             if (!Enum.IsDefined(t.Kind) || !Enum.IsDefined(t.InstancePolicy) || !Enum.IsDefined(t.Readiness)) throw new InvalidDataException("Unknown target policy.");
+            if (t.Readiness == Readiness.Dispatch && t.InstancePolicy != InstancePolicy.ReuseOrLaunch) throw new InvalidDataException("Instance policies require window readiness.");
             if (t.Match is { } m && string.IsNullOrWhiteSpace(m.Executable) && string.IsNullOrWhiteSpace(m.AppId))
                 throw new InvalidDataException("Window matching requires executable path or application identity.");
             if (t.Match?.Executable is { } executable && !Path.IsPathFullyQualified(Environment.ExpandEnvironmentVariables(executable)))
                 throw new InvalidDataException("Matching executable must be a full path; environment variables are supported.");
         }
+        if (mode.Actions.Count == 0 && mode.Layout.Count == 0 && targets.All(t => t.DependsOn.Count == 0)) return;
         var targetIds = targets.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
         foreach (var a in mode.Actions)
         {

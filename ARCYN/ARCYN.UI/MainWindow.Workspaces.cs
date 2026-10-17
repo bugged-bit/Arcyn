@@ -18,21 +18,23 @@ public partial class MainWindow
     }
     private ContextMenu MakeWorkspaceMenu(ModeConfig mode)
     {
-        var menu = new ContextMenu();
-        void Item(string text, Action action) { var item = new MenuItem { Header = text }; item.Click += (_, _) => action(); menu.Items.Add(item); }
-        Item("Edit workspace (F2)", () => EditWorkspace(mode));
-        Item("Attach running windows", () => ManageWorkspace(mode, null));
-        Item("Reapply saved layout", () => ManageWorkspace(mode, WindowOperation.ApplyLayout));
-        Item("Minimize managed windows", () => ManageWorkspace(mode, WindowOperation.Minimize));
-        Item("Restore windows minimized by ARCYN", () => ManageWorkspace(mode, WindowOperation.Restore));
-        Item("Release managed windows", () => { if (!_isLaunching && !_editing) _orchestrator.Release(mode.Id); });
-        Item("Last run details", () => WorkspaceError(_runReports.GetValueOrDefault(mode.Id, "No run in this ARCYN session.")));
-        Item("New workspace (Ctrl+N)", () => EditWorkspace(null));
-        Item("Duplicate workspace", () => DuplicateWorkspace(mode));
-        Item("Move up", () => MoveWorkspace(mode, -1));
-        Item("Move down", () => MoveWorkspace(mode, 1));
-        Item("Delete workspace", () => DeleteWorkspace(mode));
-        Item("Theme and settings (Ctrl+,)", EditTheme);
+        var menu = new ContextMenu { Resources = Resources };
+        void Item(ItemsControl parent, string text, Action action, string gesture = "") { var item = new MenuItem { Header = text, InputGestureText = gesture }; item.Click += (_, _) => action(); parent.Items.Add(item); }
+        Item(menu, "Edit workspace", () => EditWorkspace(mode), "F2");
+        Item(menu, "New workspace", () => EditWorkspace(null), "Ctrl+N");
+        var windows = new MenuItem { Header = "Windows" }; menu.Items.Add(windows);
+        Item(windows, "Attach running windows", () => ManageWorkspace(mode, null));
+        Item(windows, "Reapply saved layout", () => ManageWorkspace(mode, WindowOperation.ApplyLayout));
+        Item(windows, "Minimize managed windows", () => ManageWorkspace(mode, WindowOperation.Minimize));
+        Item(windows, "Restore ARCYN-minimized windows", () => ManageWorkspace(mode, WindowOperation.Restore));
+        Item(windows, "Release managed windows", () => { if (!_isLaunching && !_editing) _orchestrator.Release(mode.Id); });
+        Item(menu, "Last run details", () => WorkspaceError(_runReports.GetValueOrDefault(mode.Id, "No run in this ARCYN session.")));
+        var organize = new MenuItem { Header = "Organize" }; menu.Items.Add(organize);
+        Item(organize, "Duplicate workspace", () => DuplicateWorkspace(mode));
+        Item(organize, "Move up", () => MoveWorkspace(mode, -1));
+        Item(organize, "Move down", () => MoveWorkspace(mode, 1));
+        Item(organize, "Delete workspace", () => DeleteWorkspace(mode));
+        Item(menu, "Appearance & behavior", EditTheme, "Ctrl+,");
         menu.Opened += (_, _) => _menuOpen = true;
         menu.Closed += (_, _) => { _menuOpen = false; ResetIdle(); };
         return menu;
@@ -43,7 +45,7 @@ public partial class MainWindow
         _editing = true;
         try
         {
-            var editor = new EditModeWindow(mode ?? new ModeConfig()) { Owner = this };
+            var editor = new EditModeWindow(mode ?? new ModeConfig(), theme: _config.Theme) { Owner = this };
             if (editor.ShowDialog() != true) return;
             var before = _modes.ToList();
             if (mode == null) _modeService.Add(editor.Result);
@@ -82,7 +84,7 @@ public partial class MainWindow
         _editing = true;
         try
         {
-            if (MessageBox.Show(this, $"Delete workspace '{mode.Label}'? Its applications and files remain on disk.", "ARCYN", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if (!WindowSurface.Show(this, "Delete workspace?", $"Remove '{mode.Label}' from ARCYN? Its applications, windows and files remain untouched.", "Delete workspace")) return;
             var before = _modes.ToList(); _modeService.RemoveAt(_modes.IndexOf(mode));
             if (await SaveWorkspaces(before)) _orchestrator.Release(mode.Id);
         }
@@ -109,7 +111,7 @@ public partial class MainWindow
         var text = "These configured operations can change files or system state. Review exact executable and arguments before continuing. Cancel launches nothing.\n\n" +
             string.Join("\n\n", commands.Select(c => (c.Elevate ? "[ADMINISTRATOR — UAC required]\n" : "") + Services.LaunchService.QuoteArgument(c.Executable) + " " +
                 string.Join(" ", c.Arguments.Select(Services.LaunchService.QuoteArgument)) + "\nWorking directory: " + c.WorkingDirectory));
-        return Task.FromResult(MessageBox.Show(this, text, "ARCYN — authorize configured commands", MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) == MessageBoxResult.OK);
+        return Task.FromResult(WindowSurface.Show(this, "Review configured commands", text, "Run reviewed commands"));
     }
     private static string FormatReport(Services.LaunchResult result) =>
         (result.Canceled ? "Canceled. Already-dispatched work was not undone.\n" : "") +

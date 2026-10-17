@@ -9,6 +9,7 @@ namespace ARCYN.UI;
 public partial class MainWindow
 {
     private ThemeConfig _currentTheme = new();
+    internal ThemeConfig CurrentTheme => _currentTheme;
     private string? _appliedThemeJson;
     private bool _runtimeStarted;
     private void EditTheme()
@@ -60,6 +61,7 @@ public partial class MainWindow
             try
             {
                 NativeMethods.EnableAcrylic(handle, theme.Acrylic && !theme.ReducedEffects);
+                NativeMethods.RoundWindow(handle, theme.CornerRadius > 0);
             }
             catch (Exception ex) { _log.Write("Acrylic: {0}", ex.Message); }
         if (_runtimeStarted || _state.Phase == AppPhase.Ready) BuildDashboard();

@@ -1,6 +1,6 @@
 # ARCYN
 
-ARCYN is a WPF workspace launcher for Windows 10/11 x64. Its cinematic boot, red HUD, particles, mode-specific atmosphere and launch choreography remain the defaults. The application has no NuGet package dependencies.
+ARCYN is a cinematic workspace launcher for Windows 10/11 x64, built with WPF and Windows-native APIs. Softer layered surfaces, rounded workspace cards and quieter typography frame its original boot, particles, mode-specific atmosphere and launch choreography. The application has no NuGet package dependencies.
 
 Extract the **complete standalone ZIP** and run ARCYN.exe. Keep its runtime files beside it; no separate .NET runtime, AutoHotkey or VC redistributable installation is required. First run opens the setup wizard. Distribution includes .NET/WPF, so the ZIP is larger than the old runtime-dependent executable.
 
@@ -11,7 +11,12 @@ Default mode leaves **zero ARCYN processes** after closing. Ordinary Desktop, St
 - Ctrl+, opens HUD controls: colours, font, scale, geometry, spacing, rows/compact/grid, particles, glow, acrylic, scanlines, vignette, trail and continuous motion.
 - Live previews are coalesced while the editor is open. Apply saves; Cancel restores. Import/export uses visual JSON only.
 - Reduced effects and continuous-motion controls preserve boot/launch durations and choreography.
-- Workspace editing supports ordered targets, exact arguments, working directories, file/folder browsing and application discovery on demand through Start-menu shortcuts and Windows App Paths. There is no background discovery.
+- The workspace editor groups **Targets**, **Layout** and **Actions**. Targets keep exact arguments, working directories, browsing and on-demand discovery. Selected-item controls expose instance policies, window selectors, readiness, timeout and prerequisites.
+- Applications default to **Reuse or launch**; **Reuse only** and **Launch new** are explicit alternatives. Matching uses executable/application identity, optionally narrowed by window class/title. Ambiguous or inaccessible matches report a failure instead of duplicating blindly. Reuse does not send new arguments or open a new document in an existing window. Aliases/brokers may require an explicit matching executable selected from a running window.
+- **Capture matched windows** reads window arrangements into an unsaved editor draft. The monitor map and numeric table edit saved intent without moving windows. Restore scales work-area-relative geometry, retains show state and uses the primary display if a saved monitor is absent; fallback is reported without changing the saved preference.
+- Typed window operations, fixed/window waits and explicitly reviewed commands form small workflows. Dependencies run deterministically; failed prerequisites skip dependents while independent steps continue. Application readiness requires a unique responsive window by default (30-second timeout). This proves window availability, not that a document or network task has finished loading. URLs/files/folders report **Dispatched** unless matching window evidence is configured.
+- Right-click **Windows** to attach running windows, reapply a layout, minimize managed windows, restore windows ARCYN minimized, or release ownership. Switching leaves outgoing windows alone. Ownership lasts only for the current ARCYN process; reopening requires fresh attachment. ARCYN never closes applications or discards unsaved work.
+- Commands and recognized script/interpreter targets require review on every run; configuration cannot grant approval. Elevated commands additionally request UAC. Timeouts/cancellation stop further orchestration, leave dispatched work running, and retain uncertain dispatches to prevent silent retry. **Last run details** keeps failures and focus/placement warnings accessible; automatic closing requires a successful run.
 - CPU/RAM on the HUD are **system-wide** readings. Applications launched by ARCYN have their own resource costs.
 
 Run `scripts/Setup-Shortcuts.ps1` to create Desktop and Start-menu shortcuts. This does not start a process or install a helper. Windows also supports assigning Ctrl+Alt combinations in shortcut Properties.
@@ -27,20 +32,20 @@ Configuration uses one selected path for both reads and saves:
 
 An explicit path must already exist. A new installation saves to AppData. The current working directory does not choose a configuration. `--config-path` prints the selected save location. Atomic saves retain the previous file as .bak. Malformed or newer-schema files are preserved and reported, never replaced by setup defaults. Copy a known-good .bak over the damaged file after keeping a copy of the damaged file.
 
-Both legacy workspace arrays and upstream apps/websites/folders remain readable. Prefer ordered targets for new work:
+Schema 1, legacy workspace arrays and upstream apps/websites/folders remain readable. Ordinary saves write schema 2 with stable IDs, layouts and typed actions; earlier releases reject schema 2. Loading alone does not rewrite configuration. Prefer ordered targets for new work:
 
 Saved workspaces use `label` and `subtitle`. The older `name` and `description` aliases remain readable; if both forms occur, their values must agree.
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "modes": [
     {
       "label": "CODE",
       "subtitle": "Development workspace",
       "type": "code",
       "session": "SES 089",
-      "state": "EXEC LIVE",
+      "state": "Ready to build",
       "targets": [
         { "cmd": "wt.exe", "args": [] },
         { "cmd": "https://github.com", "args": [] }
@@ -49,7 +54,7 @@ Saved workspaces use `label` and `subtitle`. The older `name` and `description` 
   ]
 }
 ```
-Unavailable targets stay saved and can be repaired. Existing literal paths take precedence over command-line parsing. Ambiguous legacy strings require editing; shell metacharacters are not interpreted as a shell script. A program that needs a command interpreter must select that interpreter explicitly.
+Unavailable targets stay saved and can be repaired. Existing literal paths take precedence over command-line parsing. Ambiguous legacy strings require editing; shell metacharacters are not interpreted as a shell script. A command that needs an interpreter must select its executable explicitly. Dispatched targets require a distinct matching window for window readiness; existing browser tabs and document readiness are not inferred. [The example](ARCYN/example.arcyn.json) shows typed targets and waits; [the schema](ARCYN/arcyn.schema.json) also describes selectors, commands and layouts.
 
 Use `ARCYN --setup` in a terminal for line-based setup (appends to existing workspaces; EOF exits). Other flags: --help, --version, --config-path, --config. Duplicate startup activates the existing window. Logs are bounded and nonfatal under %LOCALAPPDATA%\ARCYN.
 

@@ -5,112 +5,25 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="ARCYN Setup"
-        Width="700"
-        Height="520"
+        Width="740"
+        Height="600"
         WindowStyle="None"
-        AllowsTransparency="True"
-        Background="#FF0A0A0A"
+
+        Background="{DynamicResource WindowBrush}"
         ShowInTaskbar="False"
-        
+
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         SnapsToDevicePixels="True"
         FontFamily="{StaticResource UIFont}">
     <Window.Resources>
-        <Style x:Key="StepTitle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-        <Style x:Key="StepDesc" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="9"/>
-            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
-        </Style>
-        <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="8"/>
-            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,2"/>
-        </Style>
-        <Style x:Key="WizInput" TargetType="TextBox">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="Background" Value="#E0141420"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="CaretBrush" Value="{StaticResource AccentBrightBrush}"/>
-            <Setter Property="Height" Value="28"/>
-        </Style>
-        <Style x:Key="NavButton" TargetType="Button">
-            <Setter Property="FontSize" Value="9"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="Padding" Value="16,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="#0F000000"
-                                BorderThickness="1"
-                                BorderBrush="{StaticResource BorderSubtleBrush}"
-                                CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1AFFFFFF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBorderBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2AFFFFFF"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.35"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource NavButton}">
-            <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="#CCD64545"
-                                BorderThickness="0"
-                                CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#E06060"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#F08080"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="ChipStyle" TargetType="Border">
-            <Setter Property="Margin" Value="0,0,4,3"/>
-            <Setter Property="Padding" Value="6,2"/>
-            <Setter Property="CornerRadius" Value="2"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}"/>
-            <Setter Property="Background" Value="#18000000"/>
-        </Style>
+        <Style x:Key="StepTitle" TargetType="TextBlock"><Setter Property="FontSize" Value="22"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
+        <Style x:Key="StepDesc" TargetType="TextBlock"><Setter Property="FontSize" Value="12"/><Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="0,0,0,20"/></Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
+        <Style x:Key="WizInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="FontSize" Value="13"/></Style>
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="FontSize" Value="12"/></Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryActionButton}"><Setter Property="FontSize" Value="12"/></Style>
+        <Style x:Key="ChipStyle" TargetType="Border"><Setter Property="Margin" Value="0,0,6,6"/><Setter Property="Padding" Value="10,6"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Background" Value="{DynamicResource FieldBrush}"/></Style>
     </Window.Resources>
 
 <Grid x:Name="RootGrid" Background="Transparent" MouseDown="RootGrid_MouseDown">
@@ -121,10 +34,10 @@
 
         <Grid x:Name="ShellHost" Margin="12,10">
             <Border x:Name="MainBorder"
-                    CornerRadius="9"
-                    Background="#D7171725"
+                    CornerRadius="20"
+                    Background="{DynamicResource SurfaceBrush}"
                     BorderThickness="1"
-                    BorderBrush="{StaticResource BorderGlowBrush}"
+                    BorderBrush="{DynamicResource SurfaceLineBrush}"
                     Effect="{StaticResource GlowAccent}">
         <Grid>
             <Grid.RowDefinitions>
@@ -136,7 +49,7 @@
 
             <!-- Header - HUD style top bar -->
             <Border Grid.Row="0"
-                    CornerRadius="2"
+                    CornerRadius="12"
                     Background="#12000000"
                     Padding="8,3">
                 <Grid>
@@ -154,19 +67,19 @@
                              Effect="{StaticResource GlowAccentSoft}" />
                     <TextBlock Grid.Column="1"
                                Text="ARCYN"
-                               FontSize="9"
+                               FontSize="12"
                                FontWeight="Bold"
                                Margin="6,0,10,0"
                                Foreground="{StaticResource TextPrimaryBrush}"
                                VerticalAlignment="Center" />
                     <TextBlock Grid.Column="2"
                                Text="SETUP"
-                               FontSize="8"
+                               FontSize="11"
                                Foreground="{StaticResource AccentBrush}"
                                VerticalAlignment="Center" />
                     <TextBlock Grid.Column="3"
                                x:Name="StepCounter"
-                               FontSize="8"
+                               FontSize="11"
                                Margin="10,0,0,0"
                                Foreground="{StaticResource TextDimBrush}"
                                VerticalAlignment="Center"/>
@@ -197,12 +110,12 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Style="{StaticResource StepTitle}" Text="WELCOME TO ARCYN"/>
+                    <TextBlock Grid.Row="0" Style="{StaticResource StepTitle}" Text="Make yourself at home"/>
                     <TextBlock Grid.Row="1" Style="{StaticResource StepDesc}"
-                               Text="Tactical workspace launcher. Configure your modes to launch apps, websites, and folders with a single click."/>
+                               Text="Your apps, places and projects, ready together. Start with one workspace and make it your own."/>
                     <Border Grid.Row="2"
                             Background="#0A000000"
-                            CornerRadius="3"
+                            CornerRadius="12"
                             BorderThickness="1"
                             BorderBrush="{StaticResource BorderSubtleBrush}"
                             Padding="12,10"
@@ -213,13 +126,13 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="!"
+                            <TextBlock Text="↗"
                                        FontSize="14"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource AccentBrightBrush}"
                                        VerticalAlignment="Top"
                                        Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="1" FontSize="9" Foreground="{StaticResource TextDimBrush}"
+                            <TextBlock Grid.Column="1" FontSize="12" Foreground="{StaticResource TextDimBrush}"
                                        TextWrapping="Wrap">
                                 <Run Text="Create workspaces (modes)"/> <LineBreak/>
                                 <Run Text="Each mode opens your apps, sites, and folders together"/> <LineBreak/>
@@ -229,10 +142,10 @@
                     </Border>
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Border Style="{StaticResource ChipStyle}" Padding="8,3">
-                            <TextBlock Text=" .NET 10" FontSize="8" Foreground="{StaticResource TextMutedBrush}"/>
+                            <TextBlock Text="Made for your flow" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
                         </Border>
                         <Border Style="{StaticResource ChipStyle}" Padding="8,3">
-                            <TextBlock Text=" Windows" FontSize="8" Foreground="{StaticResource TextMutedBrush}"/>
+                            <TextBlock Text="Windows native" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
                         </Border>
                     </StackPanel>
                 </Grid>
@@ -249,7 +162,7 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Style="{StaticResource StepTitle}" Text="NAME YOUR WORKSPACE"/>
+                    <TextBlock Grid.Row="0" Style="{StaticResource StepTitle}" Text="Name your workspace"/>
                     <TextBlock Grid.Row="1" Style="{StaticResource StepDesc}"
                                Text="Each mode is a workspace. Give it a name and description."/>
                     <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="NAME"/>
@@ -266,31 +179,31 @@
                         <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="ACCENT COLOR"/>
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
                             <RadioButton x:Name="ColorRed" GroupName="Accent" IsChecked="True" AutomationProperties.Name="Red accent"
-                                         ToolTip="Classic Red">
+                                         ToolTip="Warm red">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#D64545" Margin="2"/>
                                 </RadioButton.Content>
                             </RadioButton>
                             <RadioButton x:Name="ColorBlue" GroupName="Accent" Margin="8,0,0,0" AutomationProperties.Name="Blue accent"
-                                         ToolTip="Cyber Blue">
+                                         ToolTip="Clear blue">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#4580D6" Margin="2"/>
                                 </RadioButton.Content>
                             </RadioButton>
                             <RadioButton x:Name="ColorGreen" GroupName="Accent" Margin="8,0,0,0" AutomationProperties.Name="Green accent"
-                                         ToolTip="Matrix Green">
+                                         ToolTip="Fresh green">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#45D680" Margin="2"/>
                                 </RadioButton.Content>
                             </RadioButton>
                             <RadioButton x:Name="ColorOrange" GroupName="Accent" Margin="8,0,0,0" AutomationProperties.Name="Orange accent"
-                                         ToolTip="Phosphor Orange">
+                                         ToolTip="Amber">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#D6A045" Margin="2"/>
                                 </RadioButton.Content>
                             </RadioButton>
                             <RadioButton x:Name="ColorPurple" GroupName="Accent" Margin="8,0,0,0" AutomationProperties.Name="Purple accent"
-                                         ToolTip="Void Purple">
+                                         ToolTip="Soft violet">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#A045D6" Margin="2"/>
                                 </RadioButton.Content>
@@ -307,14 +220,14 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Style="{StaticResource StepTitle}" Text="ADD APPLICATIONS"/>
+                    <TextBlock Grid.Row="0" Style="{StaticResource StepTitle}" Text="Bring your apps"/>
                     <TextBlock Grid.Row="1" Style="{StaticResource StepDesc}"
                                Text="Pick apps to launch with this mode. You can add more later."/>
                     <Border Grid.Row="2"
                             Background="#0A000000"
                             BorderThickness="1"
                             BorderBrush="{StaticResource BorderSubtleBrush}"
-                            CornerRadius="3"
+                            CornerRadius="12"
                             Padding="6">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Background="Transparent">
                             <ItemsControl x:Name="AppsList">
@@ -327,11 +240,11 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding}"
-                                                           FontSize="9" Foreground="{StaticResource TextDimBrush}"
+                                                           FontSize="12" Foreground="{StaticResource TextDimBrush}"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1"
                                                         Content="X"
-                                                        FontSize="7"
+                                                        FontSize="10"
                                                         Foreground="{StaticResource AccentLightBrush}"
                                                         Background="Transparent"
                                                         BorderThickness="0"
@@ -379,7 +292,7 @@
                             Background="#0A000000"
                             BorderThickness="1"
                             BorderBrush="{StaticResource BorderSubtleBrush}"
-                            CornerRadius="3"
+                            CornerRadius="12"
                             Padding="6">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Background="Transparent">
                             <ItemsControl x:Name="FoldersList">
@@ -392,11 +305,11 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding}"
-                                                           FontSize="9" Foreground="{StaticResource TextDimBrush}"
+                                                           FontSize="12" Foreground="{StaticResource TextDimBrush}"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1"
                                                         Content="X"
-                                                        FontSize="7"
+                                                        FontSize="10"
                                                         Foreground="{StaticResource AccentLightBrush}"
                                                         Background="Transparent"
                                                         BorderThickness="0"
@@ -434,7 +347,7 @@
                             Background="#0A000000"
                             BorderThickness="1"
                             BorderBrush="{StaticResource BorderSubtleBrush}"
-                            CornerRadius="3"
+                            CornerRadius="12"
                             Padding="6">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Background="Transparent">
                             <ItemsControl x:Name="WebsitesList">
@@ -447,11 +360,11 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding}"
-                                                           FontSize="9" Foreground="{StaticResource TextDimBrush}"
+                                                           FontSize="12" Foreground="{StaticResource TextDimBrush}"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1"
                                                         Content="X"
-                                                        FontSize="7"
+                                                        FontSize="10"
                                                         Foreground="{StaticResource AccentLightBrush}"
                                                         Background="Transparent"
                                                         BorderThickness="0"
@@ -498,7 +411,7 @@
                             Background="#0A000000"
                             BorderThickness="1"
                             BorderBrush="{StaticResource BorderSubtleBrush}"
-                            CornerRadius="3"
+                            CornerRadius="12"
                             Padding="8">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Background="Transparent">
                             <ItemsControl x:Name="ModesPreviewList">
@@ -526,11 +439,11 @@
                                                 </Grid>
                                                 <TextBlock Grid.Row="1"
                                                            Text="{Binding Description}"
-                                                           FontSize="8" Foreground="{StaticResource TextDimBrush}"
+                                                           FontSize="11" Foreground="{StaticResource TextDimBrush}"
                                                            Margin="14,2,0,0"/>
                                                 <TextBlock Grid.Row="2"
                                                            Text="{Binding Summary}"
-                                                           FontSize="7" Foreground="{StaticResource TextMutedBrush}"
+                                                           FontSize="10" Foreground="{StaticResource TextMutedBrush}"
                                                            Margin="14,4,0,0"/>
                                             </Grid>
                                         </Border>
@@ -550,7 +463,7 @@
 
             <!-- Footer - nav buttons -->
             <Border Grid.Row="2"
-                    CornerRadius="2"
+                    CornerRadius="12"
                     Background="#12000000"
                     Padding="6,2">
                 <Grid>
@@ -585,12 +498,12 @@
 
             <!-- Footer - status bar -->
             <Border Grid.Row="3"
-                    CornerRadius="2"
+                    CornerRadius="12"
                     Background="#12000000"
                     Padding="6,2"
                     Margin="0,2,0,0">
                 <TextBlock x:Name="StatusBar"
-                           FontSize="7"
+                           FontSize="10"
                            Foreground="{StaticResource TextMutedBrush}"
                            VerticalAlignment="Center"/>
             </Border>

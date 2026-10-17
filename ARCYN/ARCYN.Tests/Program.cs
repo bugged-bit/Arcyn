@@ -128,7 +128,7 @@ internal static partial class Program
             ((RenderService.ISubscriber)window).OnRenderTick(30);
             Check(((UIElement)window.FindName("AmbientGlow")).Opacity is >= 0 and <= 1, "maximum glow customization stays within valid render bounds");
             window.ApplyTheme(new ThemeConfig { Accent = "#4580D6", FontScale = 1.2, Layout = "grid", Width = 1000, Spacing = 10, Particles = 0 });
-            Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == Color.FromRgb(0x45, 0x80, 0xD6) && (double)window.FindResource("FontSize15") == 18 && dashboard.ColumnDefinitions.Count == 2, "live theme covers colour, typography, geometry and layout");
+            Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == Color.FromRgb(0x45, 0x80, 0xD6) && Math.Abs((double)window.FindResource("FontSize15") - 20.4) < .001 && dashboard.ColumnDefinitions.Count == 2, "live theme covers colour, typography, geometry and layout");
             window.ApplyTheme(config.Theme);
             Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == (Color)ColorConverter.ConvertFromString(config.Theme.Accent), "preview rollback restores the saved palette");
             var themePath = Path.Combine(directory, "theme.json");
@@ -185,6 +185,7 @@ internal static partial class Program
             Check(new FileInfo(imagePath).Length > 5000, "HUD templates render offscreen without opening a window");
             ReviewChecks(directory, service, config, window);
             WorkspaceEditorChecks(directory);
+            VisualSurfaceChecks(service);
             bindingTrace.Flush();
             Check(bindingOutput.ToString().Length == 0, "offscreen HUD and editor bindings produce no warnings or errors");
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingTrace);

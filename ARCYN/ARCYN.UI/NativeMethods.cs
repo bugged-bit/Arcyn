@@ -18,6 +18,11 @@ internal static class NativeMethods
         var backdrop = enabled ? 3 : 1;
         DwmSetWindowAttribute(hwnd, 38, ref backdrop, sizeof(int));
     }
+    internal static void RoundWindow(IntPtr hwnd, bool rounded)
+    {
+        var preference = rounded ? 2 : 1;
+        DwmSetWindowAttribute(hwnd, 33, ref preference, sizeof(int));
+    }
 
     internal const int WS_EX_TOOLWINDOW = 0x00000080;
     internal const int GWL_EXSTYLE = -20;

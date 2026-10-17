@@ -138,10 +138,10 @@ public sealed class ModeConfig : INotifyPropertyChanged
     public string StateLabel => string.IsNullOrWhiteSpace(State)
         ? Type switch
         {
-            "study" => "FOCUS LOCK",
-            "design" => "CREATIVE READY",
-            "code" => "EXEC LIVE",
-            _ => "TACTICAL READY"
+            "study" => "Room to focus",
+            "design" => "Ready to create",
+            "code" => "Ready to build",
+            _ => "Ready when you are"
         }
         : State.ToUpperInvariant();
 
@@ -161,7 +161,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
     public int ProcessCount => LaunchTargets.Count();
 
     [JsonIgnore]
-    public string ProcessLabel => $"{ProcessCount:D2} PROC";
+    public string ProcessLabel => $"{ProcessCount} targets";
 
     [JsonIgnore]
     public string LaunchCountLabel => $"{_launchCount:D2} RUN";
@@ -170,7 +170,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
     public string LastLaunchLabel => _lastLaunchedAt?.ToString("HH:mm") ?? "NONE";
 
     [JsonIgnore]
-    public string LastOutcomeLabel => _lastLaunchOutcome;
+    public string LastOutcomeLabel => _lastLaunchOutcome switch { "STANDBY" => "Not opened yet", "COMPLETE" => "Last run complete", "PARTIAL" => "Needs attention", "CANCELED" => "Last run canceled", _ => _lastLaunchOutcome };
 
     public void RecordLaunch(int launchedTargets, int totalTargets, bool fullSuccess)
     {

@@ -13,6 +13,7 @@ public partial class EditModeWindow : Window
 {
     public ModeConfig Result { get; }
     private readonly IWindowSystem _windows;
+    private readonly ThemeConfig _theme;
     private readonly ObservableCollection<TargetRow> _rows;
     private readonly ObservableCollection<LayoutRow> _layouts;
     private readonly ObservableCollection<ActionRow> _actions;
@@ -25,9 +26,10 @@ public partial class EditModeWindow : Window
         input.SelectedValuePath = "Value"; input.DisplayMemberPath = "Label";
         input.ItemsSource = values.Select(v => new Option<T>(v.Value, v.Label)).ToArray();
     }
-    public EditModeWindow(ModeConfig mode, IWindowSystem? windows = null)
+    public EditModeWindow(ModeConfig mode, IWindowSystem? windows = null, ThemeConfig? theme = null)
     {
         _windows = windows ?? new WindowsWindowSystem();
+        _theme = ThemeService.Clone(theme ?? new());
         Result = WorkspaceDefinition.Clone(mode); Result.RetainLaunchHistory(mode);
         _rows = new(mode.LaunchTargets.Select(t => new TargetRow(t)));
         _layouts = new(Result.Layout.Select(l => MakeLayoutRow(l)));
@@ -44,6 +46,7 @@ public partial class EditModeWindow : Window
         LayoutGrid.CellEditEnding += (_, _) => Dispatcher.BeginInvoke(DrawMap);
         Closed += (_, _) => _closed = true;
         if (_rows.Count > 0) TargetsGrid.SelectedIndex = 0;
+        WindowSurface.Prepare(this, _theme);
     }
 
     public sealed class TargetRow
@@ -230,7 +233,8 @@ public partial class EditModeWindow : Window
             var windows = await Task.Run(_windows.Windows); if (_closed) return;
             var choices = windows.Where(w => w.Executable != null || w.AppId != null).Select(w => new { Window = w, Label = w.Title + "\n" + (w.AppId ?? w.Executable) }).ToList();
             var list = new ListBox { ItemsSource = choices, DisplayMemberPath = "Label", Margin = new(12) };
-            var picker = new Window { Title = "Choose matching window — Enter or double-click", Owner = this, Width = 650, Height = 420, Content = list, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var picker = new Window { Title = "ARCYN — Choose matching window", Owner = this, Width = 650, Height = 480, Content = list, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            WindowSurface.Prepare(picker, _theme);
             void Select()
             {
                 if (list.SelectedIndex < 0) return; var window = choices[list.SelectedIndex].Window;
@@ -278,16 +282,19 @@ public partial class EditModeWindow : Window
         var scale = Math.Max(.001, Math.Min(Math.Max(1, LayoutMap.ActualWidth - 30) / totalW, Math.Max(1, LayoutMap.ActualHeight - 30) / totalH));
         foreach (var monitor in displays)
         {
-            var mx = 15 + (monitor.Bounds.X - left) * scale; var my = 15 + (monitor.Bounds.Y - top) * scale;
-            var frame = new Border { Width = monitor.Bounds.Width * scale, Height = monitor.Bounds.Height * scale, BorderBrush = Brushes.DimGray, BorderThickness = new(1),
+            var mx = (LayoutMap.ActualWidth - totalW * scale) / 2 + (monitor.Bounds.X - left) * scale;
+            var my = (LayoutMap.ActualHeight - totalH * scale) / 2 + (monitor.Bounds.Y - top) * scale;
+            var frame = new Border { Width = monitor.Bounds.Width * scale, Height = monitor.Bounds.Height * scale, BorderThickness = new(1), CornerRadius = new(12),
                 Child = new TextBlock { Text = monitor.Name, FontSize = 10, Foreground = Brushes.Gray, Margin = new(4) } };
+            frame.SetResourceReference(Border.BorderBrushProperty, "SurfaceLineBrush");
             Canvas.SetLeft(frame, mx); Canvas.SetTop(frame, my); LayoutMap.Children.Add(frame);
             foreach (var row in _layouts.Where(l => l.Layout.Monitor == monitor.Id))
             {
                 var layout = row.Layout; var work = monitor.WorkArea;
                 if (!double.IsFinite(layout.X + layout.Y + layout.Width + layout.Height)) continue;
-                var box = new Border { Width = Math.Max(18, work.Width * layout.Width * scale), Height = Math.Max(18, work.Height * layout.Height * scale), Background = new SolidColorBrush(Color.FromArgb(100, 145, 40, 40)),
-                    BorderBrush = TryFindResource("AccentBrightBrush") as Brush ?? Brushes.IndianRed, BorderThickness = new(1), ToolTip = row.Label };
+                var box = new Border { Width = Math.Max(18, work.Width * layout.Width * scale), Height = Math.Max(18, work.Height * layout.Height * scale), CornerRadius = new(9),
+                    BorderThickness = new(1), ToolTip = row.Label };
+                box.SetResourceReference(Border.BackgroundProperty, "AccentSurfaceBrush"); box.SetResourceReference(Border.BorderBrushProperty, "AccentBrightBrush");
                 var content = new Grid(); box.Child = content;
                 content.Children.Add(new TextBlock { Text = row.Label, Margin = new(4), FontSize = 10, Foreground = Brushes.White, IsHitTestVisible = false, TextTrimming = TextTrimming.CharacterEllipsis });
                 var template = new ControlTemplate(typeof(Thumb)) { VisualTree = new FrameworkElementFactory(typeof(Border)) };
@@ -344,7 +351,8 @@ public partial class EditModeWindow : Window
         {
             var apps = await Task.Run(() => ApplicationDiscovery.Find()); if (_closed) return;
             var list = new ListBox { ItemsSource = apps, DisplayMemberPath = "Name", Margin = new(12) };
-            var picker = new Window { Title = "Choose application — Enter or double-click", Owner = this, Width = 550, Height = 480, Content = list, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var picker = new Window { Title = "ARCYN — Choose application", Owner = this, Width = 550, Height = 480, Content = list, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            WindowSurface.Prepare(picker, _theme);
             void Select() { if (list.SelectedItem is DiscoveredApp app) { _rows.Add(new TargetRow(new() { Cmd = app.Command })); picker.Close(); } }
             list.MouseDoubleClick += (_, _) => Select();
             list.KeyDown += (_, key) => { if (key.Key == System.Windows.Input.Key.Enter) Select(); };

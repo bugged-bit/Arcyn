@@ -88,22 +88,51 @@ public sealed class ThemeService
             }
             else if (key is string name && name.StartsWith("FontSize") && value is double size) target.Resources[key] = size * theme.FontScale;
         }
-        target.Resources["UIFont"] = theme.FontFamily == "JetBrainsMono NF" ? source["UIFont"] : new FontFamily(theme.FontFamily);
+        target.Resources["UIFont"] = theme.FontFamily == "JetBrainsMono NF" ? source["ReadoutFont"] : new FontFamily(theme.FontFamily);
+        var background = ParseColor(theme.Background); var text = ParseColor(theme.Text); var accent = ParseColor(theme.Accent);
+        SolidColorBrush Surface(double lift, byte alpha = 255)
+        {
+            byte Channel(byte value) => (byte)Math.Round(value + (255 - value) * lift);
+            var brush = new SolidColorBrush(Color.FromArgb(alpha, Channel(background.R), Channel(background.G), Channel(background.B))); brush.Freeze(); return brush;
+        }
+        SolidColorBrush Tint(Color color, byte alpha) { var brush = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B)); brush.Freeze(); return brush; }
+        target.Resources["WindowBrush"] = Tint(background, 255);
+        target.Resources["SurfaceBrush"] = Surface(.035, theme.ReducedEffects || SystemParameters.HighContrast ? (byte)255 : (byte)245);
+        target.Resources["RaisedSurfaceBrush"] = Surface(.085);
+        target.Resources["FieldBrush"] = Surface(.015, 235);
+        target.Resources["SurfaceLineBrush"] = Tint(text, 35);
+        target.Resources["AccentSurfaceBrush"] = Tint(accent, 45);
+        target.Resources["TextDimBrush"] = Tint(text, 220);
+        target.Resources["TextMutedBrush"] = Tint(text, 180);
+        target.Resources["SurfaceRadius"] = new CornerRadius(theme.CornerRadius);
+        target.Resources["CardRadius"] = new CornerRadius(theme.CornerRadius * .8);
+        target.Resources["ControlRadius"] = new CornerRadius(theme.CornerRadius * .5);
+        target.Resources["GlassReflection"] = theme.ReducedEffects || SystemParameters.HighContrast ? Brushes.Transparent : source["GlassReflection"];
         target.Resources["CardHeight"] = theme.CompactMode || theme.Layout == "compact" ? Math.Min(theme.CardHeight, 72) : theme.CardHeight;
         // Templates are freshly loaded and have not yet been applied/sealed.
         var style = (Style)source["WorkstationPanelStyle"];
         foreach (var setter in style.Setters.OfType<Setter>())
             if (setter.Value is SolidColorBrush brush)
             { var mapped = new SolidColorBrush(Map(brush.Color, theme)); mapped.Freeze(); setter.Value = mapped; }
-        var template = (ControlTemplate)style.Setters.OfType<Setter>().Single(s => s.Property == Control.TemplateProperty).Value;
-        foreach (var trigger in template.Triggers.OfType<Trigger>())
-            foreach (var action in trigger.EnterActions.Concat(trigger.ExitActions).OfType<BeginStoryboard>())
-            {
-                var storyboard = action.Storyboard.Clone();
-                foreach (var animation in storyboard.Children.OfType<ColorAnimation>())
-                    if (animation.To is Color to) animation.To = Map(to, theme);
-                action.Storyboard = storyboard;
-            }
+        void PrepareMotion(Style controlStyle)
+        {
+            var template = (ControlTemplate)controlStyle.Setters.OfType<Setter>().Single(s => s.Property == Control.TemplateProperty).Value;
+            foreach (var trigger in template.Triggers.OfType<Trigger>())
+                foreach (var action in trigger.EnterActions.Concat(trigger.ExitActions).OfType<BeginStoryboard>())
+                {
+                    var storyboard = action.Storyboard.Clone();
+                    foreach (var animation in storyboard.Children.OfType<ColorAnimation>())
+                        if (animation.To is Color to) animation.To = Map(to, theme);
+                    if (theme.ReducedEffects || !theme.Animations || theme.MotionAmount == 0 || !SystemParameters.ClientAreaAnimation)
+                        foreach (var animation in storyboard.Children.OfType<DoubleAnimation>())
+                            if (Storyboard.GetTargetProperty(animation)?.Path.Contains("ScaleTransform", StringComparison.Ordinal) == true) animation.To = 1;
+                    action.Storyboard = storyboard;
+                }
+        }
+        PrepareMotion(style);
         target.Resources["WorkstationPanelStyle"] = style;
+        var button = (Style)source[typeof(Button)]; PrepareMotion(button);
+        target.Resources[typeof(Button)] = button;
+        target.Resources["PrimaryActionButton"] = source["PrimaryActionButton"];
     }
 }
