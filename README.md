@@ -58,8 +58,8 @@ Development requires the SDK pinned in global.json. C++ build tools are needed o
 ./ARCYN/tools/Test-Arcyn.ps1
 ./ARCYN/tools/Publish-Arcyn.ps1
 ```
-The regression runner opens no windows or target applications. Publishing creates and checks a complete standalone ZIP. CI runs these commands for master and pull requests. A running CI result still requires a push/PR; local changes are not pushed automatically.
+The regression runner opens no windows or target applications. Publishing creates and checks a complete standalone ZIP. CI runs these commands for master, codex/arcyn-lightweight and pull requests targeting master.
 
 See [validation and performance notes](docs/implementation-validation.md). WPF remains the framework; Windows interop stays in the existing services. Linux support and a framework migration are outside this change.
 
-The standalone artifact bundles .NET 8.0.32. [.NET 8 support ends November 10, 2026](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core); a separate .NET 10 LTS compatibility update is due before that deadline. Updating a self-contained release also requires republishing its bundled runtime.
+The standalone artifact bundles .NET 10 LTS runtime 10.0.13; the development SDK is pinned to 10.0.402. Updating a self-contained release requires republishing its bundled runtime. The validated .NET 8 artifact remains separately recoverable. See the [migration and original-plan checklist](docs/net10-migration.md) for measured comparisons and release-readiness limits.

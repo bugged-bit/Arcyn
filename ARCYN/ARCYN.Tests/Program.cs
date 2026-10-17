@@ -84,13 +84,19 @@ internal static partial class Program
             manager.Load(workspaces); manager.Add(new() { Name = "THREE" }); manager.MoveUp(2); manager.RemoveAt(0);
             Check(workspaces.Count == 2 && workspaces[0].Name == "THREE" && workspaces.Select(m => m.Index).SequenceEqual(new[] { 1, 2 }), "workspace add, reorder and delete preserve the shared configuration list");
             LaunchChecks().GetAwaiter().GetResult();
-            var app = new Application();
+            var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
             using var bindingOutput = new StringWriter();
             using var bindingTrace = new TextWriterTraceListener(bindingOutput);
             PresentationTraceSources.DataBindingSource.Listeners.Add(bindingTrace);
             PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/ARCYN;component/Styles/Theme.xaml", UriKind.Relative) });
+            var setup = new SetupWindow(service);
+            using var legacyLoading = new LoadingWindow(config.Modes[0], 0);
+            Check(new System.Windows.Interop.WindowInteropHelper(setup).Handle == IntPtr.Zero &&
+                new System.Windows.Interop.WindowInteropHelper(legacyLoading).Handle == IntPtr.Zero,
+                "setup and legacy loading XAML initialize without windows or runtime resource errors");
+            setup.Close(); legacyLoading.Close();
             using var window = new MainWindow(service, config);
             var dashboard = (Grid)window.FindName("DashboardGrid");
             typeof(MainWindow).GetMethod("LoadConfig", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(window, null);

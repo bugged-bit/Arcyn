@@ -5,7 +5,9 @@ foreach ($file in @('ARCYN.exe','ARCYN.dll','ARCYN.runtimeconfig.json','ARCYN.de
 }
 $runtime = Get-Content -LiteralPath (Join-Path $Directory 'ARCYN.runtimeconfig.json') -Raw | ConvertFrom-Json
 if (!$runtime.runtimeOptions.includedFrameworks -or $runtime.runtimeOptions.framework -or $runtime.runtimeOptions.frameworks) { throw 'Artifact still requires an installed runtime.' }
-if ($runtime.runtimeOptions.includedFrameworks | Where-Object { [version]$_.version -lt [version]'8.0.32' }) { throw 'Bundled runtime is older than the validated servicing patch.' }
+$frameworks = @($runtime.runtimeOptions.includedFrameworks)
+if ($frameworks.Count -ne 2 -or @($frameworks | Where-Object name -eq 'Microsoft.NETCore.App').Count -ne 1 -or @($frameworks | Where-Object name -eq 'Microsoft.WindowsDesktop.App').Count -ne 1) { throw 'Standalone artifact must include both .NET and Windows Desktop runtimes.' }
+if ($frameworks | Where-Object { $version = [version]$_.version; $version.Major -ne 10 -or $version.Minor -ne 0 -or $version -lt [version]'10.0.13' }) { throw 'Bundle the validated .NET 10 LTS servicing runtime (10.0.13 or later within 10.0).' }
 $dependencies = Get-Content -LiteralPath (Join-Path $Directory 'ARCYN.deps.json') -Raw | ConvertFrom-Json
 $packages = $dependencies.libraries.PSObject.Properties | Where-Object { $_.Value.type -eq 'package' }
 if ($packages) { throw ('Unexpected application packages: ' + ($packages.Name -join ', ')) }

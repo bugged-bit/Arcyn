@@ -12,7 +12,7 @@ Thanks for your interest! ARCYN is a lightweight project — contributions are w
 
 ## Code conventions
 
-- **Language**: C# 12, .NET 8, WPF
+- **Language**: C#, .NET 10 LTS, WPF (SDK pinned in global.json)
 - **Style**: Follow existing code — brace positions, naming, patterns
 - **No XML comments** — only `//` when the "why" isn't obvious
 - **No personal paths** — all config must be user-defined in `arcyn.json`

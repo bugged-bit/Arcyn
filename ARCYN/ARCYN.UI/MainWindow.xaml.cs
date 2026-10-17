@@ -80,6 +80,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         Topmost = _config.Behavior.AlwaysOnTop;
         PreviewMouseDown += (_, _) => ResetIdle();
         PreviewMouseWheel += (_, _) => ResetIdle();
+        Activated += (_, _) => ResetIdle();
 
         _log = new LogService();
         _render = new RenderService();

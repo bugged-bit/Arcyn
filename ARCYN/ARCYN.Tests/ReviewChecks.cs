@@ -31,6 +31,16 @@ internal static partial class Program
     }
     private static void ReviewChecks(string directory, ConfigService service, ArcynConfig config, MainWindow window)
     {
+        var deadline = Field<IdleDeadline>(window, "_idle");
+        var originalClock = Field<Func<long>>(deadline, "_milliseconds"); long now = 100;
+        try
+        {
+            SetField(deadline, "_milliseconds", new Func<long>(() => now)); deadline.Reset(); now += 11000;
+            if (!deadline.Expired(10)) throw new Exception("Idle fixture did not expire.");
+            Call(window, "OnActivated", EventArgs.Empty);
+            Check(!deadline.Expired(10), "reactivation resets an expired idle deadline without creating a window");
+        }
+        finally { SetField(deadline, "_milliseconds", originalClock); deadline.Reset(); }
         var missing = Path.Combine(directory, "offline app", "tool.exe");
         var row = new EditModeWindow.TargetRow(new TargetConfig { Cmd = $"\"{missing}\" \"a b\" \"\"", LegacyCommandLine = true });
         var repaired = row.Commit();

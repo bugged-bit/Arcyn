@@ -1,0 +1,622 @@
+{
+  "date": "2026-10-17",
+  "sdk": "10.0.402",
+  "oldRuntime": "8.0.32",
+  "newRuntime": "10.0.13",
+  "baselineCommit": "01b75e9",
+  "logicalProcessors": 4,
+  "cpu": "11th Gen Intel(R) Core(TM) i3-1115G4 @ 3.00GHz",
+  "method": "Five alternating old/new self-contained harness process pairs, same benchmark source and fixtures, one component warm-up. No App.Startup, Show, real dispatch, hotkey registration or visible application. Wall/CPU values are noisy on a desktop in use; CPU is quantized. Memory is harness-only, not ARCYN Ready memory.",
+  "summary": [
+    {
+      "component": "native telemetry sample",
+      "iterations": 10000,
+      "net8": {
+        "wallMedianMs": 229.2726,
+        "cpuMedianMs": 93.75,
+        "allocationMedianBytes": 1152,
+        "wallMinMs": 29.9145,
+        "wallMaxMs": 552.8287
+      },
+      "net10": {
+        "wallMedianMs": 67.6449,
+        "cpuMedianMs": 31.25,
+        "allocationMedianBytes": 96,
+        "wallMinMs": 33.4343,
+        "wallMaxMs": 317.4693
+      }
+    },
+    {
+      "component": "deserialize and validate ten workspaces",
+      "iterations": 1000,
+      "net8": {
+        "wallMedianMs": 76.9656,
+        "cpuMedianMs": 78.125,
+        "allocationMedianBytes": 11897080,
+        "wallMinMs": 69.0467,
+        "wallMaxMs": 116.1158
+      },
+      "net10": {
+        "wallMedianMs": 69.113,
+        "cpuMedianMs": 78.125,
+        "allocationMedianBytes": 11064504,
+        "wallMinMs": 61.2085,
+        "wallMaxMs": 75.7464
+      }
+    },
+    {
+      "component": "prepare target without dispatch",
+      "iterations": 10000,
+      "net8": {
+        "wallMedianMs": 1836.6515,
+        "cpuMedianMs": 1750,
+        "allocationMedianBytes": 7840672,
+        "wallMinMs": 1720.0692,
+        "wallMaxMs": 2295.2775
+      },
+      "net10": {
+        "wallMedianMs": 1823.8616,
+        "cpuMedianMs": 1828.125,
+        "allocationMedianBytes": 7520096,
+        "wallMinMs": 1741.1338,
+        "wallMaxMs": 3016.9176
+      }
+    },
+    {
+      "component": "apply theme to unshown HUD",
+      "iterations": 20,
+      "net8": {
+        "wallMedianMs": 0.2209,
+        "cpuMedianMs": 0,
+        "allocationMedianBytes": 37672,
+        "wallMinMs": 0.1943,
+        "wallMaxMs": 0.9122
+      },
+      "net10": {
+        "wallMedianMs": 0.1738,
+        "cpuMedianMs": 0,
+        "allocationMedianBytes": 37304,
+        "wallMinMs": 0.163,
+        "wallMaxMs": 0.2806
+      }
+    },
+    {
+      "component": "tick sixty particles without presentation",
+      "iterations": 2000,
+      "net8": {
+        "wallMedianMs": 298.2598,
+        "cpuMedianMs": 390.625,
+        "allocationMedianBytes": 11273856,
+        "wallMinMs": 267.359,
+        "wallMaxMs": 371.7354
+      },
+      "net10": {
+        "wallMedianMs": 314.8955,
+        "cpuMedianMs": 421.875,
+        "allocationMedianBytes": 11252760,
+        "wallMinMs": 265.2758,
+        "wallMaxMs": 404.8698
+      }
+    }
+  ],
+  "runs": [
+    {
+      "iteration": 1,
+      "variant": "net8",
+      "data": {
+        "runtime": "8.0.32",
+        "processors": 4,
+        "pid": 17524,
+        "telemetryFirstMs": 1.6196,
+        "unshownWindowConstructionMs": 372.5376,
+        "harnessPrivateBytes": 42442752,
+        "harnessWorkingSetBytes": 87859200,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 552.8287,
+            "cpuMs": 156.25,
+            "allocatedBytes": 1152
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 116.1158,
+            "cpuMs": 109.375,
+            "allocatedBytes": 11897080
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 2295.2775,
+            "cpuMs": 2093.75,
+            "allocatedBytes": 7840672
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.2209,
+            "cpuMs": 0,
+            "allocatedBytes": 37672
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 371.7354,
+            "cpuMs": 500,
+            "allocatedBytes": 11278680
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 1,
+      "variant": "net10",
+      "data": {
+        "runtime": "10.0.13",
+        "processors": 4,
+        "pid": 816,
+        "telemetryFirstMs": 1.5897,
+        "unshownWindowConstructionMs": 332.4104,
+        "harnessPrivateBytes": 41181184,
+        "harnessWorkingSetBytes": 84893696,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 317.4693,
+            "cpuMs": 78.125,
+            "allocatedBytes": 96
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 71.6162,
+            "cpuMs": 78.125,
+            "allocatedBytes": 11064504
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 2065.7092,
+            "cpuMs": 2046.875,
+            "allocatedBytes": 7520096
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.2806,
+            "cpuMs": 0,
+            "allocatedBytes": 37304
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 404.8698,
+            "cpuMs": 484.375,
+            "allocatedBytes": 11240232
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 2,
+      "variant": "net8",
+      "data": {
+        "runtime": "8.0.32",
+        "processors": 4,
+        "pid": 11932,
+        "telemetryFirstMs": 1.0426,
+        "unshownWindowConstructionMs": 223.283,
+        "harnessPrivateBytes": 42598400,
+        "harnessWorkingSetBytes": 87535616,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 386.1675,
+            "cpuMs": 125,
+            "allocatedBytes": 1152
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 76.9656,
+            "cpuMs": 78.125,
+            "allocatedBytes": 11897080
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 1836.6515,
+            "cpuMs": 1687.5,
+            "allocatedBytes": 7840672
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.9122,
+            "cpuMs": 0,
+            "allocatedBytes": 37672
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 311.2238,
+            "cpuMs": 390.625,
+            "allocatedBytes": 11284728
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 2,
+      "variant": "net10",
+      "data": {
+        "runtime": "10.0.13",
+        "processors": 4,
+        "pid": 5152,
+        "telemetryFirstMs": 1.1374,
+        "unshownWindowConstructionMs": 264.4775,
+        "harnessPrivateBytes": 40316928,
+        "harnessWorkingSetBytes": 83599360,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 48.2653,
+            "cpuMs": 31.25,
+            "allocatedBytes": 96
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 65.4706,
+            "cpuMs": 31.25,
+            "allocatedBytes": 11064504
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 1823.8616,
+            "cpuMs": 1703.125,
+            "allocatedBytes": 7520096
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.1738,
+            "cpuMs": 0,
+            "allocatedBytes": 37304
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 318.0398,
+            "cpuMs": 421.875,
+            "allocatedBytes": 11289120
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 3,
+      "variant": "net8",
+      "data": {
+        "runtime": "8.0.32",
+        "processors": 4,
+        "pid": 12728,
+        "telemetryFirstMs": 3.9416,
+        "unshownWindowConstructionMs": 343.6897,
+        "harnessPrivateBytes": 40435712,
+        "harnessWorkingSetBytes": 85176320,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 229.2726,
+            "cpuMs": 93.75,
+            "allocatedBytes": 1152
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 74.2471,
+            "cpuMs": 62.5,
+            "allocatedBytes": 11897080
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 1770.2022,
+            "cpuMs": 1750,
+            "allocatedBytes": 7840672
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.1946,
+            "cpuMs": 0,
+            "allocatedBytes": 37672
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 298.2598,
+            "cpuMs": 390.625,
+            "allocatedBytes": 11271984
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 3,
+      "variant": "net10",
+      "data": {
+        "runtime": "10.0.13",
+        "processors": 4,
+        "pid": 18592,
+        "telemetryFirstMs": 1.3853,
+        "unshownWindowConstructionMs": 258.1216,
+        "harnessPrivateBytes": 41320448,
+        "harnessWorkingSetBytes": 84783104,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 277.6723,
+            "cpuMs": 125,
+            "allocatedBytes": 96
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 69.113,
+            "cpuMs": 78.125,
+            "allocatedBytes": 11064504
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 1767.0988,
+            "cpuMs": 1828.125,
+            "allocatedBytes": 7520096
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.2766,
+            "cpuMs": 0,
+            "allocatedBytes": 37304
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 265.2758,
+            "cpuMs": 343.75,
+            "allocatedBytes": 11280912
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 4,
+      "variant": "net8",
+      "data": {
+        "runtime": "8.0.32",
+        "processors": 4,
+        "pid": 19692,
+        "telemetryFirstMs": 1.0206,
+        "unshownWindowConstructionMs": 177.7403,
+        "harnessPrivateBytes": 39010304,
+        "harnessWorkingSetBytes": 83062784,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 60.5156,
+            "cpuMs": 46.875,
+            "allocatedBytes": 1152
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 90.9799,
+            "cpuMs": 93.75,
+            "allocatedBytes": 11897080
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 1880.478,
+            "cpuMs": 1812.5,
+            "allocatedBytes": 7840672
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.1943,
+            "cpuMs": 0,
+            "allocatedBytes": 37672
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 279.5447,
+            "cpuMs": 328.125,
+            "allocatedBytes": 11245488
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 4,
+      "variant": "net10",
+      "data": {
+        "runtime": "10.0.13",
+        "processors": 4,
+        "pid": 20124,
+        "telemetryFirstMs": 3.9066,
+        "unshownWindowConstructionMs": 246.0971,
+        "harnessPrivateBytes": 42799104,
+        "harnessWorkingSetBytes": 86470656,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 33.4343,
+            "cpuMs": 0,
+            "allocatedBytes": 96
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 61.2085,
+            "cpuMs": 62.5,
+            "allocatedBytes": 11064504
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 1741.1338,
+            "cpuMs": 1625,
+            "allocatedBytes": 7520096
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.163,
+            "cpuMs": 0,
+            "allocatedBytes": 37304
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 314.8955,
+            "cpuMs": 437.5,
+            "allocatedBytes": 11252760
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 5,
+      "variant": "net8",
+      "data": {
+        "runtime": "8.0.32",
+        "processors": 4,
+        "pid": 22236,
+        "telemetryFirstMs": 1.0738,
+        "unshownWindowConstructionMs": 203.4935,
+        "harnessPrivateBytes": 40804352,
+        "harnessWorkingSetBytes": 85303296,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 29.9145,
+            "cpuMs": 15.625,
+            "allocatedBytes": 1152
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 69.0467,
+            "cpuMs": 78.125,
+            "allocatedBytes": 11897080
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 1720.0692,
+            "cpuMs": 1593.75,
+            "allocatedBytes": 7840672
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.365,
+            "cpuMs": 0,
+            "allocatedBytes": 37672
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 267.359,
+            "cpuMs": 328.125,
+            "allocatedBytes": 11273856
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    },
+    {
+      "iteration": 5,
+      "variant": "net10",
+      "data": {
+        "runtime": "10.0.13",
+        "processors": 4,
+        "pid": 7672,
+        "telemetryFirstMs": 1.1855,
+        "unshownWindowConstructionMs": 268.1735,
+        "harnessPrivateBytes": 40652800,
+        "harnessWorkingSetBytes": 83808256,
+        "results": [
+          {
+            "name": "native telemetry sample",
+            "iterations": 10000,
+            "wallMs": 67.6449,
+            "cpuMs": 15.625,
+            "allocatedBytes": 96
+          },
+          {
+            "name": "deserialize and validate ten workspaces",
+            "iterations": 1000,
+            "wallMs": 75.7464,
+            "cpuMs": 78.125,
+            "allocatedBytes": 11064504
+          },
+          {
+            "name": "prepare target without dispatch",
+            "iterations": 10000,
+            "wallMs": 3016.9176,
+            "cpuMs": 2000,
+            "allocatedBytes": 7520096
+          },
+          {
+            "name": "apply theme to unshown HUD",
+            "iterations": 20,
+            "wallMs": 0.1712,
+            "cpuMs": 0,
+            "allocatedBytes": 37304
+          },
+          {
+            "name": "tick sixty particles without presentation",
+            "iterations": 2000,
+            "wallMs": 297.2395,
+            "cpuMs": 359.375,
+            "allocatedBytes": 11252616
+          }
+        ],
+        "limitations": "Headless harness resource usage includes the runtime and test fixtures. No whole-app startup, Ready CPU/RAM or presented-frame measurements."
+      }
+    }
+  ],
+  "artifactComparison": {
+    "net8ZipBytes": 73691348,
+    "initialNet10ZipBytes": 66725800,
+    "net8ExpandedBytes": 170590843,
+    "initialNet10ExpandedBytes": 149214316,
+    "net8ZipSha256": "390B3BDFED5A52F74DD992A9062DA49D5211B6755250526D3792A6998D9E9160",
+    "testedNet10AssemblySha256": "FC2A0A2373AEE81F3FC3236A9AFA2E7335B9A864621732834EAEFBD4AC797AE6"
+  }
+}

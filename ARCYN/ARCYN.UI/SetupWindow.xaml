@@ -229,7 +229,7 @@
                     </Border>
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Border Style="{StaticResource ChipStyle}" Padding="8,3">
-                            <TextBlock Text=" .NET 8" FontSize="8" Foreground="{StaticResource TextMutedBrush}"/>
+                            <TextBlock Text=" .NET 10" FontSize="8" Foreground="{StaticResource TextMutedBrush}"/>
                         </Border>
                         <Border Style="{StaticResource ChipStyle}" Padding="8,3">
                             <TextBlock Text=" Windows" FontSize="8" Foreground="{StaticResource TextMutedBrush}"/>

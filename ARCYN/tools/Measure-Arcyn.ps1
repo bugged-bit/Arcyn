@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 if (!$AllowVisibleLauncher) { throw 'This benchmark opens visible ARCYN windows. Run later with -AllowVisibleLauncher when the desktop is available.' }
 $Executable = [IO.Path]::GetFullPath($Executable)
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
-$hook = Join-Path $PSScriptRoot 'Probe\bin\Release\net8.0-windows\Probe.dll'
+$hook = Join-Path $PSScriptRoot 'Probe\bin\Release\net10.0-windows\Probe.dll'
 if (!(Test-Path -LiteralPath $hook)) { throw 'Build tools/Probe/Probe.csproj in Release first.' }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $results = @()
