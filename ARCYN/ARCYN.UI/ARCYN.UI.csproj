@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <None Include="..\example.arcyn.json" Link="example.arcyn.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\arcyn.schema.json" Link="arcyn.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 

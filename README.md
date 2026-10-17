@@ -54,7 +54,7 @@ Saved workspaces use `label` and `subtitle`. The older `name` and `description` 
   ]
 }
 ```
-Unavailable targets stay saved and can be repaired. Existing literal paths take precedence over command-line parsing. Ambiguous legacy strings require editing; shell metacharacters are not interpreted as a shell script. A command that needs an interpreter must select its executable explicitly. Dispatched targets require a distinct matching window for window readiness; existing browser tabs and document readiness are not inferred. [The example](ARCYN/example.arcyn.json) shows typed targets and waits; [the schema](ARCYN/arcyn.schema.json) also describes selectors, commands and layouts.
+Unavailable targets stay saved and can be repaired. Existing literal paths take precedence over command-line parsing. Ambiguous legacy strings require editing; shell metacharacters are not interpreted as a shell script. A command that needs an interpreter must select its executable explicitly. Dispatched targets require a distinct matching window for window readiness; existing browser tabs and document readiness are not inferred. [The example](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/ARCYN/example.arcyn.json) shows typed targets and waits; [the schema](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/ARCYN/arcyn.schema.json) also describes selectors, commands and layouts.
 
 Use `ARCYN --setup` in a terminal for line-based setup (appends to existing workspaces; EOF exits). Other flags: --help, --version, --config-path, --config. Duplicate startup activates the existing window. Logs are bounded and nonfatal under %LOCALAPPDATA%\ARCYN.
 

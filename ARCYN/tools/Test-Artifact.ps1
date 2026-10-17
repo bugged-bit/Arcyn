@@ -1,5 +1,12 @@
 param([Parameter(Mandatory)][string]$Directory)
 $ErrorActionPreference = 'Stop'
+foreach ($configFile in @('example.arcyn.json', 'arcyn.schema.json')) {
+    $configPath = Join-Path $Directory $configFile
+    if (!(Test-Path -LiteralPath $configPath)) { throw "Standalone artifact is missing $configFile" }
+    Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json | Out-Null
+}
+$example = Get-Content -LiteralPath (Join-Path $Directory 'example.arcyn.json') -Raw | ConvertFrom-Json
+if ($example.'$schema' -ne './arcyn.schema.json') { throw 'Example configuration must resolve its bundled schema.' }
 foreach ($file in @('ARCYN.exe','ARCYN.dll','ARCYN.runtimeconfig.json','ARCYN.deps.json','coreclr.dll','hostfxr.dll','PresentationCore.dll','PresentationFramework.dll','PresentationNative_cor3.dll','vcruntime140_cor3.dll','wpfgfx_cor3.dll','PenImc_cor3.dll','D3DCompiler_47_cor3.dll','ARCYN.Hotkey.exe')) {
     if (!(Test-Path -LiteralPath (Join-Path $Directory $file))) { throw "Standalone artifact is missing $file" }
 }
