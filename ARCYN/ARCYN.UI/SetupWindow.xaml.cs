@@ -23,15 +23,6 @@ public partial class SetupWindow : Window
     private DispatcherTimer? _particleTimer;
     private static readonly string[] StepTitles = ["Welcome", "Mode", "Apps", "Folders", "Websites", "Review"];
 
-    private static readonly Dictionary<string, string> ColorMap = new()
-    {
-        ["ColorRed"] = "#D64545",
-        ["ColorBlue"] = "#4580D6",
-        ["ColorGreen"] = "#45D680",
-        ["ColorOrange"] = "#D6A045",
-        ["ColorPurple"] = "#A045D6"
-    };
-
         public SetupWindow(ConfigService? service = null)
         {
             _config = service ?? new ConfigService();
@@ -354,7 +345,6 @@ public partial class SetupWindow : Window
 
     private void AddFolder_Click(object sender, RoutedEventArgs e)
     {
-        // Use native WPF folder picker via OpenFileDialog workaround
         var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Select a folder" };
 
         if (dialog.ShowDialog() == true)
@@ -426,9 +416,9 @@ public partial class SetupWindow : Window
             config.Modes[i].Index = i + 1;
 
         _finishing = true;
-        FinishButton.IsEnabled = false;
+        MainBorder.IsEnabled = false;
         try { await _config.SaveAsync(config); }
-        catch (Exception ex) { StatusBar.Text = "Save failed: " + ex.Message; _finishing = false; FinishButton.IsEnabled = true; return; }
+        catch (Exception ex) { StatusBar.Text = "Save failed: " + ex.Message; _finishing = false; MainBorder.IsEnabled = true; return; }
 
         StatusBar.Text = "Config saved. Launching ARCYN...";
 

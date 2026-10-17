@@ -126,7 +126,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
     public string IndexLabel => Index <= 0 ? "--" : Index.ToString("D2");
 
     [JsonIgnore]
-    public string ShortcutHint => $"[{Math.Max(Index, 1)}]";
+    public string ShortcutHint => Index is >= 1 and <= 9 ? $"[{Index}]" : "";
 
     [JsonIgnore]
     public string SessionLabel => string.IsNullOrWhiteSpace(Session) ? $"SES {IndexLabel}" : Session.ToUpperInvariant();
@@ -210,6 +210,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
         OnPropertyChanged(nameof(TypeLabel));
         OnPropertyChanged(nameof(ProcessCount));
         OnPropertyChanged(nameof(ProcessLabel));
+        OnPropertyChanged(nameof(LaunchTargets));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -234,7 +235,13 @@ public sealed class TargetConfig
     {
         get
         {
-            if (Uri.TryCreate(Cmd, UriKind.Absolute, out var uri))
+            if (Cmd.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) && Args.Count > 0)
+            {
+                var folder = Args[0].TrimEnd('\\', '/');
+                var name = Path.GetFileName(folder);
+                return string.IsNullOrEmpty(name) ? folder : name;
+            }
+            if (Uri.TryCreate(Cmd, UriKind.Absolute, out var uri) && !uri.IsFile)
             {
                 var host = uri.Host;
                 return string.IsNullOrWhiteSpace(host) ? Cmd : host.Replace("www.", string.Empty, StringComparison.OrdinalIgnoreCase);
@@ -244,16 +251,7 @@ public sealed class TargetConfig
                 return Cmd.TrimEnd(':').ToUpperInvariant();
 
             if (Cmd.Contains('\\') || Cmd.Contains('/'))
-                {
-                    // If launching via Explorer with a folder argument, show friendly folder name.
-                    if (Cmd.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) && Args.Count > 0)
-                    {
-                        var folder = Args[0].TrimEnd('\\', '/');
-                        var name = System.IO.Path.GetFileName(folder);
-                        return string.IsNullOrEmpty(name) ? folder : name;
-                    }
-                    return System.IO.Path.GetFileNameWithoutExtension(Cmd);
-                }
+                return Path.GetFileNameWithoutExtension(Cmd);
 
             return Cmd;
         }

@@ -6,6 +6,7 @@ namespace ARCYN.UI;
 
 public partial class MainWindow
 {
+    internal Action<string> WorkspaceError { get; set; } = null!;
     private bool HandleEditorKey(KeyEventArgs e)
     {
         if (_state.Phase != AppPhase.Ready || _isLaunching || _editing) return false;
@@ -32,7 +33,7 @@ public partial class MainWindow
     }
     private async void EditWorkspace(ModeConfig? mode)
     {
-        if (_state.Phase != AppPhase.Ready || _isLaunching) return;
+        if (_state.Phase != AppPhase.Ready || _isLaunching || _editing || _isClosing) return;
         _editing = true;
         try
         {
@@ -47,7 +48,7 @@ public partial class MainWindow
     }
     private async void MoveWorkspace(ModeConfig mode, int delta)
     {
-        if (_state.Phase != AppPhase.Ready || _isLaunching) return;
+        if (_state.Phase != AppPhase.Ready || _isLaunching || _editing || _isClosing) return;
         var i = _modes.IndexOf(mode);
         if (i < 0 || i + delta < 0 || i + delta >= _modes.Count) return;
         _editing = true;
@@ -57,7 +58,7 @@ public partial class MainWindow
     }
     private async void DuplicateWorkspace(ModeConfig mode)
     {
-        if (_state.Phase != AppPhase.Ready || _isLaunching) return;
+        if (_state.Phase != AppPhase.Ready || _isLaunching || _editing || _isClosing) return;
         _editing = true;
         try
         {
@@ -71,7 +72,7 @@ public partial class MainWindow
     }
     private async void DeleteWorkspace(ModeConfig mode)
     {
-        if (_state.Phase != AppPhase.Ready || _isLaunching) return;
+        if (_state.Phase != AppPhase.Ready || _isLaunching || _editing || _isClosing) return;
         _editing = true;
         try
         {
@@ -87,7 +88,7 @@ public partial class MainWindow
         catch (Exception ex)
         {
             _modes.Clear(); _modes.AddRange(before);
-            MessageBox.Show(this, "Workspace save failed. Previous configuration is retained.\n" + ex.Message, "ARCYN");
+            WorkspaceError("Workspace save failed. Previous configuration is retained.\n" + ex.Message);
         }
         _state.SelectedModeIndex = -1;
         for (var i = 0; i < _modes.Count; i++) _modes[i].Index = i + 1;

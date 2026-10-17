@@ -8,7 +8,7 @@ using ARCYN.UI;
 using ARCYN.UI.Models;
 using ARCYN.UI.Services;
 
-internal static class Program
+internal static partial class Program
 {
     private static int _passed;
     private static void Check(bool condition, string label)
@@ -17,8 +17,9 @@ internal static class Program
         _passed++; Console.WriteLine("PASS " + label);
     }
     [STAThread]
-    private static int Main()
+    private static int Main(string[] args)
     {
+        if (args is ["--benchmark"]) return Benchmark();
         try { Run(); Console.WriteLine($"{_passed} checks passed on .NET {Environment.Version}; no launcher windows or applications opened."); return 0; }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
     }
@@ -26,6 +27,7 @@ internal static class Program
     {
         var directory = Path.Combine(AppContext.BaseDirectory, "test-runs", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
+        LogService.DirectoryPath = Path.Combine(directory, "logs");
         try
         {
             var user = Path.Combine(directory, "user"); var exe = Path.Combine(directory, "exe");
@@ -39,6 +41,8 @@ internal static class Program
             config.Modes[0].Name = "RENAMED";
             service.Save(config);
             var loaded = service.Load()!;
+            using (var canonical = JsonDocument.Parse(File.ReadAllText(service.GetOrCreatePath())))
+                Check(!canonical.RootElement.GetProperty("modes")[0].TryGetProperty("name", out _) && canonical.RootElement.GetProperty("modes")[0].GetProperty("label").GetString() == "RENAMED", "saves write one canonical name instead of conflicting aliases");
             Check(loaded.Theme.Accent == "#123456" && loaded.Behavior.IdleTimeoutSeconds == 42 && !loaded.Behavior.CloseOnLaunch, "workspace saves preserve all settings");
             Check(loaded.Extra!["future"].GetProperty("keep").GetBoolean() && loaded.Theme.Extra!["future"].GetInt32() == 7 && loaded.Modes[0].Extra!["future"].GetInt32() == 3, "unknown settings round-trip");
             Check(File.ReadAllText(Path.Combine(exe, "arcyn.json")) == "{}" && service.GetOrCreatePath() == Path.Combine(user, "arcyn.json"), "read and write resolve the same user configuration");
@@ -81,6 +85,11 @@ internal static class Program
             Check(workspaces.Count == 2 && workspaces[0].Name == "THREE" && workspaces.Select(m => m.Index).SequenceEqual(new[] { 1, 2 }), "workspace add, reorder and delete preserve the shared configuration list");
             LaunchChecks().GetAwaiter().GetResult();
             var app = new Application();
+            SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
+            using var bindingOutput = new StringWriter();
+            using var bindingTrace = new TextWriterTraceListener(bindingOutput);
+            PresentationTraceSources.DataBindingSource.Listeners.Add(bindingTrace);
+            PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/ARCYN;component/Styles/Theme.xaml", UriKind.Relative) });
             using var window = new MainWindow(service, config);
             var dashboard = (Grid)window.FindName("DashboardGrid");
@@ -168,6 +177,10 @@ internal static class Program
             var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
             using (var stream = File.Create(imagePath)) encoder.Save(stream);
             Check(new FileInfo(imagePath).Length > 5000, "HUD templates render offscreen without opening a window");
+            ReviewChecks(directory, service, config, window);
+            bindingTrace.Flush();
+            Check(bindingOutput.ToString().Length == 0, "offscreen HUD and editor bindings produce no warnings or errors");
+            PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingTrace);
         }
         finally { Directory.Delete(directory, true); }
     }
@@ -197,5 +210,14 @@ internal static class Program
         try { result = await pending.WaitAsync(TimeSpan.FromSeconds(2)); Check(result.Canceled, "cancellation restores control during a blocked shell dispatch"); }
         finally { release.Set(); }
         await finished.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        orchestrator.Dispatch = _ => { calls++; return null; }; calls = 0;
+        var recovery = new ModeConfig { Targets = [new() { Cmd = Path.Combine(AppContext.BaseDirectory, Guid.NewGuid() + ".exe") }, new() { Cmd = "ms-clock:" }] };
+        result = await orchestrator.LaunchModeAsync(recovery, CancellationToken.None);
+        Check(result.Failures.Count == 1 && result.LaunchedTargets == 1 && calls == 1 && !result.Success, "an unavailable target reports failure while remaining targets continue");
+        orchestrator.Dispatch = _ => throw new System.ComponentModel.Win32Exception("Fixture shell failure");
+        result = await orchestrator.LaunchModeAsync(mode, CancellationToken.None);
+        Check(result.Failures.Count == 2 && result.LaunchedTargets == 0 && !result.Success, "shell exceptions become recoverable per-target failures");
+        result = await orchestrator.LaunchModeAsync(new ModeConfig(), CancellationToken.None);
+        Check(!result.Success && result.Failures.Single().Contains("no targets"), "empty workspaces report an actionable repair message");
     }
 }

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Text.Json;
 using ARCYN.UI.Models;
 using ARCYN.UI.Services;
 namespace ARCYN.UI;
@@ -8,27 +9,32 @@ namespace ARCYN.UI;
 public partial class MainWindow
 {
     private ThemeConfig _currentTheme = new();
+    private string? _appliedThemeJson;
     private bool _runtimeStarted;
     private void EditTheme()
     {
-        if (_state.Phase != AppPhase.Ready || _isLaunching) return;
+        if (_state.Phase != AppPhase.Ready || _isLaunching || _editing || _isClosing) return;
         _editing = true;
         try
         {
             var editor = new ThemeWindow(_config.Theme, _config.Behavior,
                 (theme, behavior) => { ApplyTheme(theme); Topmost = behavior.AlwaysOnTop; },
-                async (theme, behavior) => {
-                    var before = (_config.Theme, _config.Behavior);
-                    _config.Theme = theme; _config.Behavior = behavior;
-                    try { await _configService.SaveAsync(_config); }
-                    catch { (_config.Theme, _config.Behavior) = before; throw; }
-                }) { Owner = this };
+                SaveThemeAsync) { Owner = this };
             editor.ShowDialog();
         }
         finally { ApplyTheme(_config.Theme); Topmost = _config.Behavior.AlwaysOnTop; _editing = false; ResetIdle(); }
     }
+    internal async Task SaveThemeAsync(ThemeConfig theme, BehaviorConfig behavior)
+    {
+        var before = (_config.Theme, _config.Behavior);
+        _config.Theme = theme; _config.Behavior = behavior;
+        try { await _configService.SaveAsync(_config); }
+        catch { (_config.Theme, _config.Behavior) = before; throw; }
+    }
     internal void ApplyTheme(ThemeConfig theme)
     {
+        var json = JsonSerializer.Serialize(theme, ConfigService.JsonOptions);
+        if (json == _appliedThemeJson) return;
         ThemeService.Apply(this, theme);
         _currentTheme = ThemeService.Clone(theme);
         Width = Math.Min(theme.Width, SystemParameters.WorkArea.Width);
@@ -48,7 +54,7 @@ public partial class MainWindow
         _textPrimaryBrush = (Brush)FindResource("TextPrimaryBrush");
         foreach (var particle in _cursorTrail) particle.Element.Fill = _accentBrightBrush;
         _particles?.Configure(theme.ReducedEffects ? 0 : theme.Particles, ThemeService.Map(Color.FromRgb(0xE8, 0x60, 0x60), theme));
-        if (!theme.CursorTrail || theme.ReducedEffects) { TrailCanvas.Children.Clear(); _cursorTrail.Clear(); }
+        if (!theme.Animations || !theme.CursorTrail || theme.ReducedEffects) { TrailCanvas.Children.Clear(); _cursorTrail.Clear(); }
         var handle = new WindowInteropHelper(this).Handle;
         if (handle != IntPtr.Zero)
             try
@@ -60,6 +66,7 @@ public partial class MainWindow
             catch (Exception ex) { _log.Write("Acrylic: {0}", ex.Message); }
         if (_runtimeStarted || _state.Phase == AppPhase.Ready) BuildDashboard();
         RefreshActivity();
+        _appliedThemeJson = json;
     }
     private void RefreshActivity()
     {

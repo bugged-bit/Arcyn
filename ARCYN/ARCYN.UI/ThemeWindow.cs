@@ -41,16 +41,18 @@ internal sealed class ThemeWindow : Window
         var heading = new TextBlock { Text = "HUD CONTROLS / LIVE PREVIEW", FontWeight = FontWeights.Bold, Margin = new Thickness(4, 4, 4, 12) };
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         var buttons = new WrapPanel();
-        void Button(string title, Action action) { var b = new Button { Content = title, Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(4) }; b.Click += (_, _) => action(); buttons.Children.Add(b); }
+        Button Button(string title, Action action) { var b = new Button { Content = title, Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(4) }; b.Click += (_, _) => action(); buttons.Children.Add(b); return b; }
         Button("Import theme", Import); Button("Export theme", Export);
         Button("Reset theme", () => { _draft = new(); BuildForm(); Schedule(); });
-        Button("Cancel", () => Close()); Button("Apply", Save);
+        Button("Cancel", () => Close()).IsCancel = true; Button("Apply", Save).IsDefault = true;
         DockPanel.SetDock(buttons, Dock.Bottom); root.Children.Add(buttons);
         DockPanel.SetDock(_status, Dock.Bottom); root.Children.Add(_status);
         root.Children.Add(new ScrollViewer { Content = _form, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); Content = root;
         _topmost.Checked += (_, _) => Schedule(); _topmost.Unchecked += (_, _) => Schedule();
         _close.Checked += (_, _) => Schedule(); _close.Unchecked += (_, _) => Schedule();
         _idle.TextChanged += (_, _) => Schedule();
+        System.Windows.Automation.AutomationProperties.SetName(_idle, "Idle timeout in seconds (0 disables)");
+        System.Windows.Automation.AutomationProperties.SetLiveSetting(_status, System.Windows.Automation.AutomationLiveSetting.Polite);
         BuildForm();
         _coalesce.Tick += (_, _) => { _coalesce.Stop(); Preview(); };
         Closed += (_, _) => _coalesce.Stop();
@@ -67,6 +69,7 @@ internal sealed class ThemeWindow : Window
             { var check = new CheckBox { IsChecked = (bool)property.GetValue(_draft)! }; check.Checked += (_, _) => Schedule(); check.Unchecked += (_, _) => Schedule(); input = check; }
             else
             { var box = new TextBox { Text = Convert.ToString(property.GetValue(_draft), CultureInfo.InvariantCulture), Padding = new Thickness(4) }; box.TextChanged += (_, _) => Schedule(); input = box; }
+            System.Windows.Automation.AutomationProperties.SetName(input, Labels[property.Name]);
             _inputs[property] = input; row.Children.Add(input); _form.Children.Add(row);
         }
         _form.Children.Add(new TextBlock { Text = "BEHAVIOR", FontWeight = FontWeights.Bold, Margin = new Thickness(4, 14, 4, 5) });
@@ -93,10 +96,16 @@ internal sealed class ThemeWindow : Window
     }
     private async void Save()
     {
-        if (_saving || !Preview()) return;
+        if (await ApplyAsync()) DialogResult = true;
+    }
+    internal async Task<bool> ApplyAsync()
+    {
+        if (_saving) return false;
+        _coalesce.Stop();
+        if (!Preview()) return false;
         _saving = true; IsEnabled = false;
-        try { await _save(_draft, _behavior); _saving = false; DialogResult = true; }
-        catch (Exception ex) { _status.Text = "Save failed; previous configuration retained. " + ex.Message; }
+        try { await _save(_draft, _behavior); return true; }
+        catch (Exception ex) { _status.Text = "Save failed; previous configuration retained. " + ex.Message; return false; }
         finally { _saving = false; IsEnabled = true; }
     }
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)

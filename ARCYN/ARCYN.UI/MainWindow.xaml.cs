@@ -76,6 +76,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _modeService = new ModeService(_state, _modes);
         _currentTheme = _config.Theme;
         InitializeComponent();
+        WorkspaceError = message => MessageBox.Show(this, message, "ARCYN");
         Topmost = _config.Behavior.AlwaysOnTop;
         PreviewMouseDown += (_, _) => ResetIdle();
         PreviewMouseWheel += (_, _) => ResetIdle();
@@ -765,7 +766,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         if (_modes.Count == 0)
             return "[1]";
 
-        return _modes.Count == 1 ? "[1]" : $"[1-{_modes.Count}]";
+        return _modes.Count == 1 ? "[1]" : $"[1-{Math.Min(_modes.Count, 9)}]";
     }
 
     private void SetLaunchProgress(int completed, int total)
@@ -821,6 +822,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             return;
 
         _disposed = true;
+        _state.TransitionTo(AppPhase.Closing);
         _log.Write("ARCYN disposed");
 
         _lifeCts?.Cancel();

@@ -9,7 +9,9 @@ if ($runtime.runtimeOptions.includedFrameworks | Where-Object { [version]$_.vers
 $dependencies = Get-Content -LiteralPath (Join-Path $Directory 'ARCYN.deps.json') -Raw | ConvertFrom-Json
 $packages = $dependencies.libraries.PSObject.Properties | Where-Object { $_.Value.type -eq 'package' }
 if ($packages) { throw ('Unexpected application packages: ' + ($packages.Name -join ', ')) }
-if (Test-Path -LiteralPath (Join-Path $Directory 'protocoll.json')) { throw 'Do not ship personal legacy configuration.' }
+foreach ($personal in @('protocoll.json','arcyn.json')) {
+    if (Test-Path -LiteralPath (Join-Path $Directory $personal)) { throw 'Do not ship personal configuration.' }
+}
 if (Get-ChildItem -LiteralPath $Directory -Recurse -Filter '*.ahk') { throw 'AutoHotkey dependency remains.' }
 & (Join-Path $Directory 'ARCYN.Hotkey.exe') --self-test
 if ($LASTEXITCODE) { throw 'Native helper self-test failed.' }

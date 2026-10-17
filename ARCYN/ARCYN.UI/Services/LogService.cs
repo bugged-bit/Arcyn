@@ -4,7 +4,7 @@ namespace ARCYN.UI.Services;
 public sealed class LogService : IDisposable
 {
     private static readonly object Gate = new();
-    public static string DirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ARCYN");
+    public static string DirectoryPath { get; internal set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ARCYN");
     private bool _disposed;
     public void Write(string message) { if (!_disposed) WriteStatic(message); }
     public void Write(string format, params object?[] args) { if (!_disposed) WriteStatic(format, args); }

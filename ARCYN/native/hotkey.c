@@ -3,17 +3,19 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <wchar.h>
+#include <wctype.h>
 #include <shellapi.h>
 
 static int parse_hotkey(const wchar_t *text, UINT *modifiers, UINT *key) {
     wchar_t copy[128], *context = NULL, *part;
     if (wcslen(text) >= 128) return 0;
+    if (!*text || *text == L'+' || text[wcslen(text)-1] == L'+' || wcsstr(text,L"++")) return 0;
     wcscpy_s(copy, 128, text); *modifiers = MOD_NOREPEAT; *key = 0;
     for (part = wcstok_s(copy, L"+", &context); part; part = wcstok_s(NULL, L"+", &context)) {
-        if (!_wcsicmp(part,L"ALT")) *modifiers |= MOD_ALT;
-        else if (!_wcsicmp(part,L"SHIFT")) *modifiers |= MOD_SHIFT;
-        else if (!_wcsicmp(part,L"CTRL")) *modifiers |= MOD_CONTROL;
-        else if (wcslen(part) == 1 && ((part[0] >= L'A' && part[0] <= L'Z') || (part[0] >= L'0' && part[0] <= L'9')) && !*key) *key = part[0];
+        UINT modifier = !_wcsicmp(part,L"ALT") ? MOD_ALT : !_wcsicmp(part,L"SHIFT") ? MOD_SHIFT : !_wcsicmp(part,L"CTRL") ? MOD_CONTROL : 0;
+        if (*key) return 0;
+        if (modifier) { if (*modifiers & modifier) return 0; *modifiers |= modifier; }
+        else if (wcslen(part) == 1 && ((part[0] >= L'A' && part[0] <= L'Z') || (part[0] >= L'a' && part[0] <= L'z') || (part[0] >= L'0' && part[0] <= L'9'))) *key = (UINT)towupper(part[0]);
         else return 0; /* Win combinations and debugger-reserved F12 are intentionally unsupported. */
     }
     return *key && (*modifiers & (MOD_CONTROL | MOD_ALT));
@@ -36,8 +38,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR tail, int show
     UINT modifiers = MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, key = L'D';
     if (!args) return 1;
     if (count == 2 && !wcscmp(args[1],L"--self-test")) {
-        UINT m,k; int ok = parse_hotkey(L"ALT+SHIFT+D",&m,&k) && k == L'D' &&
-            !parse_hotkey(L"WIN+L",&m,&k) && !parse_hotkey(L"ALT+F12",&m,&k) && !parse_hotkey(L"D",&m,&k);
+        UINT m,k; int ok = parse_hotkey(L"ALT+SHIFT+D",&m,&k) && k == L'D' && m == (MOD_ALT | MOD_SHIFT | MOD_NOREPEAT) &&
+            parse_hotkey(L"alt+shift+d",&m,&k) && k == L'D' && parse_hotkey(L"CTRL+7",&m,&k) && k == L'7' &&
+            !parse_hotkey(L"WIN+L",&m,&k) && !parse_hotkey(L"ALT+F12",&m,&k) && !parse_hotkey(L"D",&m,&k) &&
+            !parse_hotkey(L"ALT++D",&m,&k) && !parse_hotkey(L"+ALT+D",&m,&k) && !parse_hotkey(L"ALT+D+",&m,&k) &&
+            !parse_hotkey(L"D+ALT",&m,&k) && !parse_hotkey(L"ALT+ALT+D",&m,&k) && !parse_hotkey(L"SHIFT+D",&m,&k);
         LocalFree(args); return ok ? 0 : 1;
     }
     wchar_t user[256], event_name[320]; DWORD length = 256;

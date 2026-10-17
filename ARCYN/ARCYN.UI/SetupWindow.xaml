@@ -178,6 +178,7 @@
                     <Button Grid.Column="5"
                             Style="{StaticResource NavButton}"
                             Content="✖"
+                            AutomationProperties.Name="Close setup"
                             Width="26" Height="26"
                             Padding="0"
                             Click="CloseButton_Click"/>
@@ -252,10 +253,10 @@
                     <TextBlock Grid.Row="1" Style="{StaticResource StepDesc}"
                                Text="Each mode is a workspace. Give it a name and description."/>
                     <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="NAME"/>
-                    <TextBox Grid.Row="3" x:Name="ModeNameInput" Style="{StaticResource WizInput}"
+                    <TextBox Grid.Row="3" x:Name="ModeNameInput" Style="{StaticResource WizInput}" AutomationProperties.Name="Workspace name"
                             />
                     <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="DESCRIPTION"/>
-                    <TextBox Grid.Row="5" x:Name="ModeDescInput" Style="{StaticResource WizInput}"
+                    <TextBox Grid.Row="5" x:Name="ModeDescInput" Style="{StaticResource WizInput}" AutomationProperties.Name="Workspace description"
                             />
                     <Grid Grid.Row="6" Margin="0,8,0,0">
                         <Grid.RowDefinitions>
@@ -264,31 +265,31 @@
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="ACCENT COLOR"/>
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
-                            <RadioButton x:Name="ColorRed" GroupName="Accent" IsChecked="True"
+                            <RadioButton x:Name="ColorRed" GroupName="Accent" IsChecked="True" AutomationProperties.Name="Red accent"
                                          ToolTip="Classic Red">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#D64545" Margin="2"/>
                                 </RadioButton.Content>
                             </RadioButton>
-                            <RadioButton x:Name="ColorBlue" GroupName="Accent" Margin="8,0,0,0"
+                            <RadioButton x:Name="ColorBlue" GroupName="Accent" Margin="8,0,0,0" AutomationProperties.Name="Blue accent"
                                          ToolTip="Cyber Blue">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#4580D6" Margin="2"/>
                                 </RadioButton.Content>
                             </RadioButton>
-                            <RadioButton x:Name="ColorGreen" GroupName="Accent" Margin="8,0,0,0"
+                            <RadioButton x:Name="ColorGreen" GroupName="Accent" Margin="8,0,0,0" AutomationProperties.Name="Green accent"
                                          ToolTip="Matrix Green">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#45D680" Margin="2"/>
                                 </RadioButton.Content>
                             </RadioButton>
-                            <RadioButton x:Name="ColorOrange" GroupName="Accent" Margin="8,0,0,0"
+                            <RadioButton x:Name="ColorOrange" GroupName="Accent" Margin="8,0,0,0" AutomationProperties.Name="Orange accent"
                                          ToolTip="Phosphor Orange">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#D6A045" Margin="2"/>
                                 </RadioButton.Content>
                             </RadioButton>
-                            <RadioButton x:Name="ColorPurple" GroupName="Accent" Margin="8,0,0,0"
+                            <RadioButton x:Name="ColorPurple" GroupName="Accent" Margin="8,0,0,0" AutomationProperties.Name="Purple accent"
                                          ToolTip="Void Purple">
                                 <RadioButton.Content>
                                     <Ellipse Width="20" Height="20" Fill="#A045D6" Margin="2"/>
@@ -350,7 +351,7 @@
                                 Content="+ Browse"
                                 Foreground="{StaticResource TextPrimaryBrush}"
                                 Click="AddApp_Click"/>
-                        <TextBox x:Name="AppQuickInput"
+                        <TextBox x:Name="AppQuickInput" AutomationProperties.Name="Application path or command"
                                  Style="{StaticResource WizInput}"
                                  Width="200"
                                  Margin="8,0,0,0"
@@ -470,7 +471,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="WebsiteInput"
+                        <TextBox x:Name="WebsiteInput" AutomationProperties.Name="Website URL"
                                  Style="{StaticResource WizInput}"
                                 />
                         <Button Grid.Column="1"

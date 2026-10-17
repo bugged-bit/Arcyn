@@ -20,17 +20,17 @@ public sealed class RenderService : IDisposable
 
     public void Start()
     {
-        if (_running) return;
+        if (_running || _disposed) return;
         _running = true;
         _lastStamp = 0;
-        CompositionTargetEx.Rendering += OnRendering;
+        System.Windows.Media.CompositionTarget.Rendering += OnRendering;
     }
 
     public void Stop()
     {
         if (!_running) return;
         _running = false;
-        CompositionTargetEx.Rendering -= OnRendering;
+        System.Windows.Media.CompositionTarget.Rendering -= OnRendering;
     }
 
     private void OnRendering(object? sender, EventArgs e)
@@ -64,13 +64,4 @@ public sealed class RenderService : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>Wraps CompositionTarget.Rendering to avoid raw event pattern.</summary>
-    private static class CompositionTargetEx
-    {
-        public static event EventHandler? Rendering
-        {
-            add => System.Windows.Media.CompositionTarget.Rendering += value;
-            remove => System.Windows.Media.CompositionTarget.Rendering -= value;
-        }
-    }
 }

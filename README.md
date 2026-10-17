@@ -28,13 +28,16 @@ Configuration uses one selected path for both reads and saves:
 An explicit path must already exist. A new installation saves to AppData. The current working directory does not choose a configuration. `--config-path` prints the selected save location. Atomic saves retain the previous file as .bak. Malformed or newer-schema files are preserved and reported, never replaced by setup defaults. Copy a known-good .bak over the damaged file after keeping a copy of the damaged file.
 
 Both legacy workspace arrays and upstream apps/websites/folders remain readable. Prefer ordered targets for new work:
+
+Saved workspaces use `label` and `subtitle`. The older `name` and `description` aliases remain readable; if both forms occur, their values must agree.
+
 ```json
 {
   "schema_version": 1,
   "modes": [
     {
-      "name": "CODE",
-      "description": "Development workspace",
+      "label": "CODE",
+      "subtitle": "Development workspace",
       "type": "code",
       "session": "SES 089",
       "state": "EXEC LIVE",

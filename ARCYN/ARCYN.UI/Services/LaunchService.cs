@@ -11,17 +11,8 @@ public static class LaunchService
         psi = null!; error = null;
         try
         {
-            var cmd = Environment.ExpandEnvironmentVariables(target.Cmd).Trim();
-            var arguments = target.Args.ToList();
-            if (cmd.Length == 0) throw new ArgumentException("Empty command. Edit this target.");
-            if (cmd.StartsWith('"') && cmd.EndsWith('"') && File.Exists(cmd[1..^1])) cmd = cmd[1..^1];
-            if (target.LegacyCommandLine && !File.Exists(cmd) && !Directory.Exists(cmd) && !IsProtocol(cmd))
-            {
-                if (Path.IsPathRooted(cmd) && !cmd.StartsWith('"') && cmd.Contains(' '))
-                    throw new ArgumentException("Ambiguous path. Select an executable and enter its arguments separately.");
-                var parts = SplitCommandLine(cmd);
-                cmd = parts[0]; arguments.InsertRange(0, parts.Skip(1));
-            }
+            var (cmd, arguments) = ParseTarget(target);
+            cmd = Environment.ExpandEnvironmentVariables(cmd);
             var directory = Environment.ExpandEnvironmentVariables(target.WorkingDirectory ?? "");
             if (directory.Length > 0 && !Directory.Exists(directory)) throw new DirectoryNotFoundException("Working directory is unavailable.");
             if (Directory.Exists(cmd)) { arguments.Insert(0, cmd); cmd = "explorer.exe"; }
@@ -40,6 +31,24 @@ public static class LaunchService
         }
         catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
         { error = ex.Message; return false; }
+    }
+    internal static (string Command, List<string> Arguments) ParseTarget(TargetConfig target)
+    {
+        var cmd = target.Cmd.Trim();
+        var arguments = target.Args.ToList();
+        if (cmd.Length == 0) throw new ArgumentException("Empty command. Edit this target.");
+        if (cmd.Length >= 2 && cmd.StartsWith('"') && cmd.EndsWith('"')) cmd = cmd[1..^1];
+        if (cmd.Length == 0) throw new ArgumentException("Empty command. Edit this target.");
+        var expanded = Environment.ExpandEnvironmentVariables(cmd);
+        if (target.LegacyCommandLine && !File.Exists(expanded) && !Directory.Exists(expanded) && !IsProtocol(expanded))
+        {
+            // Parse the original quoting even when an application is temporarily unavailable.
+            if (Path.IsPathRooted(expanded) && !target.Cmd.TrimStart().StartsWith('"') && cmd.Contains(' '))
+                throw new ArgumentException("Ambiguous path. Select an executable and enter its arguments separately.");
+            var parts = SplitCommandLine(target.Cmd.Trim());
+            cmd = parts[0]; arguments.InsertRange(0, parts.Skip(1));
+        }
+        return (cmd, arguments);
     }
     private static bool IsProtocol(string cmd) => Uri.TryCreate(cmd, UriKind.Absolute, out var uri) && !uri.IsFile;
     public static string QuoteArgument(string value)

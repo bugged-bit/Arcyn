@@ -1,5 +1,7 @@
 # ARCYN implementation and validation — 2026-10-17
 
+The subsequent [headless validation pass](headless-validation.md) adds fixes, 87 assertions and component performance evidence. The results below describe the original implementation pass.
+
 Implemented on `codex/arcyn-lightweight`, retaining the current cinematic HUD and integrating upstream services. Nothing was pushed. The root contains ARCYN and its repository notes; unrelated projects were not merged. Original HEAD `4c07547` and upstream `aa6add2` are both ancestors of the implementation. Git cannot establish why the original remote configuration was absent.
 
 Recoverable backup: `D:\protocoll\.arcyn-backups\20261016-232017\workspace.zip`, SHA256 `AF6777B5E36BED03A22830F9756DBCB1CD189EADF045AC45A72264C3F1CD23AC`. It includes tracked, untracked, ignored and Git files, with a verified per-file manifest. Checkpoint `827bbb0` retains the original HUD edits. The showcase video, session notes, root notes, personal protocoll.json and original EXE retain their original bytes. New outputs are separate.

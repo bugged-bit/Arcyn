@@ -13,6 +13,12 @@ public sealed class LaunchOrchestrator(LogService log)
         var completed = 0;
         try
         {
+            token.ThrowIfCancellationRequested();
+            if (targets.Count == 0)
+            {
+                result.Failures.Add("This workspace has no targets. Edit it to add an application, folder or URL.");
+                return result;
+            }
             foreach (var target in targets)
             {
                 token.ThrowIfCancellationRequested();

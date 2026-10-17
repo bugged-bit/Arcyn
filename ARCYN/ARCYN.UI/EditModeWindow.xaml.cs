@@ -29,8 +29,9 @@ public partial class EditModeWindow : Window
         public TargetRow(TargetConfig target)
         {
             Target = JsonSerializer.Deserialize<TargetConfig>(JsonSerializer.Serialize(target, ConfigService.JsonOptions), ConfigService.JsonOptions)!;
-            if (target.LegacyCommandLine && LaunchService.TryPrepare(target, out var psi, out _))
-            { Target.Cmd = psi.FileName; Target.Args = psi.ArgumentList.ToList(); }
+            if (target.LegacyCommandLine)
+                try { (Target.Cmd, Target.Args) = LaunchService.ParseTarget(target); }
+                catch (ArgumentException) { /* Keep ambiguous text available for manual repair. */ }
             Command = Target.Cmd; Arguments = string.Join(" ", Target.Args.Select(LaunchService.QuoteArgument));
             WorkingDirectory = Target.WorkingDirectory;
         }
@@ -46,7 +47,9 @@ public partial class EditModeWindow : Window
     {
         try
         {
-            TargetsGrid.CommitEdit(); TargetsGrid.CommitEdit();
+            if (!TargetsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Cell, true) ||
+                !TargetsGrid.CommitEdit(System.Windows.Controls.DataGridEditingUnit.Row, true))
+                throw new ArgumentException("Finish editing the target before saving.");
             if (string.IsNullOrWhiteSpace(NameInput.Text)) throw new ArgumentException("Enter a workspace name.");
             ThemeService.ValidateColor(AccentInput.Text);
             Result.Name = NameInput.Text.Trim(); Result.Description = DescInput.Text;

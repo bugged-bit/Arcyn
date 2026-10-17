@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Security.Cryptography;
 using ARCYN.UI.Models;
 namespace ARCYN.UI.Services;
@@ -10,7 +11,13 @@ public sealed class ConfigService
     public static readonly JsonSerializerOptions JsonOptions = new() {
         WriteIndented = true, PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { static type => {
+            if (type.Type != typeof(ModeConfig)) return;
+            // Read both generations of field names; write each value only once.
+            foreach (var property in type.Properties)
+                if (property.Name is "name" or "description") property.ShouldSerialize = static (_, _) => false;
+        } } } };
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     private readonly string _userPath, _exeDirectory;
     private readonly string? _explicitPath;
@@ -46,6 +53,7 @@ public sealed class ConfigService
             using var reader = new StreamReader(new MemoryStream(bytes), detectEncodingFromByteOrderMarks: true);
             var json = reader.ReadToEnd();
             using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
+            RejectConflictingAliases(doc.RootElement);
             var config = doc.RootElement.ValueKind == JsonValueKind.Array
                 ? new ArcynConfig { Modes = JsonSerializer.Deserialize<List<ModeConfig>>(json, JsonOptions)! }
                 : JsonSerializer.Deserialize<ArcynConfig>(json, JsonOptions) ?? throw new InvalidDataException("Empty configuration.");
@@ -57,9 +65,31 @@ public sealed class ConfigService
         catch (Exception ex) when (ex is JsonException or InvalidDataException or ArgumentException)
         { throw new InvalidDataException($"Cannot read {path}. Your file was preserved. Previous save: {path}.bak. {ex.Message}", ex); }
     }
+    private static void RejectConflictingAliases(JsonElement root)
+    {
+        var modes = root.ValueKind == JsonValueKind.Array ? root : root.ValueKind == JsonValueKind.Object
+            ? root.EnumerateObject().FirstOrDefault(p => p.Name.Equals("modes", StringComparison.OrdinalIgnoreCase)).Value : default;
+        if (modes.ValueKind != JsonValueKind.Array) return;
+        foreach (var mode in modes.EnumerateArray())
+        {
+            if (mode.ValueKind != JsonValueKind.Object) continue;
+            foreach (var (alias, canonical) in new[] { ("name", "label"), ("description", "subtitle") })
+            {
+                string? first = null, second = null;
+                foreach (var property in mode.EnumerateObject())
+                {
+                    if (property.Value.ValueKind != JsonValueKind.String) continue;
+                    if (property.Name.Equals(alias, StringComparison.OrdinalIgnoreCase)) first = property.Value.GetString();
+                    if (property.Name.Equals(canonical, StringComparison.OrdinalIgnoreCase)) second = property.Value.GetString();
+                }
+                if (first != null && second != null && first != second)
+                    throw new InvalidDataException($"Conflicting {alias}/{canonical} values. Keep one field or make their values match.");
+            }
+        }
+    }
     public static void Validate(ArcynConfig config)
     {
-        if (config.SchemaVersion > 1) throw new InvalidDataException("This configuration needs a newer ARCYN version.");
+        if (config.SchemaVersion != 1) throw new InvalidDataException("Unsupported configuration schema version. This file was preserved.");
         if (config.Modes == null || config.Modes.Any(m => m == null)) throw new InvalidDataException("Modes must be a list of objects.");
         config.Theme ??= new(); config.Behavior ??= new();
         ThemeService.Validate(config.Theme);

@@ -21,6 +21,8 @@
             <Button Style="{DynamicResource WorkstationPanelStyle}"
                     Click="ModeButton_Click"
                     Tag="{Binding}"
+                    AutomationProperties.Name="{Binding Label}"
+                    AutomationProperties.HelpText="{Binding Subtitle}"
                     MinHeight="{DynamicResource CardHeight}"
                     Margin="0">
                 <Grid>
@@ -61,10 +63,12 @@
 
                             <StackPanel>
                                 <TextBlock Text="{Binding Label}"
+                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}"
                                            FontSize="{DynamicResource FontSize15}"
                                            FontWeight="Bold"
                                            Foreground="{DynamicResource TextBrightBrush}" />
                                 <TextBlock Text="{Binding Subtitle}"
+                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Subtitle}"
                                            FontSize="{DynamicResource FontSize8}"
                                            Foreground="{DynamicResource TextDimBrush}"
                                            Margin="0,1,0,0" />
@@ -129,7 +133,7 @@
                         </Grid>
 
                         <ItemsControl Grid.Row="2"
-                                      ItemsSource="{Binding Targets}"
+                                      ItemsSource="{Binding LaunchTargets}"
                                       Margin="0,7,0,0">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -459,11 +463,11 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="â–² LAUNCH SEQUENCE"
+                                        <TextBlock Text="&#x25B2; LAUNCH SEQUENCE"
                                                    FontSize="{DynamicResource FontSize9}" FontWeight="Bold"
                                                    Foreground="{DynamicResource AccentBrightBrush}"
                                                    VerticalAlignment="Center" />
-                                        <Ellipse Width="4" Height="4"
+                                        <Ellipse Grid.Column="1" Width="4" Height="4"
                                                  Fill="{DynamicResource AccentBrightBrush}"
                                                  Effect="{DynamicResource GlowAccentSharp}"
                                                  Margin="6,0" VerticalAlignment="Center" />
@@ -597,7 +601,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="ESC aborts Â· targets launch sequentially"
+                                        <TextBlock Text="ESC aborts &#x00B7; targets launch sequentially"
                                                    FontSize="{DynamicResource FontSize7}"
                                                    Foreground="{DynamicResource TextMutedBrush}"
                                                    Opacity="0.5" />

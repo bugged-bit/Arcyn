@@ -10,8 +10,6 @@ namespace ARCYN.UI.Services;
 
 public sealed class ThemeService
 {
-    public static IReadOnlyDictionary<string, string> Presets { get; } = new Dictionary<string, string> {
-        ["Classic Red"] = "#D64545", ["Cyber Blue"] = "#4580D6", ["Matrix Green"] = "#45D680", ["Phosphor Orange"] = "#D6A045", ["Void Purple"] = "#A045D6" };
     public static void ValidateColor(string value)
     {
         if (!System.Text.RegularExpressions.Regex.IsMatch(value ?? "", "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"))
@@ -37,7 +35,7 @@ public sealed class ThemeService
         if (new FileInfo(path).Length > 64 * 1024) throw new InvalidDataException("Theme exceeds 64 KiB.");
         var json = File.ReadAllText(path);
         using var document = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
-        if (document.RootElement.ValueKind != JsonValueKind.Object || document.RootElement.EnumerateObject().Any(p => p.Name.Equals("modes", StringComparison.OrdinalIgnoreCase))) throw new InvalidDataException("Import a visual theme, rather than a workspace configuration.");
+        if (IsConfiguration(document.RootElement)) throw new InvalidDataException("Import a visual theme, rather than a workspace configuration.");
         var theme = JsonSerializer.Deserialize<ThemeConfig>(json, ConfigService.JsonOptions) ?? throw new InvalidDataException("Empty theme.");
         Validate(theme); return theme;
     }
@@ -49,12 +47,14 @@ public sealed class ThemeService
         if (File.Exists(path))
         {
             using var document = JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
-            if (document.RootElement.ValueKind != JsonValueKind.Object || document.RootElement.EnumerateObject().Any(p => p.Name.Equals("modes", StringComparison.OrdinalIgnoreCase))) throw new InvalidDataException("Theme export cannot overwrite a workspace configuration.");
+            if (IsConfiguration(document.RootElement)) throw new InvalidDataException("Theme export cannot overwrite a workspace configuration.");
         }
         var json = JsonSerializer.Serialize(theme, ConfigService.JsonOptions);
         if (System.Text.Encoding.UTF8.GetByteCount(json) > 64 * 1024) throw new InvalidDataException("Theme exceeds 64 KiB.");
         File.WriteAllText(path, json);
     }
+    private static bool IsConfiguration(JsonElement root) => root.ValueKind != JsonValueKind.Object ||
+        root.EnumerateObject().Any(p => p.Name.ToLowerInvariant() is "modes" or "theme" or "behavior" or "schema_version");
 
     public static Color Map(Color color, ThemeConfig theme)
     {
