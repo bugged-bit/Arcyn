@@ -27,7 +27,8 @@ public partial class SetupWindow : Window
         {
             _config = service ?? new ConfigService();
             InitializeComponent();
-            ThemeService.Apply(this, new());
+            RefreshSystemTheme();
+            WindowSurface.Attach(this, new(), SurfaceRole.Workspace);
             Loaded += OnLoaded;
             IsVisibleChanged += (_, _) => RefreshActivity();
             StateChanged += (_, _) => RefreshActivity();
@@ -37,8 +38,6 @@ public partial class SetupWindow : Window
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            try { NativeMethods.EnableAcrylic(hwnd); NativeMethods.RoundWindow(hwnd, true); } catch { }
 
             _particles = new ParticleEngine(ParticleCanvas);
             _particles.Start();
@@ -50,8 +49,14 @@ public partial class SetupWindow : Window
 
         private void RefreshActivity()
         {
-            if (IsVisible && WindowState != WindowState.Minimized) _particleTimer?.Start();
+            if (IsVisible && WindowState != WindowState.Minimized && !SystemParameters.HighContrast) _particleTimer?.Start();
             else _particleTimer?.Stop();
+        }
+        internal void RefreshSystemTheme()
+        {
+            ThemeService.Apply(this, new());
+            ParticleCanvas.Visibility = SetupGlow.Visibility = SetupScanlines.Visibility = SetupVignette.Visibility = SystemParameters.HighContrast ? Visibility.Collapsed : Visibility.Visible;
+            RefreshActivity();
         }
 
         private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)

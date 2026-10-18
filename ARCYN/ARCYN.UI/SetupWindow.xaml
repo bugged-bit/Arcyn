@@ -17,28 +17,28 @@
         SnapsToDevicePixels="True"
         FontFamily="{StaticResource UIFont}">
     <Window.Resources>
-        <Style x:Key="StepTitle" TargetType="TextBlock"><Setter Property="FontSize" Value="22"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
-        <Style x:Key="StepDesc" TargetType="TextBlock"><Setter Property="FontSize" Value="12"/><Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="0,0,0,20"/></Style>
-        <Style x:Key="FieldLabel" TargetType="TextBlock"><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
-        <Style x:Key="WizInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="FontSize" Value="13"/></Style>
-        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="FontSize" Value="12"/></Style>
-        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryActionButton}"><Setter Property="FontSize" Value="12"/></Style>
+        <Style x:Key="StepTitle" TargetType="TextBlock"><Setter Property="FontSize" Value="{DynamicResource FontSize22}"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
+        <Style x:Key="StepDesc" TargetType="TextBlock"><Setter Property="FontSize" Value="{DynamicResource FontSize12}"/><Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="0,0,0,20"/></Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock"><Setter Property="FontSize" Value="{DynamicResource FontSize11}"/><Setter Property="Foreground" Value="{DynamicResource TextDimBrush}"/><Setter Property="Margin" Value="0,0,0,6"/></Style>
+        <Style x:Key="WizInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="FontSize" Value="{DynamicResource FontSize13}"/></Style>
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="FontSize" Value="{DynamicResource FontSize12}"/></Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryActionButton}"><Setter Property="FontSize" Value="{DynamicResource FontSize12}"/></Style>
         <Style x:Key="ChipStyle" TargetType="Border"><Setter Property="Margin" Value="0,0,6,6"/><Setter Property="Padding" Value="10,6"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Background" Value="{DynamicResource FieldBrush}"/></Style>
     </Window.Resources>
 
 <Grid x:Name="RootGrid" Background="Transparent" MouseDown="RootGrid_MouseDown">
         <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" />
-        <Rectangle Style="{StaticResource AmbientGlow}" />
-        <Rectangle Style="{StaticResource Scanlines}" />
-        <Rectangle Style="{StaticResource Vignette}" />
+        <Rectangle x:Name="SetupGlow" Style="{StaticResource AmbientGlow}" />
+        <Rectangle x:Name="SetupScanlines" Style="{StaticResource Scanlines}" />
+        <Rectangle x:Name="SetupVignette" Style="{StaticResource Vignette}" />
 
         <Grid x:Name="ShellHost" Margin="12,10">
             <Border x:Name="MainBorder"
                     CornerRadius="20"
-                    Background="{DynamicResource SurfaceBrush}"
+                    Background="{DynamicResource ShellBrush}"
                     BorderThickness="1"
                     BorderBrush="{DynamicResource SurfaceLineBrush}"
-                    Effect="{StaticResource GlowAccent}">
+                    Effect="{DynamicResource GlowAccent}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -67,19 +67,19 @@
                              Effect="{StaticResource GlowAccentSoft}" />
                     <TextBlock Grid.Column="1"
                                Text="ARCYN"
-                               FontSize="12"
+                               FontSize="{DynamicResource FontSize12}"
                                FontWeight="Bold"
                                Margin="6,0,10,0"
                                Foreground="{StaticResource TextPrimaryBrush}"
                                VerticalAlignment="Center" />
                     <TextBlock Grid.Column="2"
                                Text="SETUP"
-                               FontSize="11"
+                               FontSize="{DynamicResource FontSize11}"
                                Foreground="{StaticResource AccentBrush}"
                                VerticalAlignment="Center" />
                     <TextBlock Grid.Column="3"
                                x:Name="StepCounter"
-                               FontSize="11"
+                               FontSize="{DynamicResource FontSize11}"
                                Margin="10,0,0,0"
                                Foreground="{StaticResource TextDimBrush}"
                                VerticalAlignment="Center"/>
@@ -127,12 +127,12 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="↗"
-                                       FontSize="14"
+                                       FontSize="{DynamicResource FontSize14}"
                                        FontWeight="Bold"
                                        Foreground="{StaticResource AccentBrightBrush}"
                                        VerticalAlignment="Top"
                                        Margin="0,0,10,0"/>
-                            <TextBlock Grid.Column="1" FontSize="12" Foreground="{StaticResource TextDimBrush}"
+                            <TextBlock Grid.Column="1" FontSize="{DynamicResource FontSize12}" Foreground="{StaticResource TextDimBrush}"
                                        TextWrapping="Wrap">
                                 <Run Text="Create workspaces (modes)"/> <LineBreak/>
                                 <Run Text="Each mode opens your apps, sites, and folders together"/> <LineBreak/>
@@ -142,10 +142,10 @@
                     </Border>
                     <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Border Style="{StaticResource ChipStyle}" Padding="8,3">
-                            <TextBlock Text="Made for your flow" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                            <TextBlock Text="Made for your flow" FontSize="{DynamicResource FontSize11}" Foreground="{StaticResource TextMutedBrush}"/>
                         </Border>
                         <Border Style="{StaticResource ChipStyle}" Padding="8,3">
-                            <TextBlock Text="Windows native" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                            <TextBlock Text="Windows native" FontSize="{DynamicResource FontSize11}" Foreground="{StaticResource TextMutedBrush}"/>
                         </Border>
                     </StackPanel>
                 </Grid>
@@ -240,11 +240,11 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding}"
-                                                           FontSize="12" Foreground="{StaticResource TextDimBrush}"
+                                                           FontSize="{DynamicResource FontSize12}" Foreground="{StaticResource TextDimBrush}"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1"
                                                         Content="X"
-                                                        FontSize="10"
+                                                        FontSize="{DynamicResource FontSize10}"
                                                         Foreground="{StaticResource AccentLightBrush}"
                                                         Background="Transparent"
                                                         BorderThickness="0"
@@ -305,11 +305,11 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding}"
-                                                           FontSize="12" Foreground="{StaticResource TextDimBrush}"
+                                                           FontSize="{DynamicResource FontSize12}" Foreground="{StaticResource TextDimBrush}"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1"
                                                         Content="X"
-                                                        FontSize="10"
+                                                        FontSize="{DynamicResource FontSize10}"
                                                         Foreground="{StaticResource AccentLightBrush}"
                                                         Background="Transparent"
                                                         BorderThickness="0"
@@ -360,11 +360,11 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding}"
-                                                           FontSize="12" Foreground="{StaticResource TextDimBrush}"
+                                                           FontSize="{DynamicResource FontSize12}" Foreground="{StaticResource TextDimBrush}"
                                                            VerticalAlignment="Center"/>
                                                 <Button Grid.Column="1"
                                                         Content="X"
-                                                        FontSize="10"
+                                                        FontSize="{DynamicResource FontSize10}"
                                                         Foreground="{StaticResource AccentLightBrush}"
                                                         Background="Transparent"
                                                         BorderThickness="0"
@@ -434,16 +434,16 @@
                                                              VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                     <TextBlock Grid.Column="1"
                                                                Text="{Binding Name}"
-                                                               FontSize="12" FontWeight="Bold"
+                                                               FontSize="{DynamicResource FontSize12}" FontWeight="Bold"
                                                                Foreground="{StaticResource TextPrimaryBrush}"/>
                                                 </Grid>
                                                 <TextBlock Grid.Row="1"
                                                            Text="{Binding Description}"
-                                                           FontSize="11" Foreground="{StaticResource TextDimBrush}"
+                                                           FontSize="{DynamicResource FontSize11}" Foreground="{StaticResource TextDimBrush}"
                                                            Margin="14,2,0,0"/>
                                                 <TextBlock Grid.Row="2"
                                                            Text="{Binding Summary}"
-                                                           FontSize="10" Foreground="{StaticResource TextMutedBrush}"
+                                                           FontSize="{DynamicResource FontSize10}" Foreground="{StaticResource TextMutedBrush}"
                                                            Margin="14,4,0,0"/>
                                             </Grid>
                                         </Border>
@@ -503,7 +503,7 @@
                     Padding="6,2"
                     Margin="0,2,0,0">
                 <TextBlock x:Name="StatusBar"
-                           FontSize="10"
+                           FontSize="{DynamicResource FontSize10}"
                            Foreground="{StaticResource TextMutedBrush}"
                            VerticalAlignment="Center"/>
             </Border>

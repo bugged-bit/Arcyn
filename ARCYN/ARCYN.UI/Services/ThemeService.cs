@@ -81,7 +81,7 @@ public sealed class ThemeService
             else if (value is SolidColorBrush brush) { var b = new SolidColorBrush(Map(brush.Color, theme)); b.Freeze(); target.Resources[key] = b; }
             else if (value is DropShadowEffect shadow)
             {
-                if (theme.ReducedEffects || theme.GlowOpacity == 0) { target.Resources[key] = null; continue; }
+                if (theme.ReducedEffects || SystemParameters.HighContrast || theme.GlowOpacity == 0) { target.Resources[key] = null; continue; }
                 var effect = shadow.Clone(); effect.Color = Map(effect.Color, theme);
                 effect.Opacity *= theme.GlowOpacity / .28;
                 effect.Freeze(); target.Resources[key] = effect;
@@ -89,31 +89,14 @@ public sealed class ThemeService
             else if (key is string name && name.StartsWith("FontSize") && value is double size) target.Resources[key] = size * theme.FontScale;
         }
         target.Resources["UIFont"] = theme.FontFamily == "JetBrainsMono NF" ? source["ReadoutFont"] : new FontFamily(theme.FontFamily);
-        var background = ParseColor(theme.Background); var text = ParseColor(theme.Text); var accent = ParseColor(theme.Accent);
-        SolidColorBrush Surface(double lift, byte alpha = 255)
-        {
-            byte Channel(byte value) => (byte)Math.Round(value + (255 - value) * lift);
-            var brush = new SolidColorBrush(Color.FromArgb(alpha, Channel(background.R), Channel(background.G), Channel(background.B))); brush.Freeze(); return brush;
-        }
-        SolidColorBrush Tint(Color color, byte alpha) { var brush = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B)); brush.Freeze(); return brush; }
-        target.Resources["WindowBrush"] = Tint(background, 255);
-        target.Resources["SurfaceBrush"] = Surface(.035, theme.ReducedEffects || SystemParameters.HighContrast ? (byte)255 : (byte)245);
-        target.Resources["RaisedSurfaceBrush"] = Surface(.085);
-        target.Resources["FieldBrush"] = Surface(.015, 235);
-        target.Resources["SurfaceLineBrush"] = Tint(text, 35);
-        target.Resources["AccentSurfaceBrush"] = Tint(accent, 45);
-        target.Resources["TextDimBrush"] = Tint(text, 220);
-        target.Resources["TextMutedBrush"] = Tint(text, 180);
+        if (target is Window window) window.FontSize = 13 * theme.FontScale;
+        ApplySurfaces(target, theme, MaterialMode.Opaque, SystemParameters.HighContrast);
         target.Resources["SurfaceRadius"] = new CornerRadius(theme.CornerRadius);
         target.Resources["CardRadius"] = new CornerRadius(theme.CornerRadius * .8);
         target.Resources["ControlRadius"] = new CornerRadius(theme.CornerRadius * .5);
         target.Resources["GlassReflection"] = theme.ReducedEffects || SystemParameters.HighContrast ? Brushes.Transparent : source["GlassReflection"];
         target.Resources["CardHeight"] = theme.CompactMode || theme.Layout == "compact" ? Math.Min(theme.CardHeight, 72) : theme.CardHeight;
-        // Templates are freshly loaded and have not yet been applied/sealed.
         var style = (Style)source["WorkstationPanelStyle"];
-        foreach (var setter in style.Setters.OfType<Setter>())
-            if (setter.Value is SolidColorBrush brush)
-            { var mapped = new SolidColorBrush(Map(brush.Color, theme)); mapped.Freeze(); setter.Value = mapped; }
         void PrepareMotion(Style controlStyle)
         {
             var template = (ControlTemplate)controlStyle.Setters.OfType<Setter>().Single(s => s.Property == Control.TemplateProperty).Value;
@@ -121,8 +104,6 @@ public sealed class ThemeService
                 foreach (var action in trigger.EnterActions.Concat(trigger.ExitActions).OfType<BeginStoryboard>())
                 {
                     var storyboard = action.Storyboard.Clone();
-                    foreach (var animation in storyboard.Children.OfType<ColorAnimation>())
-                        if (animation.To is Color to) animation.To = Map(to, theme);
                     if (theme.ReducedEffects || !theme.Animations || theme.MotionAmount == 0 || !SystemParameters.ClientAreaAnimation)
                         foreach (var animation in storyboard.Children.OfType<DoubleAnimation>())
                             if (Storyboard.GetTargetProperty(animation)?.Path.Contains("ScaleTransform", StringComparison.Ordinal) == true) animation.To = 1;
@@ -134,5 +115,69 @@ public sealed class ThemeService
         var button = (Style)source[typeof(Button)]; PrepareMotion(button);
         target.Resources[typeof(Button)] = button;
         target.Resources["PrimaryActionButton"] = source["PrimaryActionButton"];
+    }
+
+    internal static double Contrast(Color a, Color b)
+    {
+        static double L(Color c) { static double C(byte n) { var v = n / 255d; return v <= .04045 ? v / 12.92 : Math.Pow((v + .055) / 1.055, 2.4); } return .2126 * C(c.R) + .7152 * C(c.G) + .0722 * C(c.B); }
+        var x = L(a); var y = L(b); return (Math.Max(x, y) + .05) / (Math.Min(x, y) + .05);
+    }
+    internal static Color Blend(Color background, Color foreground, double amount) => Color.FromRgb(
+        (byte)Math.Round(background.R + (foreground.R - background.R) * amount),
+        (byte)Math.Round(background.G + (foreground.G - background.G) * amount),
+        (byte)Math.Round(background.B + (foreground.B - background.B) * amount));
+
+    internal static byte ShellOpacity(Color background, MaterialMode material)
+    {
+        var alpha = material == MaterialMode.Opaque ? (byte)255 : material == MaterialMode.Mica ? (byte)215 : (byte)190;
+        var shell = Blend(background, Colors.White, .025);
+        var dark = Blend(Colors.Black, shell, alpha / 255d); var light = Blend(Colors.White, shell, alpha / 255d);
+        return Math.Max(Math.Min(Contrast(Colors.Black, dark), Contrast(Colors.Black, light)), Math.Min(Contrast(Colors.White, dark), Contrast(Colors.White, light))) < 4.5 ? (byte)255 : alpha;
+    }
+
+    internal static void ApplySurfaces(FrameworkElement target, ThemeConfig theme, MaterialMode material, bool highContrast)
+    {
+        var background = highContrast ? SystemColors.WindowColor : ParseColor(theme.Background);
+        var text = highContrast ? SystemColors.WindowTextColor : ParseColor(theme.Text);
+        var accent = highContrast ? SystemColors.HighlightColor : ParseColor(theme.Accent);
+        var shellAlpha = highContrast ? (byte)255 : ShellOpacity(background, material);
+        var shell = highContrast ? background : Blend(background, Colors.White, .025);
+        var darkest = Blend(Colors.Black, shell, shellAlpha / 255d);
+        var lightest = Blend(Colors.White, shell, shellAlpha / 255d);
+        var raised = highContrast ? background : Blend(background, Colors.White, .09);
+        double Legibility(Color color) => Math.Min(Contrast(color, raised), Math.Min(Contrast(color, background), Math.Min(Contrast(color, darkest), Contrast(color, lightest))));
+        var liftSurfaces = true;
+        if (!highContrast && Math.Max(Legibility(Colors.White), Legibility(Colors.Black)) < 4.5)
+        { shellAlpha = 255; shell = darkest = lightest = raised = background; liftSurfaces = false; }
+        Color Readable(Color desired)
+        {
+            if (Legibility(desired) >= 4.5) return desired;
+            var best = Legibility(Colors.White) >= Legibility(Colors.Black) ? Colors.White : Colors.Black;
+            for (var i = 1; i <= 10; i++) { var candidate = Blend(desired, best, i / 10d); if (Legibility(candidate) >= 4.5) return candidate; }
+            return best;
+        }
+        if (!highContrast) text = Readable(text);
+        SolidColorBrush Surface(double lift, byte alpha = 255)
+        {
+            byte Channel(byte value) => (byte)Math.Round(value + (255 - value) * (liftSurfaces ? lift : 0));
+            var brush = new SolidColorBrush(Color.FromArgb(alpha, Channel(background.R), Channel(background.G), Channel(background.B))); brush.Freeze(); return brush;
+        }
+        SolidColorBrush Tint(Color color, byte alpha) { var brush = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B)); brush.Freeze(); return brush; }
+        target.Resources["WindowBrush"] = Tint(background, 255);
+        target.Resources["ShellBrush"] = Tint(shell, shellAlpha);
+        target.Resources["SurfaceBrush"] = Surface(highContrast ? 0 : .075, material == MaterialMode.Opaque || highContrast ? (byte)255 : (byte)116);
+        target.Resources["RaisedSurfaceBrush"] = Surface(highContrast ? 0 : .09);
+        target.Resources["FieldBrush"] = Surface(highContrast ? 0 : .015);
+        target.Resources["SurfaceLineBrush"] = Tint(text, highContrast ? (byte)255 : (byte)45);
+        var selection = highContrast ? accent : Blend(background, accent, .16);
+        target.Resources["AccentSurfaceBrush"] = Tint(selection, 255);
+        target.Resources["TextPrimaryBrush"] = Tint(text, 255); target.Resources["TextBrightBrush"] = Tint(text, 255);
+        target.Resources["TextDimBrush"] = Tint(highContrast ? text : Readable(Blend(shell, text, .82)), 255);
+        target.Resources["TextMutedBrush"] = Tint(highContrast ? text : Readable(Blend(shell, text, .70)), 255);
+        target.Resources["AccentBrightBrush"] = Tint(highContrast ? text : Readable(accent), 255);
+        target.Resources["AccentLightBrush"] = Tint(highContrast ? text : Readable(Blend(accent, text, .45)), 255);
+        target.Resources["SelectionTextBrush"] = Tint(highContrast ? SystemColors.HighlightTextColor : Contrast(text, selection) >= 4.5 ? text : Contrast(Colors.Black, selection) > Contrast(Colors.White, selection) ? Colors.Black : Colors.White, 255);
+        target.Resources["TextSecondaryBrush"] = Tint(text, 255);
+        if (highContrast) { target.Resources["AccentBrush"] = Tint(accent, 255); target.Resources["AccentBorderBrush"] = Tint(accent, 255); target.Resources["GlassReflection"] = Brushes.Transparent; }
     }
 }

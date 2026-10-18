@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:system="clr-namespace:System;assembly=mscorlib">
     <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Controls.xaml"/></ResourceDictionary.MergedDictionaries>
     <SolidColorBrush x:Key="WindowBrush" Color="#FF101318"/>
+    <SolidColorBrush x:Key="ShellBrush" Color="#FF16191F"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="#F51B1E25"/>
     <SolidColorBrush x:Key="RaisedSurfaceBrush" Color="#FF252932"/>
     <SolidColorBrush x:Key="FieldBrush" Color="#B8161920"/>
@@ -63,7 +64,10 @@
     <system:Double x:Key="FontSize7">10</system:Double>
     <system:Double x:Key="FontSize8">10.5</system:Double>
     <system:Double x:Key="FontSize9">11</system:Double>
+    <system:Double x:Key="FontSize10">11.5</system:Double>
     <system:Double x:Key="FontSize11">12</system:Double>
+    <system:Double x:Key="FontSize12">12</system:Double>
+    <system:Double x:Key="FontSize13">13</system:Double>
     <system:Double x:Key="FontSize14">14</system:Double>
     <system:Double x:Key="FontSize15">17</system:Double>
     <system:Double x:Key="FontSize20">24</system:Double>
@@ -91,6 +95,7 @@
     <SolidColorBrush x:Key="AccentBorderBrush" Color="{DynamicResource LiteralColor33D64545}" />
     <SolidColorBrush x:Key="AccentBorderGlowBrush" Color="{DynamicResource LiteralColor44D64545}" />
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}" />
+    <SolidColorBrush x:Key="SelectionTextBrush" Color="{StaticResource TextPrimary}" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}" />
     <SolidColorBrush x:Key="TextBrightBrush" Color="{StaticResource TextBright}" />
     <SolidColorBrush x:Key="TextDimBrush" Color="{StaticResource TextDim}" />

@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Text.Json;
 using ARCYN.UI.Models;
@@ -12,6 +11,7 @@ public partial class MainWindow
     internal ThemeConfig CurrentTheme => _currentTheme;
     private string? _appliedThemeJson;
     private bool _runtimeStarted;
+    internal void RefreshSystemTheme() { _appliedThemeJson = null; ApplyTheme(_currentTheme); }
     private void EditTheme()
     {
         if (_state.Phase != AppPhase.Ready || _isLaunching || _editing || _isClosing) return;
@@ -42,8 +42,9 @@ public partial class MainWindow
         Height = Math.Min(theme.Height, SystemParameters.WorkArea.Height);
         MainBorder.CornerRadius = new CornerRadius(theme.CornerRadius);
         MainBorder.BorderThickness = new Thickness(theme.BorderWidth);
-        ScanlineLayer.Visibility = theme.Scanlines && !theme.ReducedEffects ? Visibility.Visible : Visibility.Collapsed;
-        VignetteLayer.Visibility = theme.Vignette ? Visibility.Visible : Visibility.Collapsed;
+        ScanlineLayer.Visibility = theme.Scanlines && !theme.ReducedEffects && !SystemParameters.HighContrast ? Visibility.Visible : Visibility.Collapsed;
+        VignetteLayer.Visibility = theme.Vignette && !SystemParameters.HighContrast ? Visibility.Visible : Visibility.Collapsed;
+        ParticleCanvas.Visibility = TrailCanvas.Visibility = AmbientGlow.Visibility = SystemParameters.HighContrast ? Visibility.Collapsed : Visibility.Visible;
         if (!theme.Animations || theme.ReducedEffects) AmbientGlow.Opacity = theme.ReducedEffects ? 0 : .26 * theme.GlowOpacity / .28;
         if (_state.Phase != AppPhase.Boot)
         {
@@ -56,14 +57,7 @@ public partial class MainWindow
         foreach (var particle in _cursorTrail) particle.Element.Fill = _accentBrightBrush;
         _particles?.Configure(theme.ReducedEffects ? 0 : theme.Particles, ThemeService.Map(Color.FromRgb(0xE8, 0x60, 0x60), theme));
         if (!theme.Animations || !theme.CursorTrail || theme.ReducedEffects) { TrailCanvas.Children.Clear(); _cursorTrail.Clear(); }
-        var handle = new WindowInteropHelper(this).Handle;
-        if (handle != IntPtr.Zero)
-            try
-            {
-                NativeMethods.EnableAcrylic(handle, theme.Acrylic && !theme.ReducedEffects);
-                NativeMethods.RoundWindow(handle, theme.CornerRadius > 0);
-            }
-            catch (Exception ex) { _log.Write("Acrylic: {0}", ex.Message); }
+        WindowSurface.RefreshBackdrop(this, _currentTheme);
         if (_runtimeStarted || _state.Phase == AppPhase.Ready) BuildDashboard();
         RefreshActivity();
         _appliedThemeJson = json;
@@ -74,7 +68,7 @@ public partial class MainWindow
         var visible = IsVisible && WindowState != WindowState.Minimized && _state.Phase != AppPhase.Closing;
         if (visible) _idleTimer?.Start(); else _idleTimer?.Stop();
         var animate = visible && (_state.Phase is AppPhase.Boot or AppPhase.Selecting or AppPhase.Launching ||
-            _currentTheme.Animations && !_currentTheme.ReducedEffects &&
+            _currentTheme.Animations && !_currentTheme.ReducedEffects && !SystemParameters.HighContrast &&
             (_currentTheme.Particles > 0 || _currentTheme.CursorTrail || _currentTheme.GlowOpacity > 0));
         if (animate) _render.Start(); else _render.Stop();
         if (!visible) _launchDotTimer?.Stop();

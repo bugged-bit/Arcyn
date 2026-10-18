@@ -94,6 +94,19 @@ public static class WorkspaceLayout
 
 public sealed class WindowsWindowSystem : IWindowSystem
 {
+    internal static PixelRect? WorkAreaFor(nint window)
+    {
+        var monitor = new Native.MonitorInfo { Size = Marshal.SizeOf<Native.MonitorInfo>(), Device = "" };
+        return Native.GetMonitorInfo(Native.MonitorFromWindow(window, 2), ref monitor) ? monitor.Work.Pixels : null;
+    }
+    internal static void ConstrainToWorkArea(nint window, PixelRect area)
+    {
+        if (!Native.GetWindowRect(window, out var rectangle)) return;
+        var bounds = rectangle.Pixels;
+        var x = Math.Clamp(bounds.X, area.X, Math.Max(area.X, area.Right - bounds.Width));
+        var y = Math.Clamp(bounds.Y, area.Y, Math.Max(area.Y, area.Bottom - bounds.Height));
+        if (x != bounds.X || y != bounds.Y) NativeMethods.SetWindowPos(window, 0, x, y, 0, 0, 0x0015); // Keep size, Z order and activation.
+    }
     public IReadOnlyList<MonitorSnapshot> Monitors()
     {
         var result = new List<MonitorSnapshot>();
@@ -226,6 +239,7 @@ public sealed class WindowsWindowSystem : IWindowSystem
         internal delegate bool EnumProc(nint handle, nint data);
         internal delegate bool MonitorProc(nint monitor, nint dc, ref Rect rect, nint data);
         [StructLayout(LayoutKind.Sequential)] internal struct Rect { public int Left, Top, Right, Bottom; public readonly PixelRect Pixels => new(Left, Top, Right - Left, Bottom - Top); }
+        [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool GetWindowRect(nint window, out Rect rectangle);
         [StructLayout(LayoutKind.Sequential)] internal struct Point { public int X, Y; }
         [StructLayout(LayoutKind.Sequential)] internal struct Placement { public int Length, Flags, Show; public Point Min, Max; public Rect Normal; }
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] internal struct MonitorInfo { public int Size; public Rect Monitor, Work; public uint Flags; [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string Device; }
