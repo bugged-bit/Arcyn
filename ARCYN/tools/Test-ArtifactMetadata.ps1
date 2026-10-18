@@ -41,4 +41,12 @@ try {
     catch { if ($_.Exception.Message -notlike 'Development artifacts in release*') { throw } }
 }
 finally { Remove-Item -LiteralPath $probe }
-Write-Output 'Seven invalid runtime/product/notice/development-artifact cases rejected before helper execution; original bytes restored.'
+$fluent = Join-Path $Directory 'PresentationFramework.Fluent.dll'
+$originalFluent = [IO.File]::ReadAllBytes($fluent)
+try {
+    Remove-Item -LiteralPath $fluent
+    try { & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $Directory; throw 'Missing Fluent runtime accepted.' }
+    catch { if ($_.Exception.Message -ne 'Standalone artifact is missing PresentationFramework.Fluent.dll') { throw } }
+}
+finally { [IO.File]::WriteAllBytes($fluent, $originalFluent) }
+Write-Output 'Eight invalid runtime/product/notice/development-artifact cases rejected before helper execution; original bytes restored.'

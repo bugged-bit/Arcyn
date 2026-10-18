@@ -163,6 +163,8 @@ public sealed class ModeConfig : INotifyPropertyChanged
     [JsonIgnore]
     public string ProcessLabel => $"{ProcessCount} targets";
 
+    [JsonIgnore] public string TargetSummary => string.Join(" · ", LaunchTargets.Select(t => t.DisplayLabel));
+
     [JsonIgnore]
     public string LaunchCountLabel => $"{_launchCount:D2} RUN";
 
@@ -214,6 +216,7 @@ public sealed class ModeConfig : INotifyPropertyChanged
         OnPropertyChanged(nameof(ProcessCount));
         OnPropertyChanged(nameof(ProcessLabel));
         OnPropertyChanged(nameof(LaunchTargets));
+        OnPropertyChanged(nameof(TargetSummary));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

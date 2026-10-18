@@ -17,4 +17,9 @@ the .NET third-party notice comes from the .NET runtime pack. The WPF third-part
 notice comes from https://github.com/dotnet/wpf/blob/v10.0.13/THIRD-PARTY-NOTICES.TXT.
 Runtime servicing requires updating the binaries and corresponding notices together.
 
-Segoe UI is supplied by Windows; ARCYN does not redistribute it.
+The bundled PresentationFramework.Fluent styles contain WPF UI contributions;
+WPF-Fluent.txt retains their MIT notice. ARCYN references the shipped Microsoft
+styles; it does not bundle a separate WPF UI or FluentFlyout package/source.
+
+Segoe UI Variable, Segoe UI and Segoe Fluent Icons are supplied by Windows;
+ARCYN does not redistribute those fonts. Older Windows uses Segoe UI/MDL2 fallbacks.

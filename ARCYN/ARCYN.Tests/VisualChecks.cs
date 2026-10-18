@@ -11,6 +11,7 @@ using ARCYN.UI.Services;
 
 internal static partial class Program
 {
+    private static int _surfaceRenderCount;
     private static FrameworkElement Detach(Window window)
     {
         var content = (FrameworkElement)window.Content;
@@ -29,6 +30,7 @@ internal static partial class Program
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var file = File.Create(Path.Combine(AppContext.BaseDirectory, "offscreen-" + name + ".png")); encoder.Save(file);
         if (file.Length < 2000) throw new Exception("Empty offscreen surface: " + name);
+        _surfaceRenderCount++;
     }
 
     private static void VisualSurfaceChecks(ConfigService service)
@@ -43,7 +45,7 @@ internal static partial class Program
         ((UIElement)window.FindName("MainHUD")).Opacity = 1;
         var border = (Border)window.FindName("MainBorder"); border.Width = 888; border.Height = 466;
         var hud = Detach(window); RenderSurface(hud, "workspaces", 920, 490);
-        Check(Descendants(hud).OfType<Button>().Count(b => b.Tag is ModeConfig) == 3, "three workspace cards render with target chips and accessible launch buttons");
+        Check(Descendants(hud).OfType<Button>().Count(b => b.Tag is ModeConfig) == 3, "three workspace rows render target summaries and accessible launch buttons");
 
         var menu = (ContextMenu)Call(window, "MakeWorkspaceMenu", modes[0])!;
         RenderSurface(menu, "menu", 310, 310);
@@ -61,16 +63,13 @@ internal static partial class Program
         Check(Descendants(dialogContent).OfType<Button>().Single(b => b.IsDefault).IsCancel,
             "review dialog keeps Cancel as safe default and selectable command details");
 
-        window.ApplyTheme(new() { ReducedEffects = true, FontFamily = "JetBrainsMono NF", CornerRadius = 0 });
+        window.ApplyTheme(new() { ReducedEffects = true, ColorMode = "custom", FontFamily = "JetBrainsMono NF", CornerRadius = 0 });
         Check(((SolidColorBrush)window.FindResource("SurfaceBrush")).Color.A == 255 && Equals(window.FindResource("GlassReflection"), Brushes.Transparent) &&
             ((CornerRadius)window.FindResource("SurfaceRadius")).TopLeft == 0 && ((FontFamily)window.FindResource("UIFont")).Source.Contains("JetBrains"),
             "reduced effects use solid surfaces while preserving saved font and corner preferences");
         var buttonStyle = (Style)window.FindResource(typeof(Button));
-        var buttonTemplate = (ControlTemplate)buttonStyle.Setters.OfType<Setter>().Single(s => s.Property == Control.TemplateProperty).Value;
-        Check(buttonTemplate.Triggers.OfType<Trigger>().SelectMany(t => t.EnterActions.Concat(t.ExitActions)).OfType<System.Windows.Media.Animation.BeginStoryboard>()
-            .SelectMany(b => b.Storyboard.Children.OfType<System.Windows.Media.Animation.DoubleAnimation>())
-            .Where(a => System.Windows.Media.Animation.Storyboard.GetTargetProperty(a)?.Path.Contains("ScaleTransform") == true).All(a => a.To == 1),
-            "reduced effects remove control scale motion while keeping state feedback");
+        Check(buttonStyle.Setters.OfType<Setter>().All(s => s.Property != Control.TemplateProperty) && buttonStyle.BasedOn != null,
+            "platform Fluent template owns control interaction without custom scale storyboards");
         Check(new[] { (Window)window, setup, settings, dialog }.All(w => !w.IsVisible && new WindowInteropHelper(w).Handle == 0),
             "HUD, setup, settings and dialogs render without any launcher or editor HWND");
         setup.Close(); settings.Close(); dialog.Close();

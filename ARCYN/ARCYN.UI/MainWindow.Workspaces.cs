@@ -6,6 +6,11 @@ namespace ARCYN.UI;
 
 public partial class MainWindow
 {
+    private void CloseHud_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isLaunching) { _launchCts?.Cancel(); LaunchStatus.Text = "Canceling…"; }
+        else CloseWithAnimation();
+    }
     private void NewWorkspace_Click(object sender, RoutedEventArgs e) => EditWorkspace(null);
     private void Appearance_Click(object sender, RoutedEventArgs e) => EditTheme();
     private void WorkspaceMenu_Click(object sender, RoutedEventArgs e)
@@ -43,7 +48,7 @@ public partial class MainWindow
         Item(organize, "Move up", () => MoveWorkspace(mode, -1));
         Item(organize, "Move down", () => MoveWorkspace(mode, 1));
         Item(organize, "Delete workspace", () => DeleteWorkspace(mode));
-        Item(menu, "Appearance & behavior", EditTheme, "Ctrl+,");
+        Item(menu, "Settings", EditTheme, "Ctrl+,");
         menu.Opened += (_, _) => _menuOpen = true;
         menu.Closed += (_, _) => { _menuOpen = false; ResetIdle(); };
         return menu;
@@ -81,7 +86,7 @@ public partial class MainWindow
         {
             var before = _modes.ToList();
             var copy = WorkspaceDefinition.Duplicate(mode);
-            copy.Name += " COPY";
+            copy.Name += " copy";
             _modeService.Insert(_modes.IndexOf(mode) + 1, copy);
             await SaveWorkspaces(before);
         }
@@ -136,7 +141,6 @@ public partial class MainWindow
             var result = await _orchestrator.ManageAsync(mode, operation, _launchCts.Token);
             _runReports[mode.Id] = FormatReport(result);
             ShowRunFeedback(result.Canceled ? "Canceled. Dispatched work remains open. Workspace menu → Last run details." : result.Success ? "Window operations complete." : "Workspace needs attention. Workspace menu → Last run details.");
-            LaunchRecent.Text = result.Success ? $"{result.CompletedSteps} window operations complete" : "Workspace needs attention — Last run details";
             if (!result.Success && !result.Canceled) WorkspaceError(FormatReport(result));
         }
         finally { _isLaunching = false; ResetIdle(); }

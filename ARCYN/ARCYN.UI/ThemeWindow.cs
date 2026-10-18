@@ -16,15 +16,16 @@ internal sealed class ThemeWindow : Window
     private readonly Dictionary<PropertyInfo, Control> _inputs = [];
     private readonly DispatcherTimer _coalesce = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8) };
-    private readonly StackPanel _form = new();
+    private readonly TabControl _form = new();
     private readonly CheckBox _topmost = new() { Content = "Always on top" }, _close = new() { Content = "Close after launching" };
     private readonly TextBox _idle = new();
     private bool _loading, _saving;
     private static readonly Dictionary<string, string> Labels = new()
     {
-        ["Accent"] = "Accent colour", ["Background"] = "Background colour", ["Text"] = "Text colour",
+        ["ColorMode"] = "App theme", ["SystemAccent"] = "Use Windows accent color",
+        ["Accent"] = "Custom accent color", ["Background"] = "Background colour", ["Text"] = "Text colour",
         ["FontFamily"] = "Installed font family", ["FontScale"] = "Typography scale (0.7–1.8)",
-        ["Width"] = "HUD width", ["Height"] = "HUD height", ["CornerRadius"] = "Corner radius", ["BorderWidth"] = "Border width",
+        ["Width"] = "HUD width", ["Height"] = "HUD height", ["CornerRadius"] = "Shell corners (Custom theme)", ["BorderWidth"] = "Border width",
         ["CardHeight"] = "Minimum workspace height", ["Spacing"] = "Workspace spacing", ["Layout"] = "Workspace layout",
         ["Particles"] = "Particles (0–120)", ["CursorTrail"] = "Cursor trail", ["Acrylic"] = "Native materials (when available)", ["Vignette"] = "Vignette",
         ["MotionAmount"] = "Continuous motion amount (0–2)", ["GlowOpacity"] = "Glow intensity (0–1)", ["Scanlines"] = "Scanlines",
@@ -34,21 +35,20 @@ internal sealed class ThemeWindow : Window
     {
         _draft = ThemeService.Clone(theme); _behavior = new BehaviorConfig { IdleTimeoutSeconds = behavior.IdleTimeoutSeconds, AlwaysOnTop = behavior.AlwaysOnTop, CloseOnLaunch = behavior.CloseOnLaunch, Extra = behavior.Extra };
         _preview = preview; _save = save;
-        Title = "ARCYN — Appearance & behavior"; Width = 660; Height = 760; MinWidth = 520; MinHeight = 450;
+        Title = "ARCYN settings"; Width = 760; Height = 720; MinWidth = 480; MinHeight = 400;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = System.Windows.Media.Brushes.Black; Foreground = System.Windows.Media.Brushes.White;
-        var root = new DockPanel { Margin = new Thickness(14) };
-        var heading = new TextBlock { Text = "Make room for your own rhythm. Changes preview as you edit.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 4, 4, 18) };
+
+        var root = new DockPanel { Margin = new Thickness(24, 16, 24, 20) };
+        var heading = new TextBlock { Text = "Settings", FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 4, 4, 18) };
+        heading.SetResourceReference(TextBlock.FontSizeProperty, "FontSize22");
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         var buttons = new WrapPanel();
         Button Button(string title, Action action) { var b = new Button { Content = title, Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(4) }; b.Click += (_, _) => action(); buttons.Children.Add(b); return b; }
-        Button("Import theme", Import); Button("Export theme", Export);
-        Button("Reset theme", () => { _draft = new(); BuildForm(); Schedule(); });
         Button("Cancel", () => Close()).IsCancel = true;
         var apply = Button("Apply changes", Save); apply.IsDefault = true; apply.SetResourceReference(StyleProperty, "PrimaryActionButton");
         DockPanel.SetDock(buttons, Dock.Bottom); root.Children.Add(buttons);
         DockPanel.SetDock(_status, Dock.Bottom); root.Children.Add(_status);
-        root.Children.Add(new ScrollViewer { Content = _form, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); Content = root;
+        root.Children.Add(_form); Content = root;
         _topmost.Checked += (_, _) => Schedule(); _topmost.Unchecked += (_, _) => Schedule();
         _close.Checked += (_, _) => Schedule(); _close.Unchecked += (_, _) => Schedule();
         _idle.TextChanged += (_, _) => Schedule();
@@ -61,7 +61,7 @@ internal sealed class ThemeWindow : Window
     }
     private void BuildForm()
     {
-        _loading = true; _form.Children.Clear(); _inputs.Clear();
+        _loading = true; _form.Items.Clear(); _inputs.Clear();
         void Fields(Panel parent, string[] names)
         {
             foreach (var name in names)
@@ -71,11 +71,11 @@ internal sealed class ThemeWindow : Window
                 row.Children.Add(new TextBlock { Text = Labels[name], TextWrapping = TextWrapping.Wrap });
                 Control input;
                 if (property.PropertyType == typeof(bool))
-                { var check = new CheckBox { IsChecked = (bool)property.GetValue(_draft)! }; check.Checked += (_, _) => Schedule(); check.Unchecked += (_, _) => Schedule(); input = check; }
-                else if (name == "Layout")
+                { row.Children.Clear(); var check = new CheckBox { Content = Labels[name], IsChecked = (bool)property.GetValue(_draft)! }; check.Checked += (_, _) => Schedule(); check.Unchecked += (_, _) => Schedule(); input = check; }
+                else if (name is "Layout" or "ColorMode")
                 {
-                    var choices = new[] { new { Value = "rows", Name = "Comfortable rows" }, new { Value = "compact", Name = "Compact rows" }, new { Value = "grid", Name = "Two columns" } };
-                    var combo = new ComboBox { ItemsSource = choices, DisplayMemberPath = "Name", SelectedValuePath = "Value", SelectedValue = _draft.Layout };
+                    var choices = name == "Layout" ? new[] { new { Value = "rows", Name = "Comfortable rows" }, new { Value = "compact", Name = "Compact rows" }, new { Value = "grid", Name = "Two columns" } } : new[] { new { Value = "system", Name = "Use Windows setting" }, new { Value = "light", Name = "Light" }, new { Value = "dark", Name = "Dark" }, new { Value = "custom", Name = "Custom colors and font" } };
+                    var combo = new ComboBox { ItemsSource = choices, DisplayMemberPath = "Name", SelectedValuePath = "Value", SelectedValue = property.GetValue(_draft) };
                     combo.SelectionChanged += (_, _) => Schedule(); input = combo;
                 }
                 else
@@ -84,23 +84,54 @@ internal sealed class ThemeWindow : Window
                 _inputs[property] = input; row.Children.Add(input); parent.Children.Add(row);
             }
         }
-        Fields(_form, ["Accent", "Layout", "FontScale", "ReducedEffects"]);
+        StackPanel Page(string title, string description)
+        {
+            var panel = new StackPanel { Margin = new(8,16,16,16) };
+            panel.Children.Add(new TextBlock { Text = description, TextWrapping = TextWrapping.Wrap, Margin = new(0,0,0,20) });
+            var page = new TabItem { Header = title, Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } };
+            _form.Items.Add(page); return panel;
+        }
+        var general = Page("General", "Choose how ARCYN fits into your day. Changes preview here; Apply saves them.");
         _topmost.IsChecked = _behavior.AlwaysOnTop; _close.IsChecked = _behavior.CloseOnLaunch; _idle.Text = _behavior.IdleTimeoutSeconds.ToString();
-        _form.Children.Add(_topmost); _form.Children.Add(_close);
-        _form.Children.Add(new TextBlock { Text = "Idle timeout in seconds (0 disables)", Margin = new(4, 6, 4, 4) }); _form.Children.Add(_idle);
+        general.Children.Add(_topmost); general.Children.Add(_close);
+        general.Children.Add(new TextBlock { Text = "Close when idle (seconds; 0 keeps ARCYN open)", TextWrapping = TextWrapping.Wrap, Margin = new(0,12,0,0) }); general.Children.Add(_idle);
+        Fields(general, ["ReducedEffects"]);
+        var appearance = Page("Appearance", "Follow Windows or choose an app theme. Windows contrast settings always take priority.");
+        Fields(appearance, ["ColorMode", "SystemAccent", "Accent", "Layout", "FontScale", "Acrylic"]);
+        var colors = new StackPanel(); Fields(colors, ["Background", "Text", "FontFamily"]);
+        var custom = new Expander { Header = "Custom colors and font", Content = colors, IsExpanded = _draft.ColorMode == "custom" };
+        foreach (var name in new[] { "Background", "Text", "FontFamily" }) _inputs[typeof(ThemeConfig).GetProperty(name)!].Tag = custom;
+        appearance.Children.Add(custom);
+        appearance.Children.Add(new TextBlock { Text = "Custom colors and font apply when App theme is set to Custom. Other themes use Segoe UI Variable and Windows surfaces.", TextWrapping = TextWrapping.Wrap, Margin = new(0,12,0,0) });
+        var tools = new WrapPanel { Margin = new(0,16,0,0) };
+        foreach (var (label, action) in new (string, Action)[] { ("Import theme", Import), ("Export theme", Export), ("Reset theme", () => { _draft = new(); BuildForm(); Schedule(); }) })
+        { var button = new Button { Content = label }; button.Click += (_, _) => action(); tools.Children.Add(button); }
+        appearance.Children.Add(tools);
+        var cinematic = Page("Motion", "Opening and launch sequences keep ARCYN’s deliberate timing. Ambient effects run only during those sequences.");
         var groups = new[] {
-            (Title: "Color & type", Fields: new[] { "Background", "Text", "FontFamily" }),
             (Title: "Workspace proportions", Fields: new[] { "Width", "Height", "CornerRadius", "BorderWidth", "CardHeight", "Spacing", "CompactMode" }),
-            (Title: "Motion & depth", Fields: new[] { "Acrylic", "Vignette", "GlowOpacity", "Particles", "CursorTrail", "Scanlines", "Animations", "MotionAmount" }) };
+            (Title: "Cinematic effects", Fields: new[] { "Vignette", "GlowOpacity", "Particles", "CursorTrail", "Scanlines", "Animations", "MotionAmount" }) };
         foreach (var group in groups)
         {
             var body = new StackPanel(); Fields(body, group.Fields);
-            var disclosure = new Expander { Header = group.Title, Content = body, Margin = new(4, 14, 4, 0) };
+            var disclosure = new Expander { Header = group.Title, Content = body, Margin = new(0,4,0,8) };
             foreach (var name in group.Fields) _inputs[typeof(ThemeConfig).GetProperty(name)!].Tag = disclosure;
-            _form.Children.Add(disclosure);
+            cinematic.Children.Add(disclosure);
         }
-        _form.Children.Add(new TextBlock { Text = "Boot and launch choreography keep their original timing in every effect mode. Theme files contain visual settings only.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 12, 4, 12) });
+        foreach (TabItem page in _form.Items)
+            foreach (var input in _inputs.Values.Where(input => IsWithin(input, page))) input.Resources["SettingsPage"] = page;
+        SetPersonalizationAvailability();
         _loading = false;
+    }
+    private void SetPersonalizationAvailability()
+    {
+        _inputs[typeof(ThemeConfig).GetProperty("Accent")!].IsEnabled = !_draft.SystemAccent;
+        foreach (var name in new[] { "Background", "Text", "FontFamily" }) _inputs[typeof(ThemeConfig).GetProperty(name)!].IsEnabled = _draft.ColorMode == "custom";
+    }
+    private static bool IsWithin(DependencyObject input, DependencyObject parent)
+    {
+        for (var current = input; current != null; current = LogicalTreeHelper.GetParent(current)) if (current == parent) return true;
+        return false;
     }
     private void Schedule() { if (!_loading) { _coalesce.Stop(); _coalesce.Start(); } }
     private bool Preview()
@@ -110,7 +141,7 @@ internal sealed class ThemeWindow : Window
             var next = ThemeService.Clone(_draft);
             foreach (var (property, input) in _inputs)
             {
-                input.SetResourceReference(BorderBrushProperty, "SurfaceLineBrush"); input.ToolTip = null;
+                input.ClearValue(BorderBrushProperty); input.ToolTip = null;
                 try
                 {
                     property.SetValue(next, input is CheckBox check ? check.IsChecked == true : input is ComboBox combo ? combo.SelectedValue : Convert.ChangeType(((TextBox)input).Text, property.PropertyType, CultureInfo.InvariantCulture));
@@ -120,13 +151,14 @@ internal sealed class ThemeWindow : Window
                 {
                     input.BorderBrush = (SystemParameters.HighContrast ? SystemColors.HighlightBrush : System.Windows.Media.Brushes.Salmon); input.ToolTip = ex.Message;
                     if (input.Tag is Expander disclosure) disclosure.IsExpanded = true;
+                    if (input.Resources["SettingsPage"] is TabItem page) _form.SelectedItem = page;
                     throw new ArgumentException(Labels[property.Name] + ": " + ex.Message);
                 }
             }
-            _idle.SetResourceReference(BorderBrushProperty, "SurfaceLineBrush"); _idle.ToolTip = null;
+            _idle.ClearValue(BorderBrushProperty); _idle.ToolTip = null;
             if (!int.TryParse(_idle.Text, out var timeout) || timeout < 0 || timeout > 86400)
-            { _idle.BorderBrush = (SystemParameters.HighContrast ? SystemColors.HighlightBrush : System.Windows.Media.Brushes.Salmon); _idle.ToolTip = "Use 0–86400 seconds."; throw new ArgumentException("Idle timeout: use 0–86400 seconds."); }
-            _draft = next; _behavior.IdleTimeoutSeconds = timeout; _behavior.AlwaysOnTop = _topmost.IsChecked == true; _behavior.CloseOnLaunch = _close.IsChecked == true;
+            { _form.SelectedIndex = 0; _idle.BorderBrush = (SystemParameters.HighContrast ? SystemColors.HighlightBrush : System.Windows.Media.Brushes.Salmon); _idle.ToolTip = "Use 0–86400 seconds."; throw new ArgumentException("Idle timeout: use 0–86400 seconds."); }
+            _draft = next; SetPersonalizationAvailability(); _behavior.IdleTimeoutSeconds = timeout; _behavior.AlwaysOnTop = _topmost.IsChecked == true; _behavior.CloseOnLaunch = _close.IsChecked == true;
             ThemeService.Apply(this, next); WindowSurface.RefreshBackdrop(this, next);
             _preview(_draft, _behavior); _status.Text = "Preview active. Apply saves; Cancel restores."; return true;
         }

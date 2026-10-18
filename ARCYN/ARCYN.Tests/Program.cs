@@ -36,6 +36,9 @@ internal static partial class Program
             var json = """{"theme":{"accent":"#123456","glow_opacity":0.4,"future":7},"behavior":{"idle_timeout_seconds":42,"close_on_launch":false},"future":{"keep":true},"modes":[{"name":"OFFLINE","folders":["Z:\\Unavailable"],"future":3}]}""";
             File.WriteAllText(Path.Combine(user, "arcyn.json"), json);
             File.WriteAllText(Path.Combine(exe, "arcyn.json"), "{}");
+            Task.Run(() => ThemeService.Validate(new())).GetAwaiter().GetResult();
+            Check(typeof(ThemeService).GetField("_baseResources", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null) == null,
+                "background configuration validation leaves Fluent UI resources uninitialized");
             var service = new ConfigService(null, user, exe);
             var config = service.Load()!;
             Check(config.Modes.Count == 1 && config.Modes[0].Folders.Count == 1, "unavailable folders and their cards survive loading");
@@ -121,16 +124,16 @@ internal static partial class Program
             Check(expanding.Width == 888, "second boot expansion starts at the held width");
             expanding.BeginAnimation(FrameworkElement.WidthProperty, null); expanding.BeginAnimation(FrameworkElement.HeightProperty, null);
             window.ApplyTheme(new ThemeConfig());
-            Check(((System.Windows.Media.Effects.DropShadowEffect)window.FindResource("GlowAccent")).Color == Color.FromRgb(0xD6, 0x45, 0x45), "default glow colour retained");
-            Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == Color.FromRgb(0xD6, 0x45, 0x45), "classic theme preserves the default palette");
+            Check(((FontFamily)window.FindResource("UIFont")).Source.Contains("Segoe UI Variable"), "default interface uses Windows variable typography");
+            Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == SystemColors.AccentColor, "default interface follows the Windows accent");
             window.ApplyTheme(new ThemeConfig { GlowOpacity = 1 });
             typeof(MainWindow).GetField("_ambientPhase", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(window, Math.PI / 2);
             ((RenderService.ISubscriber)window).OnRenderTick(30);
             Check(((UIElement)window.FindName("AmbientGlow")).Opacity is >= 0 and <= 1, "maximum glow customization stays within valid render bounds");
-            window.ApplyTheme(new ThemeConfig { Accent = "#4580D6", FontScale = 1.2, Layout = "grid", Width = 1000, Spacing = 10, Particles = 0 });
-            Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == Color.FromRgb(0x45, 0x80, 0xD6) && Math.Abs((double)window.FindResource("FontSize15") - 20.4) < .001 && dashboard.ColumnDefinitions.Count == 2, "live theme covers colour, typography, geometry and layout");
+            window.ApplyTheme(new ThemeConfig { Accent = "#4580D6", SystemAccent = false, FontScale = 1.2, Layout = "grid", Width = 1000, Spacing = 10, Particles = 0 });
+            Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == Color.FromRgb(0x45, 0x80, 0xD6) && Math.Abs((double)window.FindResource("FontSize15") - 21.6) < .001 && dashboard.ColumnDefinitions.Count == 2, "live theme covers colour, typography, geometry and layout");
             window.ApplyTheme(config.Theme);
-            Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == (Color)ColorConverter.ConvertFromString(config.Theme.Accent), "preview rollback restores the saved palette");
+            Check(((SolidColorBrush)window.FindResource("AccentBrush")).Color == SystemColors.AccentColor, "preview rollback restores system accent preference");
             var themePath = Path.Combine(directory, "theme.json");
             ThemeService.Export(themePath, new ThemeConfig { Accent = "#4580D6", CursorTrail = false, Particles = 12 });
             Check(ThemeService.Import(themePath).Particles == 12 && !ThemeService.Import(themePath).CursorTrail, "theme import/export round-trips effects");
@@ -187,6 +190,7 @@ internal static partial class Program
             WorkspaceEditorChecks(directory);
             VisualSurfaceChecks(service);
             ReleaseCandidateChecks(service);
+            FluentChecks(service);
             bindingTrace.Flush();
             Check(bindingOutput.ToString().Length == 0, "offscreen HUD and editor bindings produce no warnings or errors");
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingTrace);

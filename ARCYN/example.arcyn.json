@@ -1,6 +1,8 @@
 {
   "$schema": "./arcyn.schema.json",
   "theme": {
+    "color_mode": "system",
+    "system_accent": true,
     "accent": "#D64545",
     "glow_opacity": 0.28,
     "scanlines": true,

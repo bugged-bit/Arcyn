@@ -35,12 +35,15 @@ public partial class EditModeWindow : Window
         _layouts = new(Result.Layout.Select(l => MakeLayoutRow(l)));
         _actions = new(Result.Actions.Select(a => new ActionRow(a)));
         InitializeComponent();
+        Title = string.IsNullOrWhiteSpace(mode.Label) ? "New workspace — ARCYN" : mode.Label + " — ARCYN";
         NameInput.Text = mode.Name; DescInput.Text = mode.Description; TypeInput.Text = mode.Type;
         SessionInput.Text = mode.Session; StateInput.Text = mode.State; AccentInput.Text = mode.Accent;
         Options(KindInput, (TargetKind.Auto, "Detect automatically"), (TargetKind.Application, "Application"), (TargetKind.Url, "Website / protocol"), (TargetKind.File, "File"), (TargetKind.Folder, "Folder"));
         Options(PolicyInput, (InstancePolicy.ReuseOrLaunch, "Reuse or launch"), (InstancePolicy.ReuseOnly, "Reuse only"), (InstancePolicy.LaunchNew, "Launch new"));
         Options(ReadinessInput, (Readiness.Automatic, "Automatic"), (Readiness.Window, "Window available"), (Readiness.Dispatch, "Dispatch only"));
         Options(OperationInput, (WindowOperation.ApplyLayout, "Apply saved layout"), (WindowOperation.Minimize, "Minimize"), (WindowOperation.Restore, "Restore ARCYN-minimized"), (WindowOperation.Focus, "Focus at completion"));
+        foreach (var column in TargetsGrid.Columns.Concat(LayoutGrid.Columns).Concat(ActionsGrid.Columns))
+        { column.MinWidth *= _theme.FontScale; if (column.Width.IsAbsolute) column.Width = new(column.Width.Value * _theme.FontScale); }
         LayoutStateColumn.ItemsSource = Enum.GetValues<WindowShowState>();
         TargetsGrid.ItemsSource = _rows; LayoutGrid.ItemsSource = _layouts; ActionsGrid.ItemsSource = _actions;
         LayoutGrid.CellEditEnding += (_, _) => Dispatcher.BeginInvoke(DrawMap);
@@ -90,6 +93,7 @@ public partial class EditModeWindow : Window
     {
         public WorkspaceActionConfig Action { get; } = action;
         public string Kind => Action is CommandActionConfig ? "command" : Action is WindowActionConfig ? "window" : "wait";
+        public string KindLabel => Action switch { CommandActionConfig => "Command", WaitActionConfig => "Wait", WindowActionConfig => "Window", _ => Kind };
         public string? TargetId { get => Action is WindowActionConfig w ? w.TargetId : (Action as WaitActionConfig)?.TargetId;
             set { if (Action is WindowActionConfig w) w.TargetId = value ?? ""; if (Action is WaitActionConfig wait) wait.TargetId = value; } }
         public WindowOperation Operation { get => (Action as WindowActionConfig)?.Operation ?? WindowOperation.ApplyLayout; set { if (Action is WindowActionConfig w) w.Operation = value; } }
@@ -194,7 +198,9 @@ public partial class EditModeWindow : Window
     }
     private void Tabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (e.OriginalSource != EditorTabs || EditorTabs.SelectedIndex != 1 || LayoutMap == null) return;
+        if (e.OriginalSource != EditorTabs) return;
+        if (WorkspaceFields != null) WorkspaceFields.Visibility = EditorTabs.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (EditorTabs.SelectedIndex != 1 || LayoutMap == null) return;
         try { CommitEditing(); RefreshDisplays(); }
         catch (Exception ex) { Status.Text = ex.Message; }
     }
@@ -237,18 +243,15 @@ public partial class EditModeWindow : Window
             var windows = await Task.Run(_windows.Windows); if (_closed) return;
             var choices = windows.Where(w => w.Executable != null || w.AppId != null).Select(w => new { Window = w, Label = w.Title + "\n" + (w.AppId ?? w.Executable) }).ToList();
             var list = new ListBox { ItemsSource = choices, DisplayMemberPath = "Label", Margin = new(12) };
-            var picker = new Window { Title = "ARCYN — Choose matching window", Owner = this, Width = 650, Height = 480, Content = list, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-            WindowSurface.Prepare(picker, _theme);
             void Select()
             {
                 if (list.SelectedIndex < 0) return; var window = choices[list.SelectedIndex].Window;
                 row.MatchExecutable = window.Executable; row.MatchAppId = window.AppId; row.MatchClass = window.ClassName; row.MatchTitle = window.Title; row.TitleContains = false;
                 row.Target.Readiness = Readiness.Window;
-                TargetInspector.DataContext = null; TargetInspector.DataContext = row; picker.Close();
+                TargetInspector.DataContext = null; TargetInspector.DataContext = row;
                 Status.Text = "Exact window identity selected. Use title-contains only when its stable portion identifies the intended document.";
             }
-            list.MouseDoubleClick += (_, _) => Select();
-            list.KeyDown += (_, key) => { if (key.Key == System.Windows.Input.Key.Enter) Select(); };
+            var picker = WindowSurface.CreatePicker(this, _theme, "Choose matching window", list, Select);
             picker.ShowDialog();
         }
         catch (Exception ex) { Status.Text = ex.Message; }
@@ -297,26 +300,26 @@ public partial class EditModeWindow : Window
         {
             var mx = (LayoutMap.ActualWidth - totalW * scale) / 2 + (monitor.Bounds.X - left) * scale;
             var my = (LayoutMap.ActualHeight - totalH * scale) / 2 + (monitor.Bounds.Y - top) * scale;
-            var caption = new TextBlock { Text = monitor.Name, FontSize = 11 * _theme.FontScale, Margin = new(4, 0, 20, 8), ToolTip = monitor.Name };
+            var caption = new TextBlock { Text = monitor.Name, FontSize = 12 * _theme.FontScale, Margin = new(4, 0, 20, 8), ToolTip = monitor.Name };
             caption.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush");
             MonitorCaptions.Children.Add(caption);
-            var frame = new Border { Width = monitor.Bounds.Width * scale, Height = monitor.Bounds.Height * scale, BorderThickness = new(1), CornerRadius = new(12), ToolTip = monitor.Name };
+            var frame = new Border { Width = monitor.Bounds.Width * scale, Height = monitor.Bounds.Height * scale, BorderThickness = new(1), CornerRadius = new(8), ToolTip = monitor.Name };
             frame.SetResourceReference(Border.BorderBrushProperty, "SurfaceLineBrush");
             Canvas.SetLeft(frame, mx); Canvas.SetTop(frame, my); LayoutMap.Children.Add(frame);
             foreach (var row in _layouts.Where(l => l.Layout.Monitor == monitor.Id))
             {
                 var layout = row.Layout; var work = monitor.WorkArea;
                 if (!double.IsFinite(layout.X + layout.Y + layout.Width + layout.Height)) continue;
-                var box = new Border { Width = Math.Max(18, work.Width * layout.Width * scale), Height = Math.Max(18, work.Height * layout.Height * scale), CornerRadius = new(9),
+                var box = new Border { Width = Math.Max(18, work.Width * layout.Width * scale), Height = Math.Max(18, work.Height * layout.Height * scale), CornerRadius = new(4),
                     BorderThickness = new(1), ToolTip = row.Label };
                 box.SetResourceReference(Border.BackgroundProperty, "AccentSurfaceBrush"); box.SetResourceReference(Border.BorderBrushProperty, "AccentBrightBrush");
                 var content = new Grid(); box.Child = content;
-                var label = new TextBlock { Text = row.Label, Margin = new(4), FontSize = 11, IsHitTestVisible = false, TextTrimming = TextTrimming.CharacterEllipsis };
+                var label = new TextBlock { Text = row.Label, Margin = new(4), FontSize = 12, IsHitTestVisible = false, TextTrimming = TextTrimming.CharacterEllipsis };
                 label.SetResourceReference(TextBlock.ForegroundProperty, "SelectionTextBrush"); content.Children.Add(label);
                 var template = new ControlTemplate(typeof(Thumb)) { VisualTree = new FrameworkElementFactory(typeof(Border)) };
                 var move = new Thumb { Template = template, Cursor = System.Windows.Input.Cursors.SizeAll, Focusable = false };
                 var resize = new Thumb { Template = template, Width = 12, Height = 12, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Cursor = System.Windows.Input.Cursors.SizeNWSE, Focusable = false };
-                content.Children.Add(new Border { Width = 8, Height = 8, Background = Brushes.IndianRed, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false });
+                content.Children.Add(new Border { Width = 8, Height = 8, Background = (Brush)FindResource("AccentBrightBrush"), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false });
                 content.Children.Add(move); content.Children.Add(resize);
                 void Position() { Canvas.SetLeft(box, mx + (work.X - monitor.Bounds.X + layout.X * work.Width) * scale); Canvas.SetTop(box, my + (work.Y - monitor.Bounds.Y + layout.Y * work.Height) * scale); }
                 void Start(object s, DragStartedEventArgs e) { _dragging = true; LayoutGrid.SelectedItem = row; }
@@ -373,11 +376,9 @@ public partial class EditModeWindow : Window
         {
             var apps = await Task.Run(() => ApplicationDiscovery.Find()); if (_closed) return;
             var list = new ListBox { ItemsSource = apps, DisplayMemberPath = "Name", Margin = new(12) };
-            var picker = new Window { Title = "ARCYN — Choose application", Owner = this, Width = 550, Height = 480, Content = list, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-            WindowSurface.Prepare(picker, _theme);
-            void Select() { if (list.SelectedItem is DiscoveredApp app) { _rows.Add(new TargetRow(new() { Cmd = app.Command })); picker.Close(); } }
-            list.MouseDoubleClick += (_, _) => Select();
-            list.KeyDown += (_, key) => { if (key.Key == System.Windows.Input.Key.Enter) Select(); };
+            var picker = WindowSurface.CreatePicker(this, _theme, "Choose application", list, () => {
+                if (list.SelectedItem is DiscoveredApp app) _rows.Add(new TargetRow(new() { Cmd = app.Command }));
+            });
             picker.ShowDialog(); RefreshChoices(); Status.Text = apps.Count + " applications found.";
         }
         catch (Exception ex) { Status.Text = "Discovery: " + ex.Message; }

@@ -15,6 +15,8 @@ foreach ($file in $xaml) {
     $document = [xml][IO.File]::ReadAllText($file.FullName)
     foreach ($node in $document.SelectNodes('//*[@*[local-name()="Key"]]')) { $null = $keys.Add($node.GetAttribute('Key','http://schemas.microsoft.com/winfx/2006/xaml')) }
 }
+# Platform resource names are resolved against the shipped Fluent dictionary by the headless WPF checks.
+foreach ($key in @('DefaultButtonStyle','AccentButtonStyle','DefaultTextBoxStyle','DefaultComboBoxStyle','DefaultCheckBoxStyle','DefaultRadioButtonStyle','DefaultExpanderStyle','DefaultDataGridStyle','DefaultListBoxStyle','DefaultTabControlStyle')) { $null = $keys.Add($key) }
 foreach ($file in $xaml) {
     foreach ($match in [regex]::Matches([IO.File]::ReadAllText($file.FullName), '\{(?:StaticResource|DynamicResource)\s+([^{}]+)\}')) {
         if (!$keys.Contains($match.Groups[1].Value.Trim())) { throw ($file.Name + ': unresolved resource ' + $match.Value) }

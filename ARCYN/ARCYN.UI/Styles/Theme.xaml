@@ -61,18 +61,19 @@
     <SolidColorBrush x:Key="LiteralBrushEAF08080" Color="#EAF08080" />
     <Color x:Key="LiteralColorFF0A0A0A">#FF0A0A0A</Color>
     <SolidColorBrush x:Key="LiteralBrushFF0A0A0A" Color="#FF0A0A0A" />
-    <system:Double x:Key="FontSize7">10</system:Double>
-    <system:Double x:Key="FontSize8">10.5</system:Double>
-    <system:Double x:Key="FontSize9">11</system:Double>
-    <system:Double x:Key="FontSize10">11.5</system:Double>
-    <system:Double x:Key="FontSize11">12</system:Double>
+    <system:Double x:Key="FontSize7">12</system:Double>
+    <system:Double x:Key="FontSize8">12</system:Double>
+    <system:Double x:Key="FontSize9">12</system:Double>
+    <system:Double x:Key="FontSize10">12</system:Double>
+    <system:Double x:Key="FontSize11">14</system:Double>
     <system:Double x:Key="FontSize12">12</system:Double>
-    <system:Double x:Key="FontSize13">13</system:Double>
+    <system:Double x:Key="FontSize13">14</system:Double>
     <system:Double x:Key="FontSize14">14</system:Double>
-    <system:Double x:Key="FontSize15">17</system:Double>
-    <system:Double x:Key="FontSize20">24</system:Double>
-    <system:Double x:Key="FontSize22">27</system:Double>
-    <system:Double x:Key="CardHeight">94</system:Double>
+    <system:Double x:Key="FontSize15">18</system:Double>
+    <system:Double x:Key="FontSize20">28</system:Double>
+    <system:Double x:Key="FontSize22">28</system:Double>
+    <system:Double x:Key="CardHeight">96</system:Double>
+    <Visibility x:Key="WorkspaceDescriptionVisibility">Visible</Visibility>
 
     <Color x:Key="Accent">#D64545</Color>
     <Color x:Key="AccentBright">#F08080</Color>
@@ -106,7 +107,8 @@
     <SolidColorBrush x:Key="BorderGlowBrush" Color="{DynamicResource LiteralColor55D64545}" />
 
 
-    <FontFamily x:Key="UIFont">Segoe UI</FontFamily>
+    <FontFamily x:Key="UIFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
     <FontFamily x:Key="ReadoutFont">pack://application:,,,/Assets/Fonts/#JetBrainsMono NF</FontFamily>
 
     <DropShadowEffect x:Key="GlowAccent" ShadowDepth="0" Color="{DynamicResource LiteralColorD64545}" BlurRadius="2" Opacity="0.04" />
@@ -168,38 +170,4 @@
         <Setter Property="IsHitTestVisible" Value="False" />
     </Style>
 
-    <Style x:Key="WorkstationPanelStyle" TargetType="Button">
-        <Setter Property="FontFamily" Value="{DynamicResource UIFont}"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
-            <Border x:Name="RootBorder" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource CardRadius}" BorderThickness="1" BorderBrush="{DynamicResource SurfaceLineBrush}" RenderTransformOrigin=".5,.5" TextOptions.TextFormattingMode="Display">
-                <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
-                <Grid>
-                    <Border CornerRadius="{DynamicResource CardRadius}" Background="{DynamicResource GlassReflection}" IsHitTestVisible="False"/>
-                    <Border x:Name="HoverBg" CornerRadius="{DynamicResource CardRadius}" Background="{DynamicResource HighlightBrush}" Opacity="0" IsHitTestVisible="False"/>
-                    <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-                </Grid>
-            </Border>
-            <ControlTemplate.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To=".6" Duration="0:0:0.12"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
-                    <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverBg" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.20"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Trigger.EnterActions><BeginStoryboard><Storyboard>
-                        <DoubleAnimation Storyboard.TargetName="RootBorder" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To=".99" Duration="0:0:0.04"/>
-                        <DoubleAnimation Storyboard.TargetName="RootBorder" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To=".99" Duration="0:0:0.04"/>
-                    </Storyboard></BeginStoryboard></Trigger.EnterActions>
-                    <Trigger.ExitActions><BeginStoryboard><Storyboard>
-                        <DoubleAnimation Storyboard.TargetName="RootBorder" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.12"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
-                        <DoubleAnimation Storyboard.TargetName="RootBorder" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.12"><DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction></DoubleAnimation>
-                    </Storyboard></BeginStoryboard></Trigger.ExitActions>
-                </Trigger>
-                <Trigger Property="IsFocused" Value="True"><Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource AccentBrightBrush}"/></Trigger>
-            </ControlTemplate.Triggers>
-        </ControlTemplate></Setter.Value></Setter>
-    </Style>
 </ResourceDictionary>

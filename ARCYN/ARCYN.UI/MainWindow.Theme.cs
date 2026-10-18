@@ -40,7 +40,7 @@ public partial class MainWindow
         _currentTheme = ThemeService.Clone(theme);
         Width = Math.Min(theme.Width, SystemParameters.WorkArea.Width);
         Height = Math.Min(theme.Height, SystemParameters.WorkArea.Height);
-        MainBorder.CornerRadius = new CornerRadius(theme.CornerRadius);
+        MainBorder.CornerRadius = new CornerRadius(theme.ColorMode == "custom" ? theme.CornerRadius : 8);
         MainBorder.BorderThickness = new Thickness(theme.BorderWidth);
         ScanlineLayer.Visibility = theme.Scanlines && !theme.ReducedEffects && !SystemParameters.HighContrast ? Visibility.Visible : Visibility.Collapsed;
         VignetteLayer.Visibility = theme.Vignette && !SystemParameters.HighContrast ? Visibility.Visible : Visibility.Collapsed;
@@ -64,12 +64,14 @@ public partial class MainWindow
     }
     private void RefreshActivity()
     {
+        var cinematic = _state.Phase is AppPhase.Boot or AppPhase.Selecting or AppPhase.Launching && !SystemParameters.HighContrast;
+        ParticleCanvas.Visibility = TrailCanvas.Visibility = AmbientGlow.Visibility = cinematic ? Visibility.Visible : Visibility.Collapsed;
+        ScanlineLayer.Visibility = cinematic && _currentTheme.Scanlines && !_currentTheme.ReducedEffects ? Visibility.Visible : Visibility.Collapsed;
+        VignetteLayer.Visibility = cinematic && _currentTheme.Vignette ? Visibility.Visible : Visibility.Collapsed;
         if (!_runtimeStarted || _disposed) return;
         var visible = IsVisible && WindowState != WindowState.Minimized && _state.Phase != AppPhase.Closing;
-        if (visible) _idleTimer?.Start(); else _idleTimer?.Stop();
-        var animate = visible && (_state.Phase is AppPhase.Boot or AppPhase.Selecting or AppPhase.Launching ||
-            _currentTheme.Animations && !_currentTheme.ReducedEffects && !SystemParameters.HighContrast &&
-            (_currentTheme.Particles > 0 || _currentTheme.CursorTrail || _currentTheme.GlowOpacity > 0));
+        if (visible && _config.Behavior.IdleTimeoutSeconds > 0) _idleTimer?.Start(); else _idleTimer?.Stop();
+        var animate = visible && _state.Phase is AppPhase.Boot or AppPhase.Selecting or AppPhase.Launching;
         if (animate) _render.Start(); else _render.Stop();
         if (!visible) _launchDotTimer?.Stop();
         else if (_state.Phase == AppPhase.Launching) _launchDotTimer?.Start();

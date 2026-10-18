@@ -32,7 +32,7 @@ internal static class WindowSurface
     {
         if (!supported || highContrast || theme.ReducedEffects || !theme.Acrylic) return MaterialMode.Opaque;
         var material = role == SurfaceRole.Workspace ? MaterialMode.Mica : MaterialMode.Acrylic;
-        return ThemeService.ShellOpacity(ThemeService.ParseColor(theme.Background), material) == 255 ? MaterialMode.Opaque : material;
+        return ThemeService.ShellOpacity(ThemeService.Background(theme), material) == 255 ? MaterialMode.Opaque : material;
     }
     internal static MaterialMode InitializedMaterial(MaterialMode requested, bool succeeded) => succeeded ? requested : MaterialMode.Opaque;
 
@@ -43,10 +43,10 @@ internal static class WindowSurface
         window.SetResourceReference(Window.BackgroundProperty, "WindowBrush");
         window.SetResourceReference(Window.ForegroundProperty, "TextPrimaryBrush");
         window.SetResourceReference(Window.FontFamilyProperty, "UIFont");
-        window.FontSize = 13 * theme.FontScale;
-        WindowChrome.SetWindowChrome(window, new WindowChrome { CaptionHeight = 0, GlassFrameThickness = new(0),
+        window.FontSize = Math.Max(12, 14 * theme.FontScale);
+        if (role == SurfaceRole.Launcher) WindowChrome.SetWindowChrome(window, new WindowChrome { CaptionHeight = 0, GlassFrameThickness = new(0),
             ResizeBorderThickness = new(window.ResizeMode is ResizeMode.NoResize or ResizeMode.CanMinimize ? 0 : 6),
-            CornerRadius = new(theme.CornerRadius), UseAeroCaptionButtons = false });
+            CornerRadius = new(8), UseAeroCaptionButtons = false });
         void QueueRefresh()
         {
             if (state.Closed || state.RefreshPending || window.Dispatcher.HasShutdownStarted) return;
@@ -82,29 +82,10 @@ internal static class WindowSurface
     public static void Prepare(Window window, ThemeConfig theme, SurfaceRole role = SurfaceRole.Workspace)
     {
         ThemeService.Apply(window, theme); Attach(window, theme, role);
-        window.WindowStyle = WindowStyle.None;
-        if (window.Content is not UIElement content) return;
-        window.Content = null;
-        var root = new Grid { Margin = new(7) };
-        var shell = new Border { BorderThickness = new(1) };
-        shell.SetResourceReference(Border.BackgroundProperty, "ShellBrush");
-        shell.SetResourceReference(Border.BorderBrushProperty, "SurfaceLineBrush");
-        shell.SetResourceReference(Border.CornerRadiusProperty, "SurfaceRadius");
-        var body = new Grid(); shell.Child = body;
-        body.RowDefinitions.Add(new() { Height = GridLength.Auto }); body.RowDefinitions.Add(new());
-        var reflection = new Border { IsHitTestVisible = false };
-        reflection.SetResourceReference(Border.BackgroundProperty, "GlassReflection"); reflection.SetResourceReference(Border.CornerRadiusProperty, "SurfaceRadius");
-        root.Children.Add(shell); root.Children.Add(reflection);
-        var header = new Grid { Margin = new(22, 14, 14, 0), Background = Brushes.Transparent };
-        header.ColumnDefinitions.Add(new()); header.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
-        var caption = new TextBlock { Text = window.Title.Replace("ARCYN — ", ""), FontWeight = FontWeights.SemiBold, FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
-        caption.SetResourceReference(TextBlock.FontSizeProperty, "FontSize14");
-        header.MouseLeftButtonDown += (_, e) => { if (e.ButtonState == MouseButtonState.Pressed) window.DragMove(); };
-        header.Children.Add(caption);
-        var close = new Button { Content = "×", Width = 34, Height = 34, Padding = new(0), Margin = new(8, 0, 0, 0) };
-        System.Windows.Automation.AutomationProperties.SetName(close, "Close " + caption.Text);
-        close.Click += (_, _) => window.Close(); Grid.SetColumn(close, 1); header.Children.Add(close);
-        body.Children.Add(header); Grid.SetRow(content, 1); body.Children.Add(content); window.Content = root;
+        window.WindowStyle = WindowStyle.SingleBorderWindow;
+        window.BorderThickness = new(0);
+        window.UseLayoutRounding = true;
+        TextOptions.SetTextFormattingMode(window, TextFormattingMode.Display);
     }
 
     public static void RefreshBackdrop(Window window, ThemeConfig theme)
@@ -119,14 +100,14 @@ internal static class WindowSurface
             try
             {
                 var chrome = WindowChrome.GetWindowChrome(window);
-                chrome.GlassFrameThickness = new(material == MaterialMode.Opaque ? 0 : -1);
-                var dark = ThemeService.Contrast(ThemeService.ParseColor(theme.Background), Colors.White) > ThemeService.Contrast(ThemeService.ParseColor(theme.Background), Colors.Black);
+                if (chrome != null) chrome.GlassFrameThickness = new(material == MaterialMode.Opaque ? 0 : -1);
+                var dark = ThemeService.IsDark(theme);
                 material = InitializedMaterial(material, NativeMethods.SetBackdrop(handle, (int)material, dark));
-                if (material == MaterialMode.Opaque) { chrome.GlassFrameThickness = new(0); NativeMethods.SetBackdrop(handle, 1, dark); }
-                NativeMethods.RoundWindow(handle, theme.CornerRadius > 0);
+                if (material == MaterialMode.Opaque) { if (chrome != null) chrome.GlassFrameThickness = new(0); NativeMethods.SetBackdrop(handle, 1, dark); }
+                NativeMethods.RoundWindow(handle, true);
             }
             catch (Exception ex) when (ex is System.Runtime.InteropServices.ExternalException or InvalidOperationException)
-            { material = MaterialMode.Opaque; WindowChrome.GetWindowChrome(window).GlassFrameThickness = new(0); LogService.WriteStatic("Material fallback: {0}", ex.Message); }
+            { material = MaterialMode.Opaque; if (WindowChrome.GetWindowChrome(window) is { } chrome) chrome.GlassFrameThickness = new(0); LogService.WriteStatic("Material fallback: {0}", ex.Message); }
         }
         state.Material = material;
         ThemeService.ApplySurfaces(window, theme, material, SystemParameters.HighContrast);
@@ -156,7 +137,8 @@ internal static class WindowSurface
     {
         var window = new Window { Title = "ARCYN — " + title, Owner = owner, Width = 620, Height = 460, MinWidth = 360, MinHeight = 260,
             WindowStartupLocation = owner == null ? WindowStartupLocation.CenterScreen : WindowStartupLocation.CenterOwner, ShowInTaskbar = owner == null };
-        var content = new DockPanel { Margin = new(24, 14, 24, 24) };
+        var content = new DockPanel { Margin = new(24) };
+        var heading = new TextBlock { Text = title }; heading.SetResourceReference(FrameworkElement.StyleProperty, "PageTitle"); DockPanel.SetDock(heading, Dock.Top); content.Children.Add(heading);
         var buttons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 18, 0, 0) };
         var cancel = new Button { Content = confirm == null ? "Close" : "Cancel", IsCancel = true, IsDefault = true };
         cancel.Click += (_, _) => window.DialogResult = false; buttons.Children.Add(cancel);
@@ -170,6 +152,24 @@ internal static class WindowSurface
         window.Content = content;
         Prepare(window, owner is MainWindow main ? main.CurrentTheme : new ThemeConfig(), SurfaceRole.Dialog);
         return window;
+    }
+    internal static Window CreatePicker(Window? owner, ThemeConfig theme, string title, ListBox list, Action select)
+    {
+        var window = new Window { Title = title + " — ARCYN", Owner = owner, Width = 650, Height = 500, MinWidth = 400, MinHeight = 300,
+            WindowStartupLocation = owner == null ? WindowStartupLocation.CenterScreen : WindowStartupLocation.CenterOwner };
+        var root = new DockPanel { Margin = new(24) };
+        var heading = new TextBlock { Text = title }; heading.SetResourceReference(FrameworkElement.StyleProperty, "PageTitle");
+        DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
+        var footer = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0,16,0,0) };
+        var cancel = new Button { Content = "Cancel", IsCancel = true };
+        var accept = new Button { Content = "Select", IsDefault = true, IsEnabled = list.SelectedIndex >= 0 };
+        accept.SetResourceReference(FrameworkElement.StyleProperty, "PrimaryActionButton");
+        void Choose() { if (list.SelectedIndex < 0) return; select(); window.DialogResult = true; }
+        accept.Click += (_, _) => Choose(); list.SelectionChanged += (_, _) => accept.IsEnabled = list.SelectedIndex >= 0;
+        list.MouseDoubleClick += (_, e) => { if (ItemsControl.ContainerFromElement(list, e.OriginalSource as DependencyObject) != null) Choose(); };
+        list.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Choose(); e.Handled = true; } };
+        footer.Children.Add(cancel); footer.Children.Add(accept); DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
+        list.Margin = new(0); root.Children.Add(list); window.Content = root; Prepare(window, theme); return window;
     }
     public static bool Show(Window? owner, string title, string message, string? confirm = null) => CreateDialog(owner, title, message, confirm).ShowDialog() == true;
 }

@@ -18,6 +18,8 @@
               "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
               "default": "#D64545"
             },
+            "color_mode": { "type": "string", "enum": ["system", "light", "dark", "custom"], "default": "system" },
+            "system_accent": { "type": "boolean", "default": true },
             "background": {
               "type": "string",
               "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",

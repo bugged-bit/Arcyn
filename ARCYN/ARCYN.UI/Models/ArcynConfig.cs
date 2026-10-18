@@ -19,6 +19,8 @@ public sealed class ArcynConfig
 
 public sealed class ThemeConfig
 {
+    [JsonPropertyName("color_mode")] public string ColorMode { get; set; } = "system";
+    [JsonPropertyName("system_accent")] public bool SystemAccent { get; set; } = true;
     [JsonPropertyName("background")] public string Background { get; set; } = "#101318";
     [JsonPropertyName("text")] public string Text { get; set; } = "#FFFFFF";
     [JsonPropertyName("font_family")] public string FontFamily { get; set; } = "Segoe UI";
@@ -27,7 +29,7 @@ public sealed class ThemeConfig
     [JsonPropertyName("height")] public double Height { get; set; } = 490;
     [JsonPropertyName("corner_radius")] public double CornerRadius { get; set; } = 20;
     [JsonPropertyName("border_width")] public double BorderWidth { get; set; } = 1;
-    [JsonPropertyName("card_height")] public double CardHeight { get; set; } = 112;
+    [JsonPropertyName("card_height")] public double CardHeight { get; set; } = 96;
     [JsonPropertyName("spacing")] public double Spacing { get; set; } = 12;
     [JsonPropertyName("layout")] public string Layout { get; set; } = "rows";
     [JsonPropertyName("particles")] public int Particles { get; set; } = 60;

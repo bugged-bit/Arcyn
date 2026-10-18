@@ -4,8 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Interop;
-using System.Windows.Threading;
 using ARCYN.UI.Models;
 using ARCYN.UI.Services;
 
@@ -19,66 +17,19 @@ public partial class SetupWindow : Window
     private ModeConfig? _currentMode;
     private int _step;
     private bool _finishing;
-    private ParticleEngine? _particles;
-    private DispatcherTimer? _particleTimer;
-    private static readonly string[] StepTitles = ["Welcome", "Mode", "Apps", "Folders", "Websites", "Review"];
+    private static readonly string[] StepTitles = ["Welcome", "Workspace", "Apps", "Folders", "Websites", "Review"];
 
         public SetupWindow(ConfigService? service = null)
         {
             _config = service ?? new ConfigService();
             InitializeComponent();
             RefreshSystemTheme();
-            WindowSurface.Attach(this, new(), SurfaceRole.Workspace);
-            Loaded += OnLoaded;
-            IsVisibleChanged += (_, _) => RefreshActivity();
-            StateChanged += (_, _) => RefreshActivity();
+            WindowSurface.Prepare(this, new());
             _currentMode = NewMode();
             ShowStep(0);
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-
-            _particles = new ParticleEngine(ParticleCanvas);
-            _particles.Start();
-            _particleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
-            _particleTimer.Tick += (_, _) => _particles?.Tick();
-            _particleTimer.Start();
-            RefreshActivity();
-        }
-
-        private void RefreshActivity()
-        {
-            if (IsVisible && WindowState != WindowState.Minimized && !SystemParameters.HighContrast) _particleTimer?.Start();
-            else _particleTimer?.Stop();
-        }
-        internal void RefreshSystemTheme()
-        {
-            ThemeService.Apply(this, new());
-            ParticleCanvas.Visibility = SetupGlow.Visibility = SetupScanlines.Visibility = SetupVignette.Visibility = SystemParameters.HighContrast ? Visibility.Collapsed : Visibility.Visible;
-            RefreshActivity();
-        }
-
-        private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            var pos = e.GetPosition(MainBorder);
-            if (pos.X < 0 || pos.Y < 0 || pos.X > MainBorder.ActualWidth || pos.Y > MainBorder.ActualHeight)
-                Close();
-        }
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            _particleTimer?.Stop();
-            _particles?.Dispose();
-            System.Windows.Application.Current.Shutdown();
-        }
-
-        protected override void OnClosed(EventArgs e)
-        {
-            _particleTimer?.Stop();
-            _particles?.Dispose();
-            base.OnClosed(e);
-        }
+        internal void RefreshSystemTheme() => ThemeService.Apply(this, new());
 
     private static ModeConfig NewMode()
     {
@@ -107,7 +58,7 @@ public partial class SetupWindow : Window
                 BackButton.Visibility = Visibility.Collapsed;
                 NextButton.Visibility = Visibility.Visible;
                 FinishButton.Visibility = Visibility.Collapsed;
-                NextButton.Content = "Start Setup";
+                NextButton.Content = "Get started";
                 StatusBar.Text = "Begin configuration";
                 break;
             case 1:
@@ -116,7 +67,7 @@ public partial class SetupWindow : Window
                 NextButton.Visibility = Visibility.Visible;
                 FinishButton.Visibility = Visibility.Collapsed;
                 NextButton.Content = "Next";
-                StatusBar.Text = "Name your workspace mode";
+                StatusBar.Text = "Name your workspace";
                 break;
             case 2:
                 StepApps.Visibility = Visibility.Visible;
@@ -147,7 +98,7 @@ public partial class SetupWindow : Window
                 BackButton.Visibility = Visibility.Visible;
                 NextButton.Visibility = Visibility.Collapsed;
                 FinishButton.Visibility = Visibility.Visible;
-                StatusBar.Text = _modes.Count == 1 ? "1 mode configured" : $"{_modes.Count} modes configured";
+                StatusBar.Text = _modes.Count == 1 ? "1 workspace configured" : $"{_modes.Count} workspaces configured";
                 RefreshReview();
                 break;
         }
@@ -222,7 +173,7 @@ public partial class SetupWindow : Window
         }
 
         _currentMode ??= NewMode();
-        _currentMode.Name = name.ToUpperInvariant();
+        _currentMode.Name = name;
         _currentMode.Description = ModeDescInput.Text.Trim();
         _currentMode.Accent = GetSelectedAccent();
 
@@ -398,7 +349,7 @@ public partial class SetupWindow : Window
         AppsList.Items.Clear();
         FoldersList.Items.Clear();
         WebsitesList.Items.Clear();
-        ColorRed.IsChecked = true;
+        ColorBlue.IsChecked = true;
 
         ShowStep(1);
         Keyboard.Focus(ModeNameInput);
@@ -409,7 +360,7 @@ public partial class SetupWindow : Window
         if (_finishing) return;
         if (_modes.Count == 0)
         {
-            StatusBar.Text = "Create at least one mode to continue";
+            StatusBar.Text = "Create at least one workspace to continue";
             return;
         }
 
@@ -422,17 +373,15 @@ public partial class SetupWindow : Window
             config.Modes[i].Index = i + 1;
 
         _finishing = true;
-        MainBorder.IsEnabled = false;
+        IsEnabled = false;
         try { await _config.SaveAsync(config); }
-        catch (Exception ex) { StatusBar.Text = "Save failed: " + ex.Message; _finishing = false; MainBorder.IsEnabled = true; return; }
+        catch (Exception ex) { StatusBar.Text = "Save failed: " + ex.Message; _finishing = false; IsEnabled = true; return; }
 
         StatusBar.Text = "Config saved. Launching ARCYN...";
 
         await Task.Delay(300);
         if (!IsLoaded) return;
 
-        _particleTimer?.Stop();
-        _particles?.Dispose();
 
         var mainWindow = new MainWindow(_config, config);
         Application.Current.MainWindow = mainWindow;

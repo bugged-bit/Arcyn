@@ -22,7 +22,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private readonly LaunchOrchestrator _orchestrator;
     private readonly Dictionary<string, string> _runReports = [];
     private readonly RenderService _render;
-    private readonly Stopwatch _uptime = Stopwatch.StartNew();
     private readonly List<ModeConfig> _modes;
     private readonly ModeService _modeService;
     private readonly ConfigService _configService;
@@ -42,7 +41,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private DispatcherTimer? _idleTimer;
     private DispatcherTimer? _launchDotTimer;
     private ParticleEngine? _particles;
-    private TelemetryMonitor? _telemetry;
 
     private bool _disposed;
     private bool _isClosing;
@@ -97,6 +95,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         Closed += (_, _) => Dispose();
         IsVisibleChanged += (_, _) => RefreshActivity();
         StateChanged += (_, _) => RefreshActivity();
+        ApplyTheme(_config.Theme);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -121,7 +120,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         ApplyTheme(_config.Theme);
         LoadConfig();
 
-        _telemetry = new TelemetryMonitor();
         _particles = new ParticleEngine(ParticleCanvas);
 
         _render.Subscribe(this);
@@ -173,7 +171,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         }
 
         _accelTrail += dt;
-        if (effects && _currentTheme.CursorTrail && _accelTrail >= 16 && _state.Phase == AppPhase.Ready)
+        if (effects && _currentTheme.CursorTrail && _accelTrail >= 16 && _state.Phase != AppPhase.Ready)
         {
             _accelTrail = 0;
             UpdateCursorTrail();
@@ -244,12 +242,13 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         string[] bootMessages =
         [
-            "LINKING LAUNCH PROFILES...",
-            "TELEMETRY CHANNEL ONLINE",
-            "PROCESS TABLE VERIFIED",
-            "TACTICAL HUD STABLE",
-            "SYSTEM CONFIGURED"
+            "Bringing things together…",
+            "A little room to focus.",
+            "Your workspaces await.",
+            "Make space to work.",
+            "Ready to begin."
         ];
+        int[] typingBudgets = [26, 24, 22, 19, 17]; // Preserve each original typing + hold interval as the copy changes.
         string[] bootPercentages = ["24%", "47%", "68%", "89%", "100%"];
 
         foreach (var (message, index) in bootMessages.Select((value, idx) => (value, idx)))
@@ -257,10 +256,10 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             if (ct.IsCancellationRequested)
                 return;
 
-            BootLog.Text += "\n> ";
+            BootLog.Text += "\n";
             await TypeText(BootLog, message, 12, ct);
             BootPercent.Text = bootPercentages[index];
-            await DelaySafe(100, ct);
+            await DelaySafe(100 + Math.Max(0, typingBudgets[index] - message.Length) * 12, ct);
         }
 
         if (ct.IsCancellationRequested)
@@ -279,11 +278,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             return;
 
         BootReady.BeginAnimation(UIElement.OpacityProperty, null);
-
-        _telemetry?.Sample();
-        BootCpu.Text = $"CPU: {_telemetry?.CpuPercent ?? 0:F1}%";
-        BootRam.Text = $"RAM: {_telemetry?.RamPercent ?? 0:F1}%";
-        UpdateTelemetryUI();
 
         AnimationService.FadeOut(BootOverlay, 150);
         await DelaySafe(160, ct);
@@ -379,7 +373,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             ModePanel.IsHitTestVisible = false;
             ModePanel.Visibility = Visibility.Collapsed;
             LaunchModeLabel.Text = mode.Label;
-            LaunchSessionLabel.Text = $"{mode.SessionLabel}  -  {mode.StateLabel}";
+            LaunchSessionLabel.Text = string.IsNullOrWhiteSpace(mode.Session) ? mode.Subtitle : $"{mode.Session} · {mode.StateLabel}";
             var currentStage = "Opening workspace";
             var acceptProgress = true;
             LaunchStatus.Text = currentStage;
@@ -396,7 +390,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
                 LaunchStatus.Text = currentStage + new string('.', _launchDotIndex);
             };
             _launchDotTimer.Start();
-            LaunchTargetCount.Text = $"{mode.ProcessCount + mode.Actions.Count} STEPS";
+            LaunchTargetCount.Text = $"{mode.ProcessCount + mode.Actions.Count} steps";
             LaunchFeedText.Text = "";
             var progress = new Progress<LaunchProgress>(p => {
                 if (_disposed || token.IsCancellationRequested || !acceptProgress) return;
@@ -404,7 +398,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
                 LaunchStatus.Text = currentStage;
                 if (p.StepCompleted)
                 {
-                    LaunchFeedText.Text += $"> {p.CurrentLabel}  [{p.Evidence}]{(p.Error == null ? "" : "  " + p.Error)}\n";
+                    LaunchFeedText.Text += $"{p.CurrentLabel} · {p.Evidence}{(p.Error == null ? "" : "  " + p.Error)}\n";
                     LaunchFeedScroll.ScrollToBottom();
                 }
                 SetLaunchProgress(p.CompletedTargets, p.TotalTargets);
@@ -419,7 +413,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             LaunchStatus.Foreground = result.Success ? _textPrimaryBrush : _accentLightBrush;
             mode.RecordLaunch(result.CompletedSteps, result.TotalTargets, result.Success);
             UpdateOperationalChrome();
-            if (result.Failures.Count + result.Warnings.Count > 0) LaunchRecent.Text = "Issue: " + string.Join(", ", result.Failures.Concat(result.Warnings));
             await DelaySafe(result.Success ? 2000 : 5000, token);
             if (token.IsCancellationRequested || !_config.Behavior.CloseOnLaunch || !result.Success) await ReturnToReady();
             else if (!_disposed) Close();
@@ -531,53 +524,24 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         }
     }
 
-    private void UpdateTelemetryUI()
-    {
-        if (_telemetry == null)
-            return;
-
-        var cpu = _telemetry.CpuPercent;
-        var ram = _telemetry.RamPercent;
-
-        var known = !float.IsNaN(cpu) && !float.IsNaN(ram);
-        HeaderCpu.Text = float.IsNaN(cpu) ? "CPU --" : $"CPU {cpu,4:F1}%";
-        HeaderRam.Text = float.IsNaN(ram) ? "RAM --" : $"RAM {ram,4:F1}%";
-        HeaderSys.Text = !known ? "UNKNOWN" : cpu < 75 && ram < 85 ? "ONLINE" : "LOAD";
-        HeaderSys.Foreground = cpu < 75 && ram < 85 ? _accentBrightBrush : _accentLightBrush;
-
-        SystemStrip.Text = !known ? "System readings unavailable" : cpu < 75 && ram < 85
-            ? "Everything in balance"
-            : $"System load · CPU {cpu:F0}% / RAM {ram:F0}%";
-
-        if (_state.Phase == AppPhase.Launching)
-        {
-            LaunchCpu.Text = $"CPU {cpu:F1}%";
-            LaunchRam.Text = $"RAM {ram:F1}%";
-        }
-
-        var idleSeconds = _state.Phase == AppPhase.Ready ? (int)(_idle.Elapsed / 1000) : 0;
-        FooterIdle.Text = idleSeconds > 0 ? $"idle {idleSeconds}s" : string.Empty;
-    }
-
     private void StartIdleTimer()
     {
         _idle.Reset();
         _idleTimer?.Stop();
         _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _idleTimer.Tick += (_, _) => {
-            if (_state.Phase != AppPhase.Boot) { _telemetry?.Sample(); UpdateTelemetryUI(); }
-            TimeDisplay.Text = DateTime.Now.ToString("HH:mm:ss");
-            HeaderUptime.Text = $"UP {_uptime.Elapsed:hh\\:mm\\:ss}";
-            RuntimeStrip.Text = $"RUNTIME {_uptime.Elapsed:hh\\:mm\\:ss}";
+            var timeout = _config.Behavior.IdleTimeoutSeconds;
+            FooterIdle.Text = _state.Phase == AppPhase.Ready && timeout > 0 && !_editing && !_menuOpen ? $"Closes in {Math.Max(0, timeout - (int)(_idle.Elapsed / 1000))}s" : "";
 
             if (_state.Phase == AppPhase.Ready && !_editing && !_menuOpen && _idle.Expired(_config.Behavior.IdleTimeoutSeconds)) CloseWithAnimation();
         };
-        _idleTimer.Start();
+        RefreshActivity();
     }
     private void ResetIdle()
     {
         _idle.Reset();
         FooterIdle.Text = string.Empty;
+        RefreshActivity();
     }
 
     private async void CloseWithAnimation()
@@ -768,15 +732,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
     private void UpdateOperationalChrome()
     {
-        var totalProcesses = _modeService.TotalProcesses;
-        var activeMode = _modeService.ActiveLabel;
-
-        ModeCountRun.Text = _modes.Count.ToString("D2");
-        ProcessStrip.Text = $"{totalProcesses} targets  ·  {activeMode}";
-        FooterHint.Text = $"{ShortcutSpan()} open  ·  F2 edit  ·  Ctrl+N new  ·  Ctrl+, appearance  ·  Esc close";
-        LaunchRecent.Text = _state.SelectedModeIndex >= 0 && _state.SelectedModeIndex < _modes.Count
-            ? $"Recent: {_modes[_state.SelectedModeIndex].LastLaunchLabel}"
-            : "Recent: none";
+        FooterHint.Text = $"{ShortcutSpan()} open  ·  F2 edit  ·  Ctrl+N new  ·  Ctrl+, settings  ·  Esc close";
     }
 
     private string ShortcutSpan()
@@ -792,7 +748,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         var safeTotal = Math.Max(total, 1);
         var ratio = Math.Clamp((double)completed / safeTotal, 0, 1);
         LaunchProgressScale.ScaleX = ratio;
-        LaunchProgressText.Text = $"PROC {Math.Min(completed, safeTotal):D2}/{safeTotal:D2}";
+        LaunchProgressText.Text = $"{Math.Min(completed, safeTotal)} of {safeTotal} steps";
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
@@ -850,7 +806,6 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _idleTimer?.Stop();
         _launchDotTimer?.Stop();
         _render.Dispose();
-        _telemetry?.Dispose();
         _particles?.Dispose();
         _log.Dispose();
     }

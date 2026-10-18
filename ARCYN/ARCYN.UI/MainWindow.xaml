@@ -1,80 +1,39 @@
-<Window x:Class="ARCYN.UI.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        Width="920"
-        Height="490"
-        WindowStyle="None"
-        Background="{DynamicResource WindowBrush}"
-        ShowInTaskbar="False"
-        Topmost="True"
-        WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize"
-        SnapsToDevicePixels="True"
-        TextOptions.TextFormattingMode="Display"
-        FontFamily="{DynamicResource UIFont}"
-        PreviewKeyDown="Window_PreviewKeyDown">
-    <Window.Resources>
-        <DataTemplate x:Key="ModeCardTemplate">
-          <Grid>
-            <Button Style="{DynamicResource WorkstationPanelStyle}" Click="ModeButton_Click" Tag="{Binding}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Subtitle}" MinHeight="{DynamicResource CardHeight}" Margin="0">
-                <Grid Margin="16,12,56,12">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <Border Width="34" Height="34" CornerRadius="12" Background="{Binding AccentTintBrush}" VerticalAlignment="Top" HorizontalAlignment="Left">
-                        <TextBlock Text="{Binding IndexLabel}" FontSize="{DynamicResource FontSize14}" FontWeight="SemiBold" Foreground="{DynamicResource AccentLightBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                    </Border>
-                    <StackPanel Grid.Column="1">
-                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}" FontSize="{DynamicResource FontSize15}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrightBrush}"/>
-                        <TextBlock Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Subtitle}" FontSize="{DynamicResource FontSize9}" Foreground="{DynamicResource TextDimBrush}" Margin="0,2,0,0"/>
-                        <ItemsControl ItemsSource="{Binding LaunchTargets}" Margin="0,8,0,0">
-                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate><DataTemplate>
-                                <Border Margin="0,0,6,4" Padding="8,3" CornerRadius="20" Background="{DynamicResource FieldBrush}">
-                                    <TextBlock Text="{Binding DisplayLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextDimBrush}"/>
-                                </Border>
-                            </DataTemplate></ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{Binding StateLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/>
-                            <TextBlock Text=" · " Foreground="{DynamicResource TextMutedBrush}"/>
-                            <TextBlock Text="{Binding LastOutcomeLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/>
-                            <TextBlock Text="{Binding SessionLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}" Margin="12,0,0,0"/>
-                        </StackPanel>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2" Margin="18,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right">
-                        <Border Background="{DynamicResource AccentSurfaceBrush}" CornerRadius="14" Padding="14,8"><TextBlock Text="Open ↗" FontWeight="SemiBold" Foreground="{DynamicResource SelectionTextBrush}" FontSize="{DynamicResource FontSize9}"/></Border>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,7,0,0"><TextBlock Text="{Binding ProcessLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/><TextBlock Text="{Binding ShortcutHint}" Margin="8,0,0,0" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/></StackPanel>
-                    </StackPanel>
-                </Grid>
-            </Button>
-            <Button Content="⋯" Click="WorkspaceMenu_Click" Tag="{Binding Id}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Padding="8,2" Width="36" ToolTip="Workspace actions" AutomationProperties.Name="Workspace actions"/>
-          </Grid>
-        </DataTemplate>
-    </Window.Resources>
-
-    <Grid x:Name="RootGrid" Background="Transparent" MouseDown="RootGrid_MouseDown">
-        <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False" />
-        <Rectangle x:Name="AmbientGlow" Style="{StaticResource AmbientGlow}" />
-        <Rectangle x:Name="StartupFlash" Fill="{DynamicResource LiteralBrushD64545}" Opacity="0" IsHitTestVisible="False" />
-        <Rectangle x:Name="ScanlineLayer" Style="{StaticResource Scanlines}" />
-        <Rectangle x:Name="VignetteLayer" Style="{StaticResource Vignette}" />
-        <Canvas x:Name="TrailCanvas" IsHitTestVisible="False" Panel.ZIndex="100" />
-
-        <Grid x:Name="ShellHost" Margin="16,12">
-            <Border x:Name="MainBorder"
-                    CornerRadius="20"
-                    Width="6"
-                    MaxWidth="{Binding ActualWidth, ElementName=ShellHost}" MaxHeight="{Binding ActualHeight, ElementName=ShellHost}"
-                    Height="6"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Background="{DynamicResource ShellBrush}"
-                    BorderThickness="1"
-                    BorderBrush="{DynamicResource SurfaceLineBrush}"
-                    Effect="{DynamicResource GlowAccent}">
-                <Grid>
+<Window x:Class="ARCYN.UI.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="ARCYN" Width="920" Height="490" WindowStyle="None" Background="{DynamicResource WindowBrush}" ShowInTaskbar="False" Topmost="True"
+ WindowStartupLocation="CenterScreen" ResizeMode="NoResize" SnapsToDevicePixels="True" UseLayoutRounding="True" TextOptions.TextFormattingMode="Display"
+ FontFamily="{DynamicResource UIFont}" PreviewKeyDown="Window_PreviewKeyDown">
+ <Window.Resources>
+  <DataTemplate x:Key="ModeCardTemplate">
+   <Grid>
+    <Button Style="{DynamicResource WorkstationPanelStyle}" Click="ModeButton_Click" Tag="{Binding}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Subtitle}" MinHeight="{DynamicResource CardHeight}">
+     <Grid Margin="0,0,44,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <TextBlock Text="&#xE8F1;" FontFamily="{DynamicResource IconFont}" FontSize="24" Foreground="{Binding AccentBrush}" VerticalAlignment="Center"/>
+      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+       <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="{DynamicResource FontSize15}" FontWeight="SemiBold"/>
+       <TextBlock Text="{Binding Subtitle}" Visibility="{DynamicResource WorkspaceDescriptionVisibility}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextDimBrush}" Margin="0,4,0,0" FontSize="{DynamicResource FontSize14}"/>
+       <TextBlock Text="{Binding TargetSummary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetSummary}" FontSize="{DynamicResource FontSize12}" Foreground="{DynamicResource TextDimBrush}" Margin="0,6,0,0"/>
+      </StackPanel>
+      <TextBlock Grid.Column="2" Text="{Binding ShortcutHint}" VerticalAlignment="Center" Margin="16,0,0,0" FontSize="{DynamicResource FontSize12}" Foreground="{DynamicResource TextDimBrush}"/>
+     </Grid>
+    </Button>
+    <Button Style="{DynamicResource SubtleButton}" Click="WorkspaceMenu_Click" Tag="{Binding Id}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" Padding="8" ToolTip="Workspace actions" AutomationProperties.Name="Workspace actions">
+     <TextBlock Text="&#xE712;" FontFamily="{DynamicResource IconFont}" FontSize="16"/>
+    </Button>
+   </Grid>
+  </DataTemplate>
+ </Window.Resources>
+ <Grid x:Name="RootGrid" Background="Transparent" MouseDown="RootGrid_MouseDown">
+  <Canvas x:Name="ParticleCanvas" IsHitTestVisible="False"/>
+  <Rectangle x:Name="AmbientGlow" Style="{StaticResource AmbientGlow}"/>
+  <Rectangle x:Name="StartupFlash" Fill="{DynamicResource AccentBrush}" Opacity="0" IsHitTestVisible="False"/>
+  <Rectangle x:Name="ScanlineLayer" Style="{StaticResource Scanlines}"/>
+  <Rectangle x:Name="VignetteLayer" Style="{StaticResource Vignette}"/>
+  <Canvas x:Name="TrailCanvas" IsHitTestVisible="False" Panel.ZIndex="100"/>
+  <Grid x:Name="ShellHost" Margin="16,12">
+   <Border x:Name="MainBorder" CornerRadius="8" Width="6" Height="6" MaxWidth="{Binding ActualWidth, ElementName=ShellHost}" MaxHeight="{Binding ActualHeight, ElementName=ShellHost}"
+    HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource ShellBrush}" BorderThickness="1" BorderBrush="{DynamicResource SurfaceLineBrush}">
+    <Grid>
                     <Grid x:Name="BootOverlay" Margin="16,12" Opacity="0" IsHitTestVisible="False" Panel.ZIndex="20">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -170,379 +129,48 @@
                                        Opacity="0"
                                        Text="SYSTEM READY"
                                        HorizontalAlignment="Left" />
-                            <TextBlock x:Name="BootCpu"
-                                       Grid.Column="1"
-                                       FontSize="{DynamicResource FontSize8}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Text="CPU: --%"
-                                       Margin="0,0,10,0" />
-                            <TextBlock x:Name="BootRam"
-                                       Grid.Column="2"
-                                       FontSize="{DynamicResource FontSize8}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Text="RAM: --%" />
                         </Grid>
                     </Grid>
 
-                    <Grid x:Name="MainHUD" Opacity="0" Margin="8" Panel.ZIndex="10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="30" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="24" />
-                            <RowDefinition Height="16" />
-                        </Grid.RowDefinitions>
 
-                        <Border Grid.Row="0"
-                                CornerRadius="12"
-                                Background="{DynamicResource LiteralBrush12000000}"
-                                Padding="8,3">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <Ellipse Width="4"
-                                         Height="4"
-                                         Fill="{DynamicResource AccentBrightBrush}"
-                                         VerticalAlignment="Center"
-                                         Effect="{DynamicResource GlowAccentSoft}" />
-                                <TextBlock Grid.Column="1"
-                                           Text="ARCYN"
-                                           FontSize="{DynamicResource FontSize9}"
-                                           FontWeight="Bold"
-                                           Margin="6,0,10,0"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"
-                                           VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2"
-                                           x:Name="ModeCountRun"
-                                           FontSize="{DynamicResource FontSize8}"
-                                           Margin="0,0,10,0"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           VerticalAlignment="Center"
-                                           Text="00" />
-                                <TextBlock Grid.Column="3"
-                                           x:Name="PhaseLabel"
-                                           FontSize="{DynamicResource FontSize8}"
-                                           Margin="0,0,14,0"
-                                           Foreground="{DynamicResource AccentBrush}"
-                                           VerticalAlignment="Center"
-                                           Text="BOOT" />
-                                <TextBlock Grid.Column="4"
-                                           x:Name="HeaderCpu"
-                                           FontSize="{DynamicResource FontSize8}"
-                                           Margin="0,0,10,0"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           VerticalAlignment="Center"
-                                           Text="CPU --%" />
-                                <TextBlock Grid.Column="5"
-                                           x:Name="HeaderRam"
-                                           FontSize="{DynamicResource FontSize8}"
-                                           Margin="0,0,10,0"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           VerticalAlignment="Center"
-                                           Text="RAM --%" />
-                                <TextBlock Grid.Column="6"
-                                           x:Name="HeaderUptime"
-                                           FontSize="{DynamicResource FontSize8}"
-                                           Margin="0,0,10,0"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           VerticalAlignment="Center"
-                                           Text="UP 00:00:00" />
-                                <TextBlock Grid.Column="7"
-                                           x:Name="HeaderSys"
-                                           FontSize="{DynamicResource FontSize8}"
-                                           FontWeight="Bold"
-                                           Margin="0,0,10,0"
-                                           Foreground="{DynamicResource AccentBrightBrush}"
-                                           VerticalAlignment="Center"
-                                           Text="ONLINE" />
-                                <Rectangle Grid.Column="8"
-                                           Height="1"
-                                           Fill="{DynamicResource BorderSubtleBrush}"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,10,0" />
-                                <TextBlock Grid.Column="9"
-                                           x:Name="TimeDisplay"
-                                           FontSize="{DynamicResource FontSize8}"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           VerticalAlignment="Center"
-                                           Text="00:00:00" />
-                            </Grid>
-                        </Border>
-
-                        <Grid Grid.Row="1">
-                            <Border x:Name="ModePanel"
-                                    CornerRadius="16"
-                                    BorderThickness="0"
-                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                    Background="Transparent"
-                                    Padding="8,4">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                              HorizontalScrollBarVisibility="Disabled"
-                                              Background="Transparent"
-                                              BorderThickness="0">
-                                  <StackPanel>
-                                    <WrapPanel Margin="0,0,0,8">
-                                      <Button Content="＋ New workspace" Click="NewWorkspace_Click" ToolTip="Ctrl+N"/>
-                                      <Button Content="Appearance" Click="Appearance_Click" ToolTip="Ctrl+,"/>
-                                    </WrapPanel>
-                                    <TextBlock x:Name="RunFeedback" Visibility="Collapsed" TextWrapping="Wrap" Margin="4,0,4,10" Foreground="{DynamicResource TextPrimaryBrush}" AutomationProperties.LiveSetting="Polite"/>
-                                    <Grid x:Name="DashboardGrid" />
-                                  </StackPanel>
-                                </ScrollViewer>
-                            </Border>
-
-                            <Border x:Name="LaunchPanel"
-                                    CornerRadius="12"
-                                    Opacity="0"
-                                    Visibility="Collapsed"
-                                    BorderThickness="1"
-                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                    Background="{DynamicResource LiteralBrushE9080808}"
-                                    Padding="10">
-                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" VerticalContentAlignment="Stretch"><Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Row 0: Header + target count + separator -->
-                                    <Grid Grid.Row="0" Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Opening your workspace"
-                                                   FontSize="{DynamicResource FontSize9}" FontWeight="Bold"
-                                                   Foreground="{DynamicResource AccentBrightBrush}"
-                                                   VerticalAlignment="Center" />
-                                        <Ellipse Grid.Column="1" Width="4" Height="4"
-                                                 Fill="{DynamicResource AccentBrightBrush}"
-                                                 Effect="{DynamicResource GlowAccentSharp}"
-                                                 Margin="6,0" VerticalAlignment="Center" />
-                                        <Rectangle Grid.Column="2"
-                                                   Height="1"
-                                                   Fill="{DynamicResource BorderSubtleBrush}"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,8,0" />
-                                        <TextBlock Grid.Column="3"
-                                                   x:Name="LaunchTargetCount"
-                                                   FontSize="{DynamicResource FontSize8}"
-                                                   Foreground="{DynamicResource TextMutedBrush}"
-                                                   VerticalAlignment="Center"
-                                                   Text="00 TARGETS" />
-                                    </Grid>
-
-                                    <!-- Row 1: Mode name + spinner -->
-                                    <Grid Grid.Row="1" Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                            <TextBlock x:Name="LaunchModeLabel"
-                                                       FontSize="{DynamicResource FontSize22}" FontWeight="Light"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                                       Text="" />
-                                            <TextBlock x:Name="LaunchSessionLabel"
-                                                       FontSize="{DynamicResource FontSize9}" Margin="0,2,0,0"
-                                                       Foreground="{DynamicResource TextDimBrush}"
-                                                       Text="" />
-                                        </StackPanel>
-                                        <Grid Grid.Column="1" VerticalAlignment="Center">
-                                            <Ellipse Width="36" Height="36"
-                                                     Stroke="{DynamicResource BorderSubtleBrush}"
-                                                     StrokeThickness="0.5" Opacity="0.3" />
-                                            <Viewbox Width="28" Height="28">
-                                                <Canvas Width="28" Height="28">
-                                                    <Path x:Name="SpinnerArc"
-                                                          Stroke="{DynamicResource AccentBrightBrush}"
-                                                          StrokeThickness="2.5"
-                                                          StrokeEndLineCap="Round"
-                                                          StrokeStartLineCap="Round"
-                                                          Width="28" Height="28"
-                                                          Stretch="Uniform"
-                                                          Data="M 3,14 A 11,11 0 1,1 25,14"
-                                                          RenderTransformOrigin="0.5,0.5">
-                                                        <Path.RenderTransform>
-                                                            <RotateTransform x:Name="SpinnerRotation" />
-                                                        </Path.RenderTransform>
-                                                    </Path>
-                                                </Canvas>
-                                            </Viewbox>
-                                        </Grid>
-                                    </Grid>
-
-                                    <!-- Row 2: Target feed -->
-                                    <Border Grid.Row="2" CornerRadius="12"
-                                            Background="{DynamicResource LiteralBrush0A000000}"
-                                            BorderThickness="1"
-                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                            Padding="8,6" MinHeight="56">
-                                        <ScrollViewer x:Name="LaunchFeedScroll"
-                                                      MaxHeight="180"
-                                                      VerticalScrollBarVisibility="Hidden"
-                                                      HorizontalScrollBarVisibility="Disabled"
-                                                      Background="Transparent">
-                                            <TextBlock x:Name="LaunchFeedText"
-                                                       FontSize="{DynamicResource FontSize8}"
-                                                       Foreground="{DynamicResource TextDimBrush}"
-                                                       TextWrapping="Wrap" />
-                                        </ScrollViewer>
-                                    </Border>
-
-                                    <!-- Row 3: Telemetry strip -->
-                                    <Grid Grid.Row="3" Margin="0,6,0,6">
-                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="LaunchCpu"
-                                                   Grid.Column="0"
-                                                   FontSize="{DynamicResource FontSize8}"
-                                                   Foreground="{DynamicResource TextDimBrush}"
-                                                   Text="CPU --%" />
-                                        <TextBlock x:Name="LaunchRam"
-                                                   Grid.Column="1"
-                                                   FontSize="{DynamicResource FontSize8}"
-                                                   Margin="10,0,0,0"
-                                                   Foreground="{DynamicResource TextDimBrush}"
-                                                   Text="RAM --%" />
-                                        <TextBlock x:Name="LaunchStatus"
-                                                   Grid.Row="1" Grid.ColumnSpan="4" Margin="0,6,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
-                                                   FontSize="{DynamicResource FontSize9}"
-                                                   FontWeight="Medium"
-                                                   HorizontalAlignment="Left"
-                                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                                   Text="Launching" />
-                                        <TextBlock x:Name="LaunchProgressText"
-                                                   Grid.Column="3"
-                                                   FontSize="{DynamicResource FontSize8}"
-                                                   Margin="12,0,0,0"
-                                                   Foreground="{DynamicResource AccentBrush}"
-                                                   Text="PROC 00/00" />
-                                    </Grid>
-
-                                    <!-- Row 4: Segmented progress bar -->
-                                    <Border Grid.Row="4" Height="6" CornerRadius="12"
-                                            Background="{DynamicResource LiteralBrush06000000}"
-                                            BorderThickness="0.5"
-                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                            Padding="1">
-                                        <Grid>
-                                            <Rectangle Fill="{DynamicResource BorderSubtleBrush}"
-                                                       RadiusX="1" RadiusY="1" Opacity="0.3" />
-                                            <Rectangle Fill="{DynamicResource AccentBrush}"
-                                                       RadiusX="1" RadiusY="1"
-                                                       HorizontalAlignment="Stretch"
-                                                       RenderTransformOrigin="0,0.5">
-                                                <Rectangle.RenderTransform>
-                                                    <ScaleTransform x:Name="LaunchProgressScale" ScaleX="0" />
-                                                </Rectangle.RenderTransform>
-                                            </Rectangle>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Row 5: Footer -->
-                                    <Grid Grid.Row="5" Margin="0,6,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="ESC aborts &#x00B7; targets launch sequentially"
-                                                   FontSize="{DynamicResource FontSize7}"
-                                                   Foreground="{DynamicResource TextMutedBrush}"
-                                                   />
-                                        <TextBlock Grid.Column="1"
-                                                   x:Name="LaunchRecent"
-                                                   FontSize="{DynamicResource FontSize7}"
-                                                   Foreground="{DynamicResource TextMutedBrush}"
-                                                   Text="" />
-                                    </Grid>
-                                </Grid></ScrollViewer>
-                            </Border>
-                        </Grid>
-
-                        <Grid Grid.Row="2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <Border CornerRadius="12"
-                                    Background="{DynamicResource LiteralBrush12000000}"
-                                    Padding="6,2"
-                                    Margin="0,0,4,0">
-                                <TextBlock x:Name="RuntimeStrip"
-                                           FontSize="{DynamicResource FontSize7}"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           Text="RUNTIME 00:00:00" />
-                            </Border>
-
-                            <Border Grid.Column="1"
-                                    CornerRadius="12"
-                                    Background="{DynamicResource LiteralBrush12000000}"
-                                    Padding="6,2"
-                                    Margin="2,0,2,0">
-                                <TextBlock x:Name="ProcessStrip"
-                                           FontSize="{DynamicResource FontSize7}"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           Text="PROC 00  -  ACTIVE STANDBY" />
-                            </Border>
-
-                            <Border Grid.Column="2"
-                                    CornerRadius="12"
-                                    Background="{DynamicResource LiteralBrush12000000}"
-                                    Padding="6,2"
-                                    Margin="4,0,0,0">
-                                <TextBlock x:Name="SystemStrip"
-                                           FontSize="{DynamicResource FontSize7}"
-                                           Foreground="{DynamicResource TextDimBrush}"
-                                           Text="SYS ONLINE  -  HUD STABLE" />
-                            </Border>
-                        </Grid>
-
-                        <Grid Grid.Row="3" Margin="0,2,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="FooterHint"
-                                       TextWrapping="Wrap"
-                                       Grid.Column="0"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Foreground="{DynamicResource TextDimBrush}"
-                                       VerticalAlignment="Center"
-                                       Text="[1-3] select  -  ENTER launch  -  ESC close" />
-                            <TextBlock x:Name="FooterIdle"
-                                       Grid.Column="1"
-                                       FontSize="{DynamicResource FontSize7}"
-                                       Foreground="{DynamicResource TextDimBrush}"
-                                       VerticalAlignment="Center" />
-                        </Grid>
-                    </Grid>
-                </Grid>
-            </Border>
+     <Grid x:Name="MainHUD" Opacity="0" Margin="24,20">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid Margin="0,0,0,16">
+       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <StackPanel><TextBlock Text="ARCYN" FontSize="{DynamicResource FontSize12}" Foreground="{DynamicResource TextDimBrush}"/><TextBlock Text="Workspaces" FontSize="{DynamicResource FontSize22}" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
+       <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+        <Button Content="New workspace" Click="NewWorkspace_Click" ToolTip="New workspace (Ctrl+N)"/>
+        <Button Style="{DynamicResource SubtleButton}" Click="Appearance_Click" ToolTip="Settings (Ctrl+,)" AutomationProperties.Name="Settings"><TextBlock Text="&#xE713;" FontFamily="{DynamicResource IconFont}" FontSize="16"/></Button>
+        <Button Style="{DynamicResource SubtleButton}" Click="CloseHud_Click" ToolTip="Close (Esc)" AutomationProperties.Name="Close ARCYN"><TextBlock Text="&#xE8BB;" FontFamily="{DynamicResource IconFont}" FontSize="14"/></Button>
+       </WrapPanel>
+      </Grid>
+      <Border x:Name="ModePanel" Grid.Row="1">
+       <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
+        <StackPanel><TextBlock x:Name="RunFeedback" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,0,0,12" AutomationProperties.LiveSetting="Polite"/><Grid x:Name="DashboardGrid"/></StackPanel>
+       </ScrollViewer>
+      </Border>
+      <Border x:Name="LaunchPanel" Grid.Row="1" Visibility="Collapsed" Opacity="0" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="20">
+       <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+         <Path x:Name="SpinnerArc" Stroke="{DynamicResource AccentBrightBrush}" StrokeThickness="2" StrokeEndLineCap="Round" StrokeStartLineCap="Round" Width="28" Height="28" Stretch="Uniform" Data="M 3,14 A 11,11 0 1,1 25,14" RenderTransformOrigin=".5,.5" Margin="0,0,16,0"><Path.RenderTransform><RotateTransform x:Name="SpinnerRotation"/></Path.RenderTransform></Path>
+         <StackPanel Grid.Column="1"><TextBlock x:Name="LaunchModeLabel" FontSize="{DynamicResource FontSize15}" FontWeight="SemiBold"/><TextBlock x:Name="LaunchSessionLabel" FontSize="{DynamicResource FontSize12}" Foreground="{DynamicResource TextDimBrush}"/></StackPanel>
+         <Button Grid.Column="2" Content="Cancel" Click="CloseHud_Click"/>
         </Grid>
+        <ScrollViewer x:Name="LaunchFeedScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,16"><TextBlock x:Name="LaunchFeedText" FontSize="{DynamicResource FontSize14}" TextWrapping="Wrap" Foreground="{DynamicResource TextDimBrush}"/></ScrollViewer>
+        <StackPanel Grid.Row="2"><TextBlock x:Name="LaunchStatus" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+         <Grid Margin="0,12,0,8" Height="3" Background="{DynamicResource SurfaceLineBrush}"><Rectangle Fill="{DynamicResource AccentBrush}" RenderTransformOrigin="0,0"><Rectangle.RenderTransform><ScaleTransform x:Name="LaunchProgressScale" ScaleX="0"/></Rectangle.RenderTransform></Rectangle></Grid>
+         <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="LaunchProgressText" FontSize="{DynamicResource FontSize12}"/><TextBlock x:Name="LaunchTargetCount" Grid.Column="1" FontSize="{DynamicResource FontSize12}"/></Grid>
+        </StackPanel>
+       </Grid>
+      </Border>
+      <Grid Grid.Row="2" Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       <TextBlock x:Name="FooterHint" TextWrapping="Wrap" Foreground="{DynamicResource TextDimBrush}" FontSize="{DynamicResource FontSize12}"/>
+       <TextBlock x:Name="FooterIdle" Grid.Column="1" Margin="12,0,0,0" Foreground="{DynamicResource TextDimBrush}" FontSize="{DynamicResource FontSize12}"/>
+      </Grid>
+      <TextBlock x:Name="PhaseLabel" Visibility="Collapsed"/>
+     </Grid>
     </Grid>
+   </Border>
+  </Grid>
+ </Grid>
 </Window>
