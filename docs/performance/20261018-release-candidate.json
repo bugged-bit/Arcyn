@@ -1206,7 +1206,10 @@
   ],
   "package": {
     "baselineBytes": 66768657,
-    "candidateBytes": null,
-    "note": "Candidate ZIP size is recorded after packaging, before this final report is committed; subsequent documentation/version provenance changes can affect CI archive bytes."
+    "candidateBytes": 67096134,
+    "note": "Candidate ZIP size is recorded after packaging, before this final report is committed; subsequent documentation/version provenance changes can affect CI archive bytes.",
+    "sha256": "02AE8E19BFF6ECAAA6C8CBD0C352A9D1E6DF081A38BD61F60FF2C18FF775B13B",
+    "candidateBuildCommit": "ca922e5",
+    "fileCount": 424
   }
 }
