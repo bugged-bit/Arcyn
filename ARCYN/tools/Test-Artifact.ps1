@@ -1,5 +1,36 @@
 param([Parameter(Mandatory)][string]$Directory)
 $ErrorActionPreference = 'Stop'
+if (!('ArcynArtifactResources' -as [type])) {
+    Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class ArcynArtifactResources {
+    private delegate bool NameCallback(IntPtr module, IntPtr type, IntPtr name, IntPtr parameter);
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode)] private static extern IntPtr LoadLibraryEx(string path, IntPtr file, uint flags);
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode)] private static extern bool EnumResourceNames(IntPtr module, IntPtr type, NameCallback callback, IntPtr parameter);
+    [DllImport("kernel32.dll")] private static extern bool FreeLibrary(IntPtr module);
+    public static bool HasIcon(string path) {
+        var module = LoadLibraryEx(path, IntPtr.Zero, 0x22); if (module == IntPtr.Zero) return false;
+        try { bool found = false; EnumResourceNames(module, new IntPtr(14), (m,t,n,p) => { found = true; return false; }, IntPtr.Zero); return found; }
+        finally { FreeLibrary(module); }
+    }
+}
+'@
+}
+$project = [xml](Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\ARCYN.UI\ARCYN.UI.csproj') -Raw)
+$metadata = $project.Project.PropertyGroup | Where-Object Version
+foreach ($binary in @('ARCYN.exe', 'ARCYN.dll', 'ARCYN.Hotkey.exe')) {
+    $path = [IO.Path]::GetFullPath((Join-Path $Directory $binary))
+    $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($path)
+    if ($version.ProductName -ne 'ARCYN' -or $version.FileVersion -ne $metadata.FileVersion -or $version.ProductVersion -notlike ($metadata.Version + '*')) { throw "Incorrect ARCYN product/version metadata: $binary" }
+    if ($binary -ne 'ARCYN.dll' -and ![ArcynArtifactResources]::HasIcon($path)) { throw "Missing ARCYN icon resource: $binary" }
+}
+foreach ($notice in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot '..\Notices') -File) {
+    $copy = Join-Path $Directory ('Notices\' + $notice.Name)
+    if (!(Test-Path -LiteralPath $copy) -or (Get-FileHash -LiteralPath $copy).Hash -ne (Get-FileHash -LiteralPath $notice.FullName).Hash) { throw ('Missing or changed redistribution notice: ' + $notice.Name) }
+}
+$excluded = Get-ChildItem -LiteralPath $Directory -Recurse -File | Where-Object { $_.Extension -in @('.pdb','.ahk','.mp4','.obj','.res') -or $_.Name -match '^(Probe|ARCYN.Tests|session-ses_)' -or $_.Name -in @('hotkey.c','hotkey.rc','build.cmd') }
+if ($excluded) { throw ('Development artifacts in release: ' + ($excluded.Name -join ', ')) }
 foreach ($configFile in @('example.arcyn.json', 'arcyn.schema.json')) {
     $configPath = Join-Path $Directory $configFile
     if (!(Test-Path -LiteralPath $configPath)) { throw "Standalone artifact is missing $configFile" }
@@ -14,7 +45,7 @@ $runtime = Get-Content -LiteralPath (Join-Path $Directory 'ARCYN.runtimeconfig.j
 if (!$runtime.runtimeOptions.includedFrameworks -or $runtime.runtimeOptions.framework -or $runtime.runtimeOptions.frameworks) { throw 'Artifact still requires an installed runtime.' }
 $frameworks = @($runtime.runtimeOptions.includedFrameworks)
 if ($frameworks.Count -ne 2 -or @($frameworks | Where-Object name -eq 'Microsoft.NETCore.App').Count -ne 1 -or @($frameworks | Where-Object name -eq 'Microsoft.WindowsDesktop.App').Count -ne 1) { throw 'Standalone artifact must include both .NET and Windows Desktop runtimes.' }
-if ($frameworks | Where-Object { $version = [version]$_.version; $version.Major -ne 10 -or $version.Minor -ne 0 -or $version -lt [version]'10.0.13' }) { throw 'Bundle the validated .NET 10 LTS servicing runtime (10.0.13 or later within 10.0).' }
+if ($frameworks | Where-Object version -ne $metadata.RuntimeFrameworkVersion) { throw 'Bundle the validated .NET 10 servicing runtime matching the included redistribution notices.' }
 $dependencies = Get-Content -LiteralPath (Join-Path $Directory 'ARCYN.deps.json') -Raw | ConvertFrom-Json
 $packages = $dependencies.libraries.PSObject.Properties | Where-Object { $_.Value.type -eq 'package' }
 if ($packages) { throw ('Unexpected application packages: ' + ($packages.Name -join ', ')) }

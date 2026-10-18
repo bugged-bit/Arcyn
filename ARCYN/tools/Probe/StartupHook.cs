@@ -20,15 +20,16 @@ internal static class StartupHook
     private static double _ageAtHook;
     private static double _dpiX = 1, _dpiY = 1;
     private static string[] _labels = [];
+    private static Window? _window;
+    private static TextBlock? _phase;
+    private static readonly System.ComponentModel.DependencyPropertyDescriptor PhaseDescriptor = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
 
     public static void Initialize()
     {
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ARCYN_PROBE_OUTPUT"))) return;
         _ = Clock.ElapsedTicks;
         using (var process = Process.GetCurrentProcess()) _ageAtHook = (DateTime.UtcNow - process.StartTime.ToUniversalTime()).TotalMilliseconds;
-        InputManager.Current.PreProcessInput += (_, args) => {
-            if (args.StagingItem.Input is KeyEventArgs or MouseButtonEventArgs) args.Cancel();
-        };
+        InputManager.Current.PreProcessInput += BlockInput;
         CompositionTarget.Rendering += Render;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => Save();
     }
@@ -43,15 +44,11 @@ internal static class StartupHook
         _lastFrame = now;
         var window = Application.Current?.MainWindow;
         if (window == null) return;
+        if (_window == null) { _window = window; window.Closed += (_, _) => { EndReady(); CompositionTarget.Rendering -= Render; InputManager.Current.PreProcessInput -= BlockInput; if (_phase != null) PhaseDescriptor.RemoveValueChanged(_phase, PhaseChanged); _phase = null; _window = null; }; }
         var dpi = VisualTreeHelper.GetDpi(window); _dpiX = dpi.DpiScaleX; _dpiY = dpi.DpiScaleY;
         if (window.FindName("PhaseLabel") is TextBlock phase && !Phases.ContainsKey(phase.Text))
         {
             Phases[phase.Text] = Clock.Elapsed.TotalMilliseconds;
-            if (phase.Text == "CLS" && _readyAt > 0)
-            {
-                using var process = Process.GetCurrentProcess();
-                _readyEndAt = Clock.Elapsed.TotalMilliseconds; _readyEndCpu = process.TotalProcessorTime.TotalMilliseconds;
-            }
             if (phase.Text == "RDY")
             {
                 using var process = Process.GetCurrentProcess();
@@ -62,8 +59,19 @@ internal static class StartupHook
                         .Select(control => control.Content?.GetType().GetProperty("Label")?.GetValue(control.Content)?.ToString()
                             ?? control.Content?.GetType().GetProperty("Name")?.GetValue(control.Content)?.ToString() ?? "")
                         .ToArray();
+                CompositionTarget.Rendering -= Render; // Do not keep WPF rendering during the idle measurement.
+                _phase = phase; PhaseDescriptor.AddValueChanged(phase, PhaseChanged);
             }
         }
+    }
+    private static void BlockInput(object sender, PreProcessInputEventArgs args)
+    { if (args.StagingItem.Input is KeyEventArgs or MouseButtonEventArgs) args.Cancel(); }
+    private static void PhaseChanged(object? sender, EventArgs e) { if (_phase?.Text == "CLS") { Phases["CLS"] = Clock.Elapsed.TotalMilliseconds; EndReady(); } }
+    private static void EndReady()
+    {
+        if (_readyAt <= 0 || _readyEndAt != null) return;
+        using var process = Process.GetCurrentProcess();
+        _readyEndAt = Clock.Elapsed.TotalMilliseconds; _readyEndCpu = process.TotalProcessorTime.TotalMilliseconds;
     }
 
     private static void Save()
@@ -83,7 +91,7 @@ internal static class StartupHook
                 CpuMs = process.TotalProcessorTime.TotalMilliseconds,
                 ReadyCpuMs = _readyAt > 0 ? (_readyEndCpu ?? process.TotalProcessorTime.TotalMilliseconds) - _readyCpu : (double?)null,
                 ReadyDurationMs = _readyAt > 0 ? (_readyEndAt ?? Clock.Elapsed.TotalMilliseconds) - _readyAt : (double?)null,
-                FrameCallbackP95Ms = Intervals.Count > 0 ? Intervals[(int)((Intervals.Count - 1) * .95)] : (double?)null,
+                BootFrameCallbackP95Ms = Intervals.Count > 0 ? Intervals[(int)((Intervals.Count - 1) * .95)] : (double?)null,
                 PeakWorkingSetBytes = process.PeakWorkingSet64,
                 RenderTier = RenderCapability.Tier >> 16
             };

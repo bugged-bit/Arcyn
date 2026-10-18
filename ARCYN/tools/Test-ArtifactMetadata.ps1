@@ -17,4 +17,28 @@ try {
     }
 }
 finally { [IO.File]::WriteAllBytes($configPath, $original) }
-Write-Output 'Four invalid runtime metadata cases rejected before helper execution; original bytes restored.'
+$executable = Join-Path $Directory 'ARCYN.exe'
+$originalExe = [IO.File]::ReadAllBytes($executable)
+try {
+    [IO.File]::WriteAllBytes($executable, [IO.File]::ReadAllBytes((Join-Path $Directory 'coreclr.dll')))
+    try { & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $Directory; throw 'Invalid product metadata accepted.' }
+    catch { if ($_.Exception.Message -notlike 'Incorrect ARCYN product/version metadata*') { throw } }
+}
+finally { [IO.File]::WriteAllBytes($executable, $originalExe) }
+$notice = Join-Path $Directory 'Notices\JetBrains-Mono-2.304.txt'
+$originalNotice = [IO.File]::ReadAllBytes($notice)
+try {
+    Remove-Item -LiteralPath $notice
+    try { & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $Directory; throw 'Missing notice accepted.' }
+    catch { if ($_.Exception.Message -notlike 'Missing or changed redistribution notice*') { throw } }
+}
+finally { [IO.File]::WriteAllBytes($notice, $originalNotice) }
+$probe = Join-Path $Directory 'Probe.dll'
+if (Test-Path -LiteralPath $probe) { throw 'Negative fixture requires a clean release.' }
+try {
+    [IO.File]::WriteAllBytes($probe, @())
+    try { & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $Directory; throw 'Probe in release accepted.' }
+    catch { if ($_.Exception.Message -notlike 'Development artifacts in release*') { throw } }
+}
+finally { Remove-Item -LiteralPath $probe }
+Write-Output 'Seven invalid runtime/product/notice/development-artifact cases rejected before helper execution; original bytes restored.'

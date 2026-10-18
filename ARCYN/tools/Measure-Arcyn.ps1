@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory)][string]$Executable,
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\..\.arcyn-local\measurements'),
     [int]$Runs = 30,
-    [int]$ExtractionColdRuns = 5,
+    [int]$InitialRuns = 5,
     [string]$ConfigPath,
     [switch]$AllowVisibleLauncher
 )
@@ -14,16 +14,14 @@ $hook = Join-Path $PSScriptRoot 'Probe\bin\Release\net10.0-windows\Probe.dll'
 if (!(Test-Path -LiteralPath $hook)) { throw 'Build tools/Probe/Probe.csproj in Release first.' }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $results = @()
-for ($run = 0; $run -lt ($Runs + $ExtractionColdRuns); $run++) {
-    $kind = if ($run -lt $ExtractionColdRuns) { 'first-extraction' } else { 'warm' }
+for ($run = 0; $run -lt ($Runs + $InitialRuns); $run++) {
+    $kind = if ($run -lt $InitialRuns) { 'initial' } else { 'warm' }
     $capture = Join-Path $OutputDirectory ('run-{0:D2}.json' -f $run)
     $start = [Diagnostics.ProcessStartInfo]::new($Executable)
     $start.UseShellExecute = $false
     $start.WorkingDirectory = Split-Path -Parent $Executable
     $start.Environment['DOTNET_STARTUP_HOOKS'] = $hook
     $start.Environment['ARCYN_PROBE_OUTPUT'] = $capture
-    $cache = if ($kind -eq 'first-extraction') { "bundle-cold-$run" } else { 'bundle-warm' }
-    $start.Environment['DOTNET_BUNDLE_EXTRACT_BASE_DIR'] = Join-Path $OutputDirectory $cache
     if ($ConfigPath) { $start.ArgumentList.Add('--config'); $start.ArgumentList.Add([IO.Path]::GetFullPath($ConfigPath)) }
     $clock = [Diagnostics.Stopwatch]::StartNew()
     $process = [Diagnostics.Process]::Start($start)
@@ -54,8 +52,8 @@ for ($run = 0; $run -lt ($Runs + $ExtractionColdRuns); $run++) {
     ConfigSHA256 = if ($ConfigPath -and (Test-Path -LiteralPath $ConfigPath)) { (Get-FileHash -LiteralPath $ConfigPath).Hash } else { $null }
     OS = [Environment]::OSVersion.VersionString; LogicalProcessors = [Environment]::ProcessorCount
     CPU = Get-ItemPropertyValue 'HKLM:\HARDWARE\DESCRIPTION\System\CentralProcessor\0' -Name ProcessorNameString
-    ColdDefinition = 'Fresh bundle extraction directory; OS caches are not cleared and the machine is not rebooted.'
-    FrameMetric = 'WPF rendering callback cadence, not GPU presentation time.'
+    InitialDefinition = 'First sequential launches in this measurement session; no extraction, cache clearing or reboot. Not a cold-start measurement.'
+    FrameMetric = 'Boot-only WPF rendering callback cadence; the hook detaches at Ready. Not GPU presentation time.'
     Timing = 'Probe phases and first callback are relative to the startup hook; add ProcessAgeAtHookMs for an approximate process-start time.'
     Attribution = 'Only the launcher PID is sampled. Helper and opened/reused application processes require separate sampling.'
     Input = 'Probe suppresses keyboard and click dispatch; no targets are launched.'

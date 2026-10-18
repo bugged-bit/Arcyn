@@ -15,8 +15,11 @@ Get-ChildItem -LiteralPath $OutputDirectory -File | Where-Object Extension -ne '
 foreach ($folder in Get-ChildItem -LiteralPath $OutputDirectory -Directory | Where-Object Name -ne 'native-build') { Copy-Item -LiteralPath $folder.FullName -Destination $release -Recurse }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\scripts') -Destination $release -Recurse
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\LICENSE'), (Join-Path $PSScriptRoot '..\..\README.md') -Destination $release
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\Notices') -Destination $release -Recurse
 New-Item -ItemType Directory -Path (Join-Path $release 'docs\performance') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\release-notes.md') -Destination (Join-Path $release 'docs')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\implementation-validation.md') -Destination (Join-Path $release 'docs')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\previews') -Destination (Join-Path $release 'docs') -Recurse
 Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot '..\..\docs\performance') -Filter '*.json' -File | Copy-Item -Destination (Join-Path $release 'docs\performance')
 & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $release
 Compress-Archive -LiteralPath $release -DestinationPath ($release + '.zip')

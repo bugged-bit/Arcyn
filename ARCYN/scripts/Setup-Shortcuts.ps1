@@ -16,6 +16,7 @@ try {
         $shortcut.TargetPath = $executable
         $shortcut.WorkingDirectory = $directory
         $shortcut.Description = 'ARCYN workspace launcher'
+        $shortcut.IconLocation = $executable + ',0'
         $shortcut.Save()
     }
     $startup = Join-Path ([Environment]::GetFolderPath('Startup')) 'ARCYN Hotkey.lnk'
@@ -30,6 +31,7 @@ try {
         $shortcut.TargetPath = $helper
         $shortcut.Arguments = '--hotkey ' + $Hotkey
         $shortcut.WorkingDirectory = $directory
+        $shortcut.IconLocation = $executable + ',0'
         $shortcut.Save()
         Write-Output "Optional helper enabled for next sign-in with $Hotkey. No helper was started."
     }

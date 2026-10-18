@@ -1,5 +1,8 @@
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+$project = [xml](Get-Content -LiteralPath (Join-Path $root 'ARCYN\ARCYN.UI\ARCYN.UI.csproj') -Raw)
+$manifest = [xml](Get-Content -LiteralPath (Join-Path $root 'ARCYN\ARCYN.UI\app.manifest') -Raw)
+if ($manifest.assembly.assemblyIdentity.version -ne ($project.Project.PropertyGroup | Where-Object Version).FileVersion) { throw 'Application manifest and file version disagree.' }
 $scripts = @(Get-ChildItem -LiteralPath (Join-Path $root 'ARCYN\tools'), (Join-Path $root 'ARCYN\scripts') -Filter '*.ps1' -Recurse -File)
 foreach ($script in $scripts) {
     $tokens = $null; $errors = $null

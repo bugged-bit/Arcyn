@@ -1,14 +1,18 @@
 # ARCYN
 
-ARCYN is a cinematic workspace launcher for Windows 10/11 x64, built with WPF and Windows-native APIs. Softer layered surfaces, rounded workspace cards and quieter typography frame its original boot, particles, mode-specific atmosphere and launch choreography. The application has no NuGet package dependencies.
+ARCYN is a cinematic workspace launcher for Windows 10/11 x64, built with WPF and Windows-native APIs. Softer layered surfaces, rounded workspace cards and quieter typography frame its original boot, particles, mode-specific atmosphere and launch choreography. The application has no NuGet package dependencies. **1.6.0-rc.1 is a release candidate; live GUI and whole-app performance validation are still required.** See [release notes](docs/release-notes.md).
 
-Extract the **complete standalone ZIP** and run ARCYN.exe. Keep its runtime files beside it; no separate .NET runtime, AutoHotkey or VC redistributable installation is required. First run opens the setup wizard. Distribution includes .NET/WPF, so the ZIP is larger than the old runtime-dependent executable.
+Extract the **complete standalone ZIP** to a permanent folder you can write to, then run ARCYN.exe. Keep all runtime files and `Notices` beside it; no separate .NET runtime, AutoHotkey or VC redistributable installation is required. First run opens the setup wizard. For an upgrade, close ARCYN, extract to a separate empty folder and point shortcuts there; AppData configuration stays in place. This candidate is unsigned; no public release is being published by this change.
 
 Default mode leaves **zero ARCYN processes** after closing. Ordinary Desktop, Start-menu and pinned Windows shortcuts need no resident ARCYN helper.
 
+![ARCYN HUD — offscreen opaque render](docs/previews/hud-offscreen.png)
+
+Actual WPF interface rendered offscreen with synthetic workspaces and opaque surfaces. This does not show native desktop glass. [Layout editor](docs/previews/layout-offscreen.png) · [Appearance](docs/previews/appearance-offscreen.png).
+
 - 1–9 launch a workspace; arrows select; Enter launches; Esc cancels or closes.
-- F2 edits a workspace. Ctrl+N adds one. Right-click a card to edit, duplicate, reorder or delete it.
-- Ctrl+, opens HUD controls: colours, font, scale, geometry, spacing, rows/compact/grid, particles, glow, acrylic, scanlines, vignette, trail and continuous motion.
+- New Workspace and Appearance are visible on the HUD. F2 edits a workspace; Ctrl+N adds one. Use a card's ⋯ menu or right-click to edit, duplicate, reorder or delete it. Shift+F10 / the context-menu key opens actions for the focused card.
+- Ctrl+, opens appearance and behavior. Common controls come first; advanced disclosures retain colours, font, geometry, spacing, particles, glow, native materials, scanlines, vignette, trail and continuous motion. Material support follows Windows capability and accessibility policy; opaque fallback is intentional.
 - Live previews are coalesced while the editor is open. Apply saves; Cancel restores. Import/export uses visual JSON only.
 - Reduced effects and continuous-motion controls preserve boot/launch durations and choreography.
 - The workspace editor groups **Targets**, **Layout** and **Actions**. Targets keep exact arguments, working directories, browsing and on-demand discovery. Selected-item controls expose instance policies, window selectors, readiness, timeout and prerequisites.
