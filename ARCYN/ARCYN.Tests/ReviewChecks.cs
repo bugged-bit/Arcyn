@@ -120,7 +120,7 @@ internal static partial class Program
         var template = (DataTemplate)window.FindResource("ModeCardTemplate");
         var presenter = new ContentControl { Content = modes[^1], ContentTemplate = template };
         presenter.Measure(new Size(800, 500)); presenter.Arrange(new Rect(0, 0, 800, 500)); presenter.UpdateLayout();
-        var card = Descendants(presenter).OfType<Button>().Single();
+        var card = Descendants(presenter).OfType<Button>().Single(b => b.Tag is ModeConfig);
         var chips = Descendants(card).OfType<ItemsControl>().Single();
         chips.GetBindingExpression(ItemsControl.ItemsSourceProperty)!.UpdateTarget();
         card.GetBindingExpression(System.Windows.Automation.AutomationProperties.NameProperty)!.UpdateTarget();

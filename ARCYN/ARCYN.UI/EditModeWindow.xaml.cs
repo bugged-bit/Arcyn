@@ -155,7 +155,11 @@ public partial class EditModeWindow : Window
     private void Target_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (e.OriginalSource != TargetsGrid || TargetInspector == null) return;
-        TargetInspector.DataContext = TargetsGrid.SelectedItem as TargetRow; RefreshChoices();
+        var row = TargetsGrid.SelectedItem as TargetRow;
+        TargetInspector.DataContext = row;
+        TargetAdvanced.IsExpanded = row != null && (row.Target.Match != null || row.Target.InstancePolicy != InstancePolicy.ReuseOrLaunch || row.Target.Readiness != Readiness.Automatic || row.Target.TimeoutMs != 30000 || row.Target.DependsOn.Count > 0 || !string.IsNullOrEmpty(row.WorkingDirectory));
+        MatchDisclosure.IsExpanded = row?.Target.Match != null;
+        RefreshChoices();
     }
     private void Action_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -273,10 +277,19 @@ public partial class EditModeWindow : Window
         return displays;
     }
     private void Map_SizeChanged(object sender, SizeChangedEventArgs e) => DrawMap();
+    private void Pane_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is not Grid pane || pane.Children.Count < 2) return;
+        var stacked = pane.ActualWidth < 800 * _theme.FontScale;
+        if (pane.Parent is ScrollViewer page) page.VerticalScrollBarVisibility = stacked ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+        pane.ColumnDefinitions[1].Width = stacked ? new(0) : new(pane == TargetsPane ? 260 : 280);
+        pane.RowDefinitions[1].Height = stacked ? GridLength.Auto : new(0);
+        var inspector = pane.Children[1]; Grid.SetColumn(inspector, stacked ? 0 : 1); Grid.SetRow(inspector, stacked ? 1 : 0);
+    }
     internal void DrawMap()
     {
         if (LayoutMap == null || _dragging) return;
-        LayoutMap.Children.Clear();
+        LayoutMap.Children.Clear(); MonitorCaptions.Children.Clear();
         var displays = DisplayMonitors(); var left = displays.Min(m => m.Bounds.X); var top = displays.Min(m => m.Bounds.Y);
         var totalW = displays.Max(m => m.Bounds.Right) - left; var totalH = displays.Max(m => m.Bounds.Bottom) - top;
         var scale = Math.Max(.001, Math.Min(Math.Max(1, LayoutMap.ActualWidth - 30) / totalW, Math.Max(1, LayoutMap.ActualHeight - 30) / totalH));
@@ -284,8 +297,10 @@ public partial class EditModeWindow : Window
         {
             var mx = (LayoutMap.ActualWidth - totalW * scale) / 2 + (monitor.Bounds.X - left) * scale;
             var my = (LayoutMap.ActualHeight - totalH * scale) / 2 + (monitor.Bounds.Y - top) * scale;
-            var frame = new Border { Width = monitor.Bounds.Width * scale, Height = monitor.Bounds.Height * scale, BorderThickness = new(1), CornerRadius = new(12),
-                Child = new TextBlock { Text = monitor.Name, FontSize = 10, Foreground = Brushes.Gray, Margin = new(4) } };
+            var caption = new TextBlock { Text = monitor.Name, FontSize = 11 * _theme.FontScale, Margin = new(4, 0, 20, 8), ToolTip = monitor.Name };
+            caption.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush");
+            MonitorCaptions.Children.Add(caption);
+            var frame = new Border { Width = monitor.Bounds.Width * scale, Height = monitor.Bounds.Height * scale, BorderThickness = new(1), CornerRadius = new(12), ToolTip = monitor.Name };
             frame.SetResourceReference(Border.BorderBrushProperty, "SurfaceLineBrush");
             Canvas.SetLeft(frame, mx); Canvas.SetTop(frame, my); LayoutMap.Children.Add(frame);
             foreach (var row in _layouts.Where(l => l.Layout.Monitor == monitor.Id))
@@ -296,7 +311,8 @@ public partial class EditModeWindow : Window
                     BorderThickness = new(1), ToolTip = row.Label };
                 box.SetResourceReference(Border.BackgroundProperty, "AccentSurfaceBrush"); box.SetResourceReference(Border.BorderBrushProperty, "AccentBrightBrush");
                 var content = new Grid(); box.Child = content;
-                content.Children.Add(new TextBlock { Text = row.Label, Margin = new(4), FontSize = 10, Foreground = Brushes.White, IsHitTestVisible = false, TextTrimming = TextTrimming.CharacterEllipsis });
+                var label = new TextBlock { Text = row.Label, Margin = new(4), FontSize = 11, IsHitTestVisible = false, TextTrimming = TextTrimming.CharacterEllipsis };
+                label.SetResourceReference(TextBlock.ForegroundProperty, "SelectionTextBrush"); content.Children.Add(label);
                 var template = new ControlTemplate(typeof(Thumb)) { VisualTree = new FrameworkElementFactory(typeof(Border)) };
                 var move = new Thumb { Template = template, Cursor = System.Windows.Input.Cursors.SizeAll, Focusable = false };
                 var resize = new Thumb { Template = template, Width = 12, Height = 12, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Cursor = System.Windows.Input.Cursors.SizeNWSE, Focusable = false };
@@ -337,6 +353,12 @@ public partial class EditModeWindow : Window
         if (dialog.ShowDialog(this) == true) foreach (var path in dialog.FileNames) _rows.Add(new TargetRow(new() { Cmd = path }));
         RefreshChoices();
     }
+    private void Website_Click(object sender, RoutedEventArgs e)
+    {
+        var row = new TargetRow(new() { Cmd = "https://", Kind = TargetKind.Url }); _rows.Add(row); TargetsGrid.SelectedItem = row;
+        TargetsGrid.ScrollIntoView(row); TargetsGrid.CurrentCell = new(row, TargetsGrid.Columns[0]); TargetsGrid.Focus(); TargetsGrid.BeginEdit(); RefreshChoices();
+    }
+    private void CommandEntry_Click(object sender, RoutedEventArgs e) { EditorTabs.SelectedIndex = 2; AddCommand_Click(sender, e); }
     private void Folder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog();

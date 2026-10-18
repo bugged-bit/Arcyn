@@ -13,38 +13,39 @@
     <StackPanel Margin="0,0,10,0"><TextBlock Text="Name"/><TextBox x:Name="NameInput" AutomationProperties.Name="Workspace name"/></StackPanel>
     <StackPanel Grid.Column="1"><TextBlock Text="Description"/><TextBox x:Name="DescInput" AutomationProperties.Name="Description"/></StackPanel>
    </Grid>
-   <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+   <Expander Header="Workspace details" Margin="0,2,0,8"><Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
     <StackPanel Margin="0,0,8,0"><TextBlock Text="Mode (study / design / code)"/><TextBox x:Name="TypeInput" AutomationProperties.Name="Mode type"/></StackPanel>
     <StackPanel Grid.Column="1" Margin="0,0,8,0"><TextBlock Text="Session"/><TextBox x:Name="SessionInput" AutomationProperties.Name="Session"/></StackPanel>
     <StackPanel Grid.Column="2" Margin="0,0,8,0"><TextBlock Text="State"/><TextBox x:Name="StateInput" AutomationProperties.Name="State"/></StackPanel>
     <StackPanel Grid.Column="3"><TextBlock Text="Accent (#RRGGBB)"/><TextBox x:Name="AccentInput" AutomationProperties.Name="Workspace accent colour"/></StackPanel>
-   </Grid>
+   </Grid></Expander>
   </StackPanel>
   <TabControl Grid.Row="1" x:Name="EditorTabs" SelectionChanged="Tabs_SelectionChanged">
-   <TabItem Header="Targets">
-    <Grid Margin="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions>
+   <TabItem Header="Targets"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Grid x:Name="TargetsPane" Margin="10" SizeChanged="Pane_SizeChanged"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition/><RowDefinition Height="0"/></Grid.RowDefinitions>
      <Grid Margin="0,0,12,0"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <TextBlock TextWrapping="Wrap" Text="Targets run in row order unless prerequisites require another order. Reuse never sends new arguments to an existing window." Margin="0,0,0,8"/>
-      <DataGrid Grid.Row="1" x:Name="TargetsGrid" CanUserAddRows="True" CanUserDeleteRows="False" SelectionChanged="Target_SelectionChanged" AutomationProperties.Name="Ordered launch targets">
+      <DataGrid Grid.Row="1" x:Name="TargetsGrid" CanUserAddRows="True" CanUserDeleteRows="False" MinHeight="120" MaxHeight="280" SelectionChanged="Target_SelectionChanged" AutomationProperties.Name="Ordered launch targets">
        <DataGrid.Columns>
         <DataGridTextColumn Header="Application, URL, file or folder" Binding="{Binding Command}" Width="2*" MinWidth="250"/>
         <DataGridTextColumn Header="Arguments" Binding="{Binding Arguments}" Width="*" MinWidth="120"/>
        </DataGrid.Columns>
       </DataGrid>
       <WrapPanel Grid.Row="2" Margin="0,8,0,0">
-       <Button Content="Browse app / file" Click="Browse_Click"/><Button Content="Folder" Click="Folder_Click"/><Button Content="Discover apps" Click="Discover_Click"/>
+       <Button Content="App / file" Click="Browse_Click"/><Button Content="Website" Click="Website_Click"/><Button Content="Folder" Click="Folder_Click"/><Button Content="Discover apps" Click="Discover_Click"/><Button Content="Command" Click="CommandEntry_Click"/>
        <Button Content="Move up" Click="Up_Click"/><Button Content="Move down" Click="Down_Click"/><Button Content="Remove" Click="Remove_Click"/>
       </WrapPanel>
      </Grid>
-     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" MaxHeight="420">
       <StackPanel x:Name="TargetInspector">
        <TextBlock Text="Target details" Foreground="{DynamicResource AccentBrightBrush}"/>
        <TextBlock Text="Kind"/><ComboBox x:Name="KindInput" SelectedValue="{Binding Target.Kind}" AutomationProperties.Name="Target kind"/>
+       <Expander x:Name="TargetAdvanced" Header="Advanced target settings"><StackPanel Margin="0,8,0,0">
        <TextBlock Text="Instance policy"/><ComboBox x:Name="PolicyInput" SelectedValue="{Binding Target.InstancePolicy}" AutomationProperties.Name="Instance policy"/>
        <TextBlock Text="Readiness"/><ComboBox x:Name="ReadinessInput" SelectedValue="{Binding Target.Readiness}" AutomationProperties.Name="Readiness requirement"/>
        <TextBlock Text="Timeout (ms)"/><TextBox Text="{Binding Target.TimeoutMs}" AutomationProperties.Name="Target timeout milliseconds"/>
        <TextBlock Text="Working directory"/><TextBox Text="{Binding WorkingDirectory}" AutomationProperties.Name="Target working directory"/>
-       <Expander Header="Window matching" IsExpanded="True" Foreground="{DynamicResource TextPrimaryBrush}"><StackPanel Margin="0,8,0,0">
+       <Expander x:Name="MatchDisclosure" Header="Window matching" Foreground="{DynamicResource TextPrimaryBrush}"><StackPanel Margin="0,8,0,0">
         <Button Content="Choose running window" Click="Bind_Click"/>
         <TextBlock Text="Executable identity (full path)"/><TextBox Text="{Binding MatchExecutable}" AutomationProperties.Name="Matching executable path"/>
         <TextBlock Text="Application identity (optional)"/><TextBox Text="{Binding MatchAppId}" AutomationProperties.Name="Matching application identity"/>
@@ -53,15 +54,18 @@
         <CheckBox Content="Title contains text" IsChecked="{Binding TitleContains}" Foreground="{DynamicResource TextPrimaryBrush}"/>
        </StackPanel></Expander>
        <TextBlock Text="Run after" Margin="0,12,0,4"/><ListBox x:Name="TargetDependencies" SelectionMode="Multiple" DisplayMemberPath="Label" Height="90" SelectionChanged="Dependencies_Changed" AutomationProperties.Name="Target prerequisites"/>
+       </StackPanel></Expander>
       </StackPanel>
      </ScrollViewer>
     </Grid>
-   </TabItem>
+   </ScrollViewer></TabItem>
    <TabItem Header="Layout">
-    <Grid Margin="10"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="150"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid Margin="10"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="100"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
      <WrapPanel><Button Content="Capture matched windows" Click="Capture_Click"/><Button Content="Refresh displays" Click="Displays_Click"/><Button Content="Add selected target" Click="AddLayout_Click"/><Button Content="Remove placement" Click="RemoveLayout_Click"/></WrapPanel>
      <Border Grid.Row="1" Background="{DynamicResource FieldBrush}" BorderBrush="{DynamicResource SurfaceLineBrush}" BorderThickness="1" CornerRadius="14" Margin="0,6">
+      <DockPanel Margin="8"><WrapPanel x:Name="MonitorCaptions" DockPanel.Dock="Top"/>
       <Canvas x:Name="LayoutMap" ClipToBounds="True" SizeChanged="Map_SizeChanged" AutomationProperties.Name="Saved workspace monitor layout"/>
+      </DockPanel>
      </Border>
      <DataGrid Grid.Row="2" x:Name="LayoutGrid" CanUserAddRows="False" CanUserDeleteRows="False" AutomationProperties.Name="Editable window placements">
       <DataGrid.Columns>
@@ -78,16 +82,16 @@
      <TextBlock Grid.Row="3" TextWrapping="Wrap" Text="Drag windows; resize from lower-right corner. Numeric controls provide keyboard editing. Changes affect saved layout only; disconnected displays fall back to primary on restore." Margin="0,8,0,0"/>
     </Grid>
    </TabItem>
-   <TabItem Header="Actions">
-    <Grid Margin="10"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions>
+   <TabItem Header="Actions"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Grid x:Name="ActionsPane" Margin="10" SizeChanged="Pane_SizeChanged"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="280"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition/><RowDefinition Height="0"/></Grid.RowDefinitions>
      <Grid Margin="0,0,12,0"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <TextBlock TextWrapping="Wrap" Text="Small, ordered steps. Commands require exact-command review before workspace execution." Margin="0,0,0,8"/>
-      <DataGrid Grid.Row="1" x:Name="ActionsGrid" CanUserAddRows="False" CanUserDeleteRows="False" SelectionChanged="Action_SelectionChanged" AutomationProperties.Name="Workspace actions">
+      <DataGrid Grid.Row="1" x:Name="ActionsGrid" CanUserAddRows="False" CanUserDeleteRows="False" MinHeight="120" MaxHeight="280" SelectionChanged="Action_SelectionChanged" AutomationProperties.Name="Workspace actions">
        <DataGrid.Columns><DataGridTextColumn Header="Kind" Binding="{Binding Kind}" IsReadOnly="True" Width="90"/><DataGridTextColumn Header="Label" Binding="{Binding Action.Label}" Width="*" MinWidth="200"/></DataGrid.Columns>
       </DataGrid>
       <WrapPanel Grid.Row="2" Margin="0,8,0,0"><Button Content="Window" Click="AddWindow_Click"/><Button Content="Wait" Click="AddWait_Click"/><Button Content="Command" Click="AddCommand_Click"/><Button Content="↑" AutomationProperties.Name="Move action up" Click="ActionUp_Click"/><Button Content="↓" AutomationProperties.Name="Move action down" Click="ActionDown_Click"/><Button Content="Remove" Click="RemoveAction_Click"/></WrapPanel>
      </Grid>
-     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"><StackPanel x:Name="ActionInspector">
+     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" MaxHeight="420"><StackPanel x:Name="ActionInspector">
       <TextBlock Text="Action details" Foreground="{DynamicResource AccentBrightBrush}"/>
       <TextBlock Text="Timeout (ms)"/><TextBox Text="{Binding Action.TimeoutMs}" AutomationProperties.Name="Action timeout milliseconds"/>
       <StackPanel Style="{StaticResource WindowFields}"><TextBlock Text="Window operation"/><ComboBox x:Name="OperationInput" SelectedValue="{Binding Operation}" AutomationProperties.Name="Window operation"/></StackPanel>
@@ -102,11 +106,11 @@
       <TextBlock Text="Run after" Margin="0,12,0,4"/><ListBox x:Name="ActionDependencies" SelectionMode="Multiple" DisplayMemberPath="Label" Height="110" SelectionChanged="Dependencies_Changed" AutomationProperties.Name="Action prerequisites"/>
      </StackPanel></ScrollViewer>
     </Grid>
-   </TabItem>
+   </ScrollViewer></TabItem>
   </TabControl>
   <DockPanel Grid.Row="2" Margin="0,10,0,0">
-   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Cancel" IsCancel="True" Click="Cancel_Click"/><Button Content="Save workspace" Style="{DynamicResource PrimaryActionButton}" IsDefault="True" Click="Save_Click"/></StackPanel>
-   <TextBlock x:Name="Status" Foreground="{DynamicResource AccentBrightBrush}" VerticalAlignment="Center" MaxHeight="70"/>
+   <WrapPanel DockPanel.Dock="Right"><Button Content="Cancel" IsCancel="True" Click="Cancel_Click"/><Button Content="Save workspace" Style="{DynamicResource PrimaryActionButton}" IsDefault="True" Click="Save_Click"/></WrapPanel>
+   <TextBlock x:Name="Status" TextWrapping="Wrap" Foreground="{DynamicResource AccentBrightBrush}" VerticalAlignment="Center" MaxHeight="70" AutomationProperties.LiveSetting="Polite"/>
   </DockPanel>
  </Grid>
 </Window>

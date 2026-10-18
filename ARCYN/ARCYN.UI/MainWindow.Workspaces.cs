@@ -6,11 +6,20 @@ namespace ARCYN.UI;
 
 public partial class MainWindow
 {
+    private void NewWorkspace_Click(object sender, RoutedEventArgs e) => EditWorkspace(null);
+    private void Appearance_Click(object sender, RoutedEventArgs e) => EditTheme();
+    private void WorkspaceMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string id } button || _modes.FirstOrDefault(m => m.Id == id) is not { } mode) return;
+        var menu = MakeWorkspaceMenu(mode); menu.PlacementTarget = button; menu.IsOpen = true; e.Handled = true;
+    }
+    private void ShowRunFeedback(string text) { RunFeedback.Text = text; RunFeedback.Visibility = Visibility.Visible; }
     internal Action<string> WorkspaceError { get; set; } = null!;
     private bool HandleEditorKey(KeyEventArgs e)
     {
         if (_state.Phase != AppPhase.Ready || _isLaunching || _editing) return false;
-        var selected = FocusManager.GetFocusedElement(this) is Button { Tag: ModeConfig mode } ? mode : null;
+        var tag = (FocusManager.GetFocusedElement(this) as Button)?.Tag;
+        var selected = tag as ModeConfig ?? (tag is string id ? _modes.FirstOrDefault(m => m.Id == id) : null);
         if (e.Key == Key.F2) { EditWorkspace(selected ?? _modes.FirstOrDefault()); return true; }
         if (e.Key == Key.N && Keyboard.Modifiers == ModifierKeys.Control) { EditWorkspace(null); return true; }
         if (e.Key == Key.OemComma && Keyboard.Modifiers == ModifierKeys.Control) { EditTheme(); return true; }
@@ -126,6 +135,7 @@ public partial class MainWindow
         {
             var result = await _orchestrator.ManageAsync(mode, operation, _launchCts.Token);
             _runReports[mode.Id] = FormatReport(result);
+            ShowRunFeedback(result.Canceled ? "Canceled. Dispatched work remains open. Workspace menu → Last run details." : result.Success ? "Window operations complete." : "Workspace needs attention. Workspace menu → Last run details.");
             LaunchRecent.Text = result.Success ? $"{result.CompletedSteps} window operations complete" : "Workspace needs attention — Last run details";
             if (!result.Success && !result.Canceled) WorkspaceError(FormatReport(result));
         }

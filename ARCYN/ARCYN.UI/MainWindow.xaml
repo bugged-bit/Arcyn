@@ -18,8 +18,9 @@
         PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
         <DataTemplate x:Key="ModeCardTemplate">
+          <Grid>
             <Button Style="{DynamicResource WorkstationPanelStyle}" Click="ModeButton_Click" Tag="{Binding}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Subtitle}" MinHeight="{DynamicResource CardHeight}" Margin="0">
-                <Grid Margin="16,12">
+                <Grid Margin="16,12,56,12">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <Border Width="34" Height="34" CornerRadius="12" Background="{Binding AccentTintBrush}" VerticalAlignment="Top" HorizontalAlignment="Left">
                         <TextBlock Text="{Binding IndexLabel}" FontSize="{DynamicResource FontSize14}" FontWeight="SemiBold" Foreground="{DynamicResource AccentLightBrush}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
@@ -43,11 +44,13 @@
                         </StackPanel>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Margin="18,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right">
-                        <Border Background="{DynamicResource AccentSurfaceBrush}" CornerRadius="14" Padding="14,8"><TextBlock Text="Open ↗" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="{DynamicResource FontSize9}"/></Border>
+                        <Border Background="{DynamicResource AccentSurfaceBrush}" CornerRadius="14" Padding="14,8"><TextBlock Text="Open ↗" FontWeight="SemiBold" Foreground="{DynamicResource SelectionTextBrush}" FontSize="{DynamicResource FontSize9}"/></Border>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,7,0,0"><TextBlock Text="{Binding ProcessLabel}" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/><TextBlock Text="{Binding ShortcutHint}" Margin="8,0,0,0" FontSize="{DynamicResource FontSize7}" Foreground="{DynamicResource TextMutedBrush}"/></StackPanel>
                     </StackPanel>
                 </Grid>
             </Button>
+            <Button Content="⋯" Click="WorkspaceMenu_Click" Tag="{Binding Id}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Padding="8,2" Width="36" ToolTip="Workspace actions" AutomationProperties.Name="Workspace actions"/>
+          </Grid>
         </DataTemplate>
     </Window.Resources>
 
@@ -63,10 +66,11 @@
             <Border x:Name="MainBorder"
                     CornerRadius="20"
                     Width="6"
+                    MaxWidth="{Binding ActualWidth, ElementName=ShellHost}" MaxHeight="{Binding ActualHeight, ElementName=ShellHost}"
                     Height="6"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Background="{DynamicResource SurfaceBrush}"
+                    Background="{DynamicResource ShellBrush}"
                     BorderThickness="1"
                     BorderBrush="{DynamicResource SurfaceLineBrush}"
                     Effect="{DynamicResource GlowAccent}">
@@ -286,7 +290,14 @@
                                               HorizontalScrollBarVisibility="Disabled"
                                               Background="Transparent"
                                               BorderThickness="0">
+                                  <StackPanel>
+                                    <WrapPanel Margin="0,0,0,8">
+                                      <Button Content="＋ New workspace" Click="NewWorkspace_Click" ToolTip="Ctrl+N"/>
+                                      <Button Content="Appearance" Click="Appearance_Click" ToolTip="Ctrl+,"/>
+                                    </WrapPanel>
+                                    <TextBlock x:Name="RunFeedback" Visibility="Collapsed" TextWrapping="Wrap" Margin="4,0,4,10" Foreground="{DynamicResource TextPrimaryBrush}" AutomationProperties.LiveSetting="Polite"/>
                                     <Grid x:Name="DashboardGrid" />
+                                  </StackPanel>
                                 </ScrollViewer>
                             </Border>
 
@@ -298,7 +309,7 @@
                                     BorderBrush="{DynamicResource BorderSubtleBrush}"
                                     Background="{DynamicResource LiteralBrushE9080808}"
                                     Padding="10">
-                                 <Grid>
+                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" VerticalContentAlignment="Stretch"><Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -346,6 +357,7 @@
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                             <TextBlock x:Name="LaunchModeLabel"
                                                        FontSize="{DynamicResource FontSize22}" FontWeight="Light"
+                                                       TextTrimming="CharacterEllipsis"
                                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                                        Text="" />
                                             <TextBlock x:Name="LaunchSessionLabel"
@@ -384,18 +396,20 @@
                                             BorderBrush="{DynamicResource BorderSubtleBrush}"
                                             Padding="8,6" MinHeight="56">
                                         <ScrollViewer x:Name="LaunchFeedScroll"
+                                                      MaxHeight="180"
                                                       VerticalScrollBarVisibility="Hidden"
                                                       HorizontalScrollBarVisibility="Disabled"
                                                       Background="Transparent">
                                             <TextBlock x:Name="LaunchFeedText"
                                                        FontSize="{DynamicResource FontSize8}"
                                                        Foreground="{DynamicResource TextDimBrush}"
-                                                       LineHeight="14" />
+                                                       TextWrapping="Wrap" />
                                         </ScrollViewer>
                                     </Border>
 
                                     <!-- Row 3: Telemetry strip -->
                                     <Grid Grid.Row="3" Margin="0,6,0,6">
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
@@ -414,10 +428,10 @@
                                                    Foreground="{DynamicResource TextDimBrush}"
                                                    Text="RAM --%" />
                                         <TextBlock x:Name="LaunchStatus"
-                                                   Grid.Column="2"
+                                                   Grid.Row="1" Grid.ColumnSpan="4" Margin="0,6,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
                                                    FontSize="{DynamicResource FontSize9}"
                                                    FontWeight="Medium"
-                                                   HorizontalAlignment="Right"
+                                                   HorizontalAlignment="Left"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                                    Text="Launching" />
                                         <TextBlock x:Name="LaunchProgressText"
@@ -457,14 +471,14 @@
                                         <TextBlock Text="ESC aborts &#x00B7; targets launch sequentially"
                                                    FontSize="{DynamicResource FontSize7}"
                                                    Foreground="{DynamicResource TextMutedBrush}"
-                                                   Opacity="0.5" />
+                                                   />
                                         <TextBlock Grid.Column="1"
                                                    x:Name="LaunchRecent"
                                                    FontSize="{DynamicResource FontSize7}"
                                                    Foreground="{DynamicResource TextMutedBrush}"
                                                    Text="" />
                                     </Grid>
-                                </Grid>
+                                </Grid></ScrollViewer>
                             </Border>
                         </Grid>
 
@@ -514,17 +528,16 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="FooterHint"
+                                       TextWrapping="Wrap"
                                        Grid.Column="0"
                                        FontSize="{DynamicResource FontSize7}"
                                        Foreground="{DynamicResource TextDimBrush}"
-                                       Opacity="0.45"
                                        VerticalAlignment="Center"
                                        Text="[1-3] select  -  ENTER launch  -  ESC close" />
                             <TextBlock x:Name="FooterIdle"
                                        Grid.Column="1"
                                        FontSize="{DynamicResource FontSize7}"
                                        Foreground="{DynamicResource TextDimBrush}"
-                                       Opacity="0.30"
                                        VerticalAlignment="Center" />
                         </Grid>
                     </Grid>

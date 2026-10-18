@@ -186,6 +186,7 @@ internal static partial class Program
             ReviewChecks(directory, service, config, window);
             WorkspaceEditorChecks(directory);
             VisualSurfaceChecks(service);
+            ReleaseCandidateChecks(service);
             bindingTrace.Flush();
             Check(bindingOutput.ToString().Length == 0, "offscreen HUD and editor bindings produce no warnings or errors");
             PresentationTraceSources.DataBindingSource.Listeners.Remove(bindingTrace);

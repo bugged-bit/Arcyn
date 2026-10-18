@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using ARCYN.UI.Models;
@@ -7,6 +8,7 @@ namespace ARCYN.UI;
 
 public partial class App : Application
 {
+    internal static string ProductVersion => typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
     private SingleInstance? _instance;
     private void Application_Startup(object sender, StartupEventArgs e)
     {
@@ -29,7 +31,7 @@ public partial class App : Application
             {
                 AttachConsole(unchecked((uint)-1));
                 if (args.Contains("--help")) Console.WriteLine("ARCYN: --help | --version | --config-path | --config <file> | --setup (terminal setup)");
-                else if (args.Contains("--version")) Console.WriteLine("ARCYN " + typeof(App).Assembly.GetName().Version);
+                else if (args.Contains("--version")) Console.WriteLine("ARCYN " + ProductVersion);
                 else if (args.Contains("--config-path")) Console.WriteLine(service.GetOrCreatePath());
                 else
                 {

@@ -78,6 +78,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _modeService = new ModeService(_state, _modes);
         _currentTheme = _config.Theme;
         InitializeComponent();
+        WindowSurface.Attach(this, _config.Theme, SurfaceRole.Launcher);
         WorkspaceError = message => WindowSurface.Show(this, "Workspace details", message);
         Topmost = _config.Behavior.AlwaysOnTop;
         PreviewMouseDown += (_, _) => ResetIdle();
@@ -232,7 +233,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         await TypeText(BootTitle, "A R C Y N", 25, ct);
         if (ct.IsCancellationRequested) return;
 
-        await TypeText(BootSubtitle, "SYSTEM BOOT SEQUENCE  -  v1.0", 15, ct);
+        await TypeText(BootSubtitle, "ARCYN WORKSPACE  · " + App.ProductVersion, 15, ct);
         if (ct.IsCancellationRequested) return;
 
         var progressAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900))
@@ -399,7 +400,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             LaunchFeedText.Text = "";
             var progress = new Progress<LaunchProgress>(p => {
                 if (_disposed || token.IsCancellationRequested || !acceptProgress) return;
-                currentStage = p.StepCompleted ? "Opening workspace" : p.Evidence ?? "Opening workspace";
+                currentStage = p.StepCompleted ? "Opening workspace" : p.CurrentLabel + " · " + (p.Evidence ?? "Opening");
                 LaunchStatus.Text = currentStage;
                 if (p.StepCompleted)
                 {
@@ -411,6 +412,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             var result = await _orchestrator.LaunchModeAsync(mode, token, progress);
             acceptProgress = false;
             _runReports[mode.Id] = FormatReport(result);
+            ShowRunFeedback(result.Canceled ? "Canceled. Dispatched work remains open. Workspace menu → Last run details." : result.Success ? "Workspace ready." : "Workspace needs attention. Workspace menu → Last run details.");
             _launchDotTimer.Stop();
             if (result.Canceled || token.IsCancellationRequested) { await ReturnToReady(); return; }
             LaunchStatus.Text = result.Success ? "Complete" : result.CompletedSteps > 0 ? "Partial" : "Fault";
@@ -422,8 +424,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             if (token.IsCancellationRequested || !_config.Behavior.CloseOnLaunch || !result.Success) await ReturnToReady();
             else if (!_disposed) Close();
         }
-        catch (OperationCanceledException) { await ReturnToReady(); }
-        catch (Exception ex) { _log.Write("Launch error: {0}", ex); await ReturnToReady(); }
+        catch (OperationCanceledException) { ShowRunFeedback("Canceled. Dispatched work remains open."); await ReturnToReady(); }
+        catch (Exception ex) { _log.Write("Launch error: {0}", ex); ShowRunFeedback("Could not finish opening the workspace: " + ex.Message); await ReturnToReady(); }
         finally { _launchDotTimer?.Stop(); _isLaunching = false; }
     }
 
@@ -646,6 +648,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         if (_state.Phase == AppPhase.Ready && _modes.Count > 0 && ModePanel.Visibility == Visibility.Visible)
         {
             var focused = FocusManager.GetFocusedElement(this);
+            if (focused is Button { Tag: not ModeConfig }) return;
             var currentIndex = -1;
             if (focused is Button button && button.Tag is ModeConfig mode)
                 currentIndex = _modes.IndexOf(mode);
@@ -667,10 +670,9 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
             }
         }
 
-        if (e.Key == Key.Enter && _state.Phase == AppPhase.Ready)
+        if (e.Key == Key.Enter && _state.Phase == AppPhase.Ready && FocusManager.GetFocusedElement(this) is Button { Tag: ModeConfig } focusedButton)
         {
-            if (FocusManager.GetFocusedElement(this) is Button focusedButton)
-                ModeButton_Click(focusedButton, new RoutedEventArgs());
+            ModeButton_Click(focusedButton, new RoutedEventArgs());
 
             e.Handled = true;
             return;
@@ -718,7 +720,10 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         _cardButtons.Clear();
 
         if (_modes.Count == 0)
-            return;
+        {
+            var empty = new TextBlock { Text = "Your workspace starts here.\nAdd the apps, websites and folders you use together, then open them in one deliberate move.", TextWrapping = TextWrapping.Wrap, Margin = new(18, 24, 18, 24), FontSize = 16 };
+            empty.SetResourceReference(TextBlock.ForegroundProperty, "TextDimBrush"); DashboardGrid.Children.Add(empty); return;
+        }
 
         var columns = _currentTheme.Layout == "grid" ? 2 : 1;
         for (var c = 0; c < columns; c++) DashboardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
