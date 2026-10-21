@@ -53,6 +53,5 @@ foreach ($personal in @('protocoll.json','arcyn.json')) {
     if (Test-Path -LiteralPath (Join-Path $Directory $personal)) { throw 'Do not ship personal configuration.' }
 }
 if (Get-ChildItem -LiteralPath $Directory -Recurse -Filter '*.ahk') { throw 'AutoHotkey dependency remains.' }
-& (Join-Path $Directory 'ARCYN.Hotkey.exe') --self-test
-if ($LASTEXITCODE) { throw 'Native helper self-test failed.' }
+if ((Start-Process -FilePath (Join-Path $Directory 'ARCYN.Hotkey.exe') -ArgumentList '--self-test' -WindowStyle Hidden -Wait -PassThru).ExitCode) { throw 'Native helper self-test failed.' }
 Write-Output 'Complete standalone runtime and package-free application verified without opening ARCYN.'

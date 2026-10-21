@@ -55,7 +55,45 @@ internal static partial class Program
         RenderSurface(Detach(setup), "setup-validation", 740, 600);
         ((TextBox)setup.FindName("ModeNameInput")).Text = "Deep work"; Call(setup, "CommitCurrentMode");
         Check(Field<ModeConfig>(setup, "_currentMode").Name == "Deep work", "setup preserves the user's chosen name casing");
+        Call(setup, "ShowStep", 2);
+        ((TextBox)setup.FindName("AppQuickInput")).Text = "never-dispatched.exe";
+        Call(setup, "Next_Click", setup, new RoutedEventArgs());
+        Check(Field<ModeConfig>(setup, "_currentMode").Apps.SequenceEqual(new[] { "never-dispatched.exe" }) &&
+            ((TextBox)setup.FindName("AppQuickInput")).Text == "", "Next retains a pending application path exactly once");
+        Call(setup, "ShowStep", 4);
+        ((TextBox)setup.FindName("WebsiteInput")).Text = "https://";
+        Call(setup, "Next_Click", setup, new RoutedEventArgs());
+        Check(Field<int>(setup, "_step") == 4 && ((TextBox)setup.FindName("WebsiteInput")).Text == "https://",
+            "incomplete website keeps setup on the editable step with its input intact");
+        ((TextBox)setup.FindName("WebsiteInput")).Text = "https://example.com/research";
+        Call(setup, "Next_Click", setup, new RoutedEventArgs());
+        Check(Field<List<ModeConfig>>(setup, "_modes").Single().Websites.SequenceEqual(new[] { "https://example.com/research" }) &&
+            Field<int>(setup, "_step") == 5, "Next retains a pending website before reviewing the workspace");
+        Check(((Button)setup.FindName("NextButton")).IsDefault && ((Button)setup.FindName("FinishButton")).IsDefault,
+            "setup exposes a default keyboard action on entry and review steps");
         setup.Close();
+        var optionalSetup = new SetupWindow(service);
+        var skip = (Button)optionalSetup.FindName("SkipButton");
+        Check(skip.Visibility == Visibility.Collapsed, "setup requires a workspace name before offering optional-step skipping");
+        ((TextBox)optionalSetup.FindName("ModeNameInput")).Text = "Optional steps";
+        Call(optionalSetup, "CommitCurrentMode"); Call(optionalSetup, "ShowStep", 2);
+        ((ItemsControl)optionalSetup.FindName("AppsList")).Items.Add("already-added.exe");
+        ((TextBox)optionalSetup.FindName("AppQuickInput")).Text = "not-added.exe";
+        Check(skip.Visibility == Visibility.Visible, "Apps exposes an explicit Skip button");
+        Call(optionalSetup, "Next_Click", skip, new RoutedEventArgs());
+        Check(Field<int>(optionalSetup, "_step") == 3 && skip.Visibility == Visibility.Visible &&
+            Field<ModeConfig>(optionalSetup, "_currentMode").Apps.SequenceEqual(new[] { "already-added.exe" }),
+            "Skip keeps added applications, excludes pending text and advances to optional folders");
+        Call(optionalSetup, "Next_Click", skip, new RoutedEventArgs());
+        Check(Field<int>(optionalSetup, "_step") == 4 && skip.Visibility == Visibility.Visible,
+            "Skip continues through empty folders to optional websites");
+        ((TextBox)optionalSetup.FindName("WebsiteInput")).Text = "not a website";
+        Call(optionalSetup, "Next_Click", skip, new RoutedEventArgs());
+        var skippedMode = Field<List<ModeConfig>>(optionalSetup, "_modes").Single();
+        Check(Field<int>(optionalSetup, "_step") == 5 && skip.Visibility == Visibility.Collapsed &&
+            skippedMode.Websites.Count == 0 && skippedMode.Folders.Count == 0 && skippedMode.Apps.Single() == "already-added.exe",
+            "Skip bypasses pending website validation and reaches review without adding optional targets");
+        optionalSetup.Close();
         var list = new ListBox { ItemsSource = new[] { "Notes", "Browser" } };
         var picker = WindowSurface.CreatePicker(null, new(), "Choose application", list, () => throw new Exception("Selection dispatched during render"));
         var content = Detach(picker);

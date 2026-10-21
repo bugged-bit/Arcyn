@@ -104,6 +104,11 @@ public partial class SetupWindow : Window
         }
 
         StepCounter.Text = $"{step + 1} / {StepTitles.Length}";
+        SkipButton.Visibility = step is 2 or 3 or 4 ? Visibility.Visible : Visibility.Collapsed;
+        Keyboard.Focus(step switch {
+            1 => ModeNameInput, 2 => AppQuickInput, 3 => FolderBrowseButton,
+            4 => WebsiteInput, 5 => FinishButton, _ => NextButton
+        });
     }
 
     private void Next_Click(object sender, RoutedEventArgs e)
@@ -113,7 +118,6 @@ public partial class SetupWindow : Window
             case 0:
                 // Welcome → Mode creation
                 ShowStep(1);
-                Keyboard.Focus(ModeNameInput);
                 break;
 
             case 1:
@@ -124,6 +128,7 @@ public partial class SetupWindow : Window
 
             case 2:
                 // Save apps → Folders
+                if (sender != SkipButton) AddAppQuick_Click(sender, e);
                 SaveCurrentApps();
                 ShowStep(3);
                 break;
@@ -132,11 +137,11 @@ public partial class SetupWindow : Window
                 // Save folders → Websites
                 SaveCurrentFolders();
                 ShowStep(4);
-                Keyboard.Focus(WebsiteInput);
                 break;
 
             case 4:
                 // Save websites → Review
+                if (sender != SkipButton && !TryAddWebsite()) return;
                 SaveCurrentWebsites();
                 FinalizeCurrentMode();
                 ShowStep(5);
@@ -318,20 +323,24 @@ public partial class SetupWindow : Window
             FoldersList.Items.Remove(folder);
     }
 
-    private void AddWebsite_Click(object sender, RoutedEventArgs e)
+    private void AddWebsite_Click(object sender, RoutedEventArgs e) => TryAddWebsite();
+
+    private bool TryAddWebsite()
     {
         var text = WebsiteInput.Text.Trim();
-        if (string.IsNullOrWhiteSpace(text)) return;
+        if (string.IsNullOrWhiteSpace(text)) return true;
 
-        if (!text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !text.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var address) ||
+            address.Scheme is not ("http" or "https") || string.IsNullOrEmpty(address.Host))
         {
-            StatusBar.Text = "URL must start with http:// or https://";
-            return;
+            StatusBar.Text = "Enter a complete website address starting with http:// or https://";
+            Keyboard.Focus(WebsiteInput);
+            return false;
         }
 
         WebsitesList.Items.Add(text);
         WebsiteInput.Clear();
+        return true;
     }
 
     private void RemoveWebsite_Click(object sender, RoutedEventArgs e)
@@ -352,7 +361,6 @@ public partial class SetupWindow : Window
         ColorBlue.IsChecked = true;
 
         ShowStep(1);
-        Keyboard.Focus(ModeNameInput);
     }
 
     private async void Finish_Click(object sender, RoutedEventArgs e)

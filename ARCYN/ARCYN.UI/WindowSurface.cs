@@ -150,7 +150,7 @@ internal static class WindowSurface
         DockPanel.SetDock(buttons, Dock.Bottom); content.Children.Add(buttons);
         content.Children.Add(new TextBox { Text = message, IsReadOnly = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new(0), BorderThickness = new(0) });
         window.Content = content;
-        Prepare(window, owner is MainWindow main ? main.CurrentTheme : new ThemeConfig(), SurfaceRole.Dialog);
+        Prepare(window, owner?.Resources[StateKey] is State state ? state.Theme : new ThemeConfig(), SurfaceRole.Dialog);
         return window;
     }
     internal static Window CreatePicker(Window? owner, ThemeConfig theme, string title, ListBox list, Action select)

@@ -4,6 +4,10 @@ ARCYN is a cinematic workspace launcher for Windows 10/11 x64. Its workspace vie
 
 Extract the **complete standalone ZIP** to a permanent folder you can write to, then run ARCYN.exe. Keep all runtime files and `Notices` beside it; no separate .NET runtime, AutoHotkey or VC redistributable installation is required. First run opens the setup wizard. For an upgrade, close ARCYN, extract to a separate empty folder and point shortcuts there; AppData configuration stays in place. This candidate is unsigned; no public release is being published by this change.
 
+Setup's Apps, Folders and Websites steps each offer **Skip**. Items already added are kept; pending text is left out when skipping. **Next** adds a pending app path or valid website address before continuing. Enter activates the primary action, and each step focuses its relevant control.
+
+See the [live validation status and remaining release gates](docs/live-validation.md).
+
 Default mode leaves **zero ARCYN processes** after closing. Ordinary Desktop, Start-menu and pinned Windows shortcuts need no resident ARCYN helper.
 
 ![ARCYN HUD — offscreen opaque render](docs/previews/hud-offscreen.png)

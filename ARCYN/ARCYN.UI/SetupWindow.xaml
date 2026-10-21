@@ -20,7 +20,7 @@
     <TextBlock Text="Or enter an application path"/><TextBox x:Name="AppQuickInput" AutomationProperties.Name="Application path or command"/><Button Content="Add app" Click="AddAppQuick_Click"/>
    </StackPanel>
    <StackPanel x:Name="StepFolders" Visibility="Collapsed"><TextBlock Style="{DynamicResource PageTitle}" Text="Keep your folders close"/><TextBlock Style="{DynamicResource Caption}" Text="Add project folders or locations you want to open with this workspace." Margin="0,0,0,24"/><ItemsControl x:Name="FoldersList"><ItemsControl.ItemTemplate><DataTemplate><Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="12,8" Margin="0,0,0,4"><DockPanel><Button DockPanel.Dock="Right" Content="Remove" Tag="{Binding}" Click="RemoveFolder_Click"/><TextBlock Text="{Binding}" VerticalAlignment="Center" TextWrapping="Wrap"/></DockPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-    <Button Content="Browse for a folder" Click="AddFolder_Click" Margin="0,12,0,0"/>
+    <Button x:Name="FolderBrowseButton" Content="Browse for a folder" Click="AddFolder_Click" Margin="0,12,0,0"/>
    </StackPanel>
    <StackPanel x:Name="StepWebsites" Visibility="Collapsed"><TextBlock Style="{DynamicResource PageTitle}" Text="Add websites"/><TextBlock Style="{DynamicResource Caption}" Text="Your pages open in your default browser." Margin="0,0,0,24"/><ItemsControl x:Name="WebsitesList"><ItemsControl.ItemTemplate><DataTemplate><Border Background="{DynamicResource SurfaceBrush}" CornerRadius="4" Padding="12,8" Margin="0,0,0,4"><DockPanel><Button DockPanel.Dock="Right" Content="Remove" Tag="{Binding}" Click="RemoveWebsite_Click"/><TextBlock Text="{Binding}" VerticalAlignment="Center" TextWrapping="Wrap"/></DockPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
     <TextBlock Text="Website address" Margin="0,16,0,0"/><TextBox x:Name="WebsiteInput" AutomationProperties.Name="Website URL"/><Button Content="Add website" Click="AddWebsite_Click"/>
@@ -30,7 +30,7 @@
     <Button Content="Add another workspace" Click="AddMode_Click"/>
    </StackPanel>
   </Grid></ScrollViewer>
-  <WrapPanel Grid.Row="2" HorizontalAlignment="Right" Margin="0,20,0,0"><Button x:Name="BackButton" Content="Back" Click="Back_Click" Visibility="Collapsed"/><Button x:Name="NextButton" Content="Get started" Click="Next_Click" Style="{DynamicResource PrimaryActionButton}"/><Button x:Name="FinishButton" Content="Save and open ARCYN" Click="Finish_Click" Visibility="Collapsed" Style="{DynamicResource PrimaryActionButton}"/></WrapPanel>
+  <WrapPanel Grid.Row="2" HorizontalAlignment="Right" Margin="0,20,0,0"><Button x:Name="BackButton" Content="Back" Click="Back_Click" Visibility="Collapsed"/><Button x:Name="SkipButton" Content="Skip" Click="Next_Click" Visibility="Collapsed" ToolTip="Continue without adding more items. Items already added are kept." AutomationProperties.HelpText="Continue without adding more items. Items already added are kept."/><Button x:Name="NextButton" Content="Get started" IsDefault="True" Click="Next_Click" Style="{DynamicResource PrimaryActionButton}"/><Button x:Name="FinishButton" Content="Save and open ARCYN" IsDefault="True" Click="Finish_Click" Visibility="Collapsed" Style="{DynamicResource PrimaryActionButton}"/></WrapPanel>
   <TextBlock x:Name="StatusBar" Grid.Row="3" TextWrapping="Wrap" FontSize="{DynamicResource FontSize12}" Foreground="{DynamicResource TextDimBrush}" Margin="0,12,0,0" AutomationProperties.LiveSetting="Polite"/>
  </Grid>
 </Window>

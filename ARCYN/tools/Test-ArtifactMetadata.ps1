@@ -49,4 +49,12 @@ try {
     catch { if ($_.Exception.Message -ne 'Standalone artifact is missing PresentationFramework.Fluent.dll') { throw } }
 }
 finally { [IO.File]::WriteAllBytes($fluent, $originalFluent) }
-Write-Output 'Eight invalid runtime/product/notice/development-artifact cases rejected before helper execution; original bytes restored.'
+& {
+    function Start-Process { [pscustomobject]@{ ExitCode = 42 } }
+    try {
+        & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $Directory
+        throw 'Failing helper self-test accepted.'
+    }
+    catch { if ($_.Exception.Message -ne 'Native helper self-test failed.') { throw } }
+}
+Write-Output 'Nine invalid runtime/product/notice/development-artifact/helper cases rejected; original bytes restored.'

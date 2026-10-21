@@ -52,5 +52,4 @@ exit /b %errorlevel%
 "@ | Set-Content -LiteralPath $buildScript -Encoding ascii
 & $env:ComSpec /d /c $buildScript
 if ($LASTEXITCODE) { throw 'Native helper compilation failed.' }
-& (Join-Path $OutputDirectory 'ARCYN.Hotkey.exe') --self-test
-if ($LASTEXITCODE) { throw 'Hotkey parsing self-test failed.' }
+if ((Start-Process -FilePath (Join-Path $OutputDirectory 'ARCYN.Hotkey.exe') -ArgumentList '--self-test' -WindowStyle Hidden -Wait -PassThru).ExitCode) { throw 'Hotkey parsing self-test failed.' }
