@@ -9,6 +9,10 @@ namespace ARCYN.UI;
 
 internal sealed class ThemeWindow : Window
 {
+    private sealed record Choice(string Value, string Name)
+    {
+        public override string ToString() => Name;
+    }
     private ThemeConfig _draft;
     private readonly BehaviorConfig _behavior;
     private readonly Action<ThemeConfig, BehaviorConfig> _preview;
@@ -74,7 +78,7 @@ internal sealed class ThemeWindow : Window
                 { row.Children.Clear(); var check = new CheckBox { Content = Labels[name], IsChecked = (bool)property.GetValue(_draft)! }; check.Checked += (_, _) => Schedule(); check.Unchecked += (_, _) => Schedule(); input = check; }
                 else if (name is "Layout" or "ColorMode")
                 {
-                    var choices = name == "Layout" ? new[] { new { Value = "rows", Name = "Comfortable rows" }, new { Value = "compact", Name = "Compact rows" }, new { Value = "grid", Name = "Two columns" } } : new[] { new { Value = "system", Name = "Use Windows setting" }, new { Value = "light", Name = "Light" }, new { Value = "dark", Name = "Dark" }, new { Value = "custom", Name = "Custom colors and font" } };
+                    var choices = name == "Layout" ? new[] { new Choice("rows", "Comfortable rows"), new Choice("compact", "Compact rows"), new Choice("grid", "Two columns") } : new[] { new Choice("system", "Use Windows setting"), new Choice("light", "Light"), new Choice("dark", "Dark"), new Choice("custom", "Custom colors and font") };
                     var combo = new ComboBox { ItemsSource = choices, DisplayMemberPath = "Name", SelectedValuePath = "Value", SelectedValue = property.GetValue(_draft) };
                     combo.SelectionChanged += (_, _) => Schedule(); input = combo;
                 }

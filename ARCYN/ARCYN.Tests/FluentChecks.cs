@@ -12,6 +12,13 @@ internal static partial class Program
 {
     private static void FluentChecks(ConfigService service)
     {
+        using (var presence = new MainWindow(service, new()))
+        {
+            Call(presence, "ApplyWindowBehavior", new BehaviorConfig { AlwaysOnTop = false });
+            Check(presence.ShowInTaskbar && !presence.Topmost, "ordinary launcher windows remain available from the taskbar");
+            Call(presence, "ApplyWindowBehavior", new BehaviorConfig { AlwaysOnTop = true });
+            Check(!presence.ShowInTaskbar && presence.Topmost, "floating launcher retains its default transient window behavior");
+        }
         Check(!ThemeService.IsDark(new(), true) && ThemeService.IsDark(new(), false) &&
             ThemeService.IsDark(new() { ColorMode = "dark" }, true) && !ThemeService.IsDark(new() { ColorMode = "light" }, false),
             "system appearance follows Windows while explicit light and dark override it");
@@ -43,6 +50,8 @@ internal static partial class Program
             "contrast policy selects the platform HC controls as well as app surfaces");
         var settings = new ThemeWindow(new(), new(), (_, _) => { }, (_, _) => System.Threading.Tasks.Task.CompletedTask);
         var inputs = Field<Dictionary<PropertyInfo, Control>>(settings, "_inputs");
+        Check(inputs.Values.OfType<ComboBox>().SelectMany(combo => combo.Items.Cast<object>())
+            .All(choice => !choice.ToString()!.Contains("Value =")), "settings choices expose readable accessible names");
         Check(inputs.Count == typeof(ThemeConfig).GetProperties().Count(p => p.Name != "Extra") &&
             inputs.Values.All(c => !string.IsNullOrWhiteSpace(System.Windows.Automation.AutomationProperties.GetName(c))),
             "all saved personalization remains editable with accessible labels");

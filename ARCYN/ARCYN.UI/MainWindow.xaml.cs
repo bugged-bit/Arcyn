@@ -78,7 +78,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         InitializeComponent();
         WindowSurface.Attach(this, _config.Theme, SurfaceRole.Launcher);
         WorkspaceError = message => WindowSurface.Show(this, "Workspace details", message);
-        Topmost = _config.Behavior.AlwaysOnTop;
+        ApplyWindowBehavior(_config.Behavior);
         PreviewMouseDown += (_, _) => ResetIdle();
         PreviewMouseWheel += (_, _) => ResetIdle();
         Activated += (_, _) => ResetIdle();
@@ -101,8 +101,7 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        var exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
-        NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE, exStyle | NativeMethods.WS_EX_TOOLWINDOW);
+        ApplyWindowBehavior(_config.Behavior);
         NativeMethods.SetWindowPos(hwnd, Topmost ? NativeMethods.HWND_TOPMOST : IntPtr.Zero, 0, 0, 0, 0,
             NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_SHOWWINDOW);
 

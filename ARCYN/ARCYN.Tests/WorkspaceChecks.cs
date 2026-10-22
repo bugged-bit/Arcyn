@@ -235,6 +235,11 @@ internal static partial class Program
         var mode = new ModeConfig { Label = "WORKSPACE", Targets = [target], Actions = [new WaitActionConfig { Label = "Wait", DelayMs = 30 }] };
         var fake = new FakeWindows(); fake.Items.Add(TestWindow(exe));
         var editor = new EditModeWindow(mode, fake);
+        Check(((ComboBox)editor.FindName("PolicyInput")).Items.Cast<object>().All(choice => !choice.ToString()!.Contains("Value =")),
+            "target policies expose friendly accessible names");
+        var prerequisites = (ListBox)editor.FindName("ActionDependencies");
+        Check(prerequisites.Items.Count > 0 && prerequisites.Items.Cast<object>().All(choice => !choice.ToString()!.Contains("StepChoice") && !choice.ToString()!.Contains("Id =")),
+            "prerequisite accessible names contain friendly labels instead of internal records");
         Await(editor.CaptureLayoutAsync());
         Check(mode.Layout.Count == 0 && fake.Operations.Count == 0 && Field<ObservableCollection<EditModeWindow.LayoutRow>>(editor, "_layouts").Count == 1, "editor captures layout into isolated draft without moving real or fake windows");
         var tabs = (TabControl)editor.FindName("EditorTabs");

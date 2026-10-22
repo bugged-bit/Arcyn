@@ -1,6 +1,6 @@
 # ARCYN
 
-ARCYN is a cinematic workspace launcher for Windows 10/11 x64. Its workspace view, editors, setup and settings use Microsoft's Fluent WPF controls, Windows appearance and accent colors, Segoe UI Variable and familiar window behavior. The opening and launch sequences retain ARCYN's personality and deliberate timing. **1.6.0-rc.1 is a release candidate; live GUI approval and whole-app performance validation remain required.** See [release notes](docs/release-notes.md).
+ARCYN is a cinematic workspace launcher for Windows 10/11 x64. Its workspace view, editors, setup and settings use Microsoft's Fluent WPF controls, Windows appearance and accent colors, Segoe UI Variable and familiar window behavior. The opening and launch sequences retain ARCYN's personality and deliberate timing. **1.6.0-rc.1 is a locally tested release candidate; clean-Windows and remaining platform acceptance checks are still required before public release.** See [release notes](docs/release-notes.md).
 
 Extract the **complete standalone ZIP** to a permanent folder you can write to, then run ARCYN.exe. Keep all runtime files and `Notices` beside it; no separate .NET runtime, AutoHotkey or VC redistributable installation is required. First run opens the setup wizard. For an upgrade, close ARCYN, extract to a separate empty folder and point shortcuts there; AppData configuration stays in place. This candidate is unsigned; no public release is being published by this change.
 

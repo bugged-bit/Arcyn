@@ -11,6 +11,16 @@ public partial class MainWindow
     internal ThemeConfig CurrentTheme => _currentTheme;
     private string? _appliedThemeJson;
     private bool _runtimeStarted;
+    private void ApplyWindowBehavior(BehaviorConfig behavior)
+    {
+        Topmost = behavior.AlwaysOnTop;
+        ShowInTaskbar = !Topmost;
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (handle == 0) return;
+        var style = NativeMethods.GetWindowLong(handle, NativeMethods.GWL_EXSTYLE);
+        NativeMethods.SetWindowLong(handle, NativeMethods.GWL_EXSTYLE,
+            Topmost ? style | NativeMethods.WS_EX_TOOLWINDOW : style & ~NativeMethods.WS_EX_TOOLWINDOW);
+    }
     internal void RefreshSystemTheme() { _appliedThemeJson = null; ApplyTheme(_currentTheme); }
     private void EditTheme()
     {
@@ -19,11 +29,11 @@ public partial class MainWindow
         try
         {
             var editor = new ThemeWindow(_config.Theme, _config.Behavior,
-                (theme, behavior) => { ApplyTheme(theme); Topmost = behavior.AlwaysOnTop; },
+                (theme, behavior) => { ApplyTheme(theme); ApplyWindowBehavior(behavior); },
                 SaveThemeAsync) { Owner = this };
             editor.ShowDialog();
         }
-        finally { ApplyTheme(_config.Theme); Topmost = _config.Behavior.AlwaysOnTop; _editing = false; ResetIdle(); }
+        finally { ApplyTheme(_config.Theme); ApplyWindowBehavior(_config.Behavior); _editing = false; ResetIdle(); }
     }
     internal async Task SaveThemeAsync(ThemeConfig theme, BehaviorConfig behavior)
     {

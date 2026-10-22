@@ -19,8 +19,14 @@ public partial class EditModeWindow : Window
     private readonly ObservableCollection<ActionRow> _actions;
     private IReadOnlyList<MonitorSnapshot> _monitors = [];
     private bool _loading, _dragging, _closed;
-    private sealed record StepChoice(string Id, string Label);
-    private sealed record Option<T>(T Value, string Label);
+    private sealed record StepChoice(string Id, string Label)
+    {
+        public override string ToString() => Label;
+    }
+    private sealed record Option<T>(T Value, string Label)
+    {
+        public override string ToString() => Label;
+    }
     private static void Options<T>(ComboBox input, params (T Value, string Label)[] values)
     {
         input.SelectedValuePath = "Value"; input.DisplayMemberPath = "Label";
@@ -58,6 +64,7 @@ public partial class EditModeWindow : Window
         public string Command { get; set; } = "";
         public string Arguments { get; set; } = "";
         public string Label => string.IsNullOrWhiteSpace(Target.Cmd) ? Command : Target.DisplayLabel;
+        public override string ToString() => Label;
         public string? WorkingDirectory { get; set; }
         public string? MatchExecutable { get; set; }
         public string? MatchAppId { get; set; }
@@ -94,6 +101,7 @@ public partial class EditModeWindow : Window
         public WorkspaceActionConfig Action { get; } = action;
         public string Kind => Action is CommandActionConfig ? "command" : Action is WindowActionConfig ? "window" : "wait";
         public string KindLabel => Action switch { CommandActionConfig => "Command", WaitActionConfig => "Wait", WindowActionConfig => "Window", _ => Kind };
+        public override string ToString() => string.IsNullOrWhiteSpace(Action.Label) ? KindLabel : Action.Label;
         public string? TargetId { get => Action is WindowActionConfig w ? w.TargetId : (Action as WaitActionConfig)?.TargetId;
             set { if (Action is WindowActionConfig w) w.TargetId = value ?? ""; if (Action is WaitActionConfig wait) wait.TargetId = value; } }
         public WindowOperation Operation { get => (Action as WindowActionConfig)?.Operation ?? WindowOperation.ApplyLayout; set { if (Action is WindowActionConfig w) w.Operation = value; } }
@@ -114,6 +122,7 @@ public partial class EditModeWindow : Window
     {
         public WindowLayout Layout { get; } = layout;
         public string Label { get; } = label;
+        public override string ToString() => Label;
         public string Monitor { get => Layout.Monitor; set { Layout.Monitor = value; Notify(); } }
         public bool Focus { get => Layout.Focus; set { Layout.Focus = value; Notify(); } }
         public double X { get => Layout.X * 100; set { Layout.X = value / 100; Notify(); } }

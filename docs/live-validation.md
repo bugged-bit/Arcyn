@@ -1,48 +1,56 @@
-# ARCYN live validation — 21 October 2026
+# ARCYN live validation — 22 October 2026
 
-Status: release candidate; public release remains blocked on the unfinished live checks below. All work stays on `codex/arcyn-lightweight`, with the existing product identity and cinematic timing.
+Status: locally validated release candidate on `codex/arcyn-lightweight`. Do not merge or publish until the remaining platform and acceptance checks below are completed. Product identity, configuration compatibility and cinematic timing are preserved.
 
-## Completed live observations
+## Live GUI and workflows
 
-The actual setup window was exercised through Windows UI Automation and inspected in screenshots, using the application's `SetupWindow` in a temporary test host. Its `ConfigService` used empty user/executable directories under `.arcyn-local`, never personal AppData. This validates the setup surface, not the standalone application's entire first-run startup path.
+All workspace dispatch used an explicitly selected disposable configuration under `.arcyn-local`. The sole real target was a locally compiled, empty WinForms test window with an exact executable/title match. No personal workspace targets, window arrangements, Windows settings or real shortcuts were changed.
 
-- Native Windows title bar, system buttons, rounded window edge, dark Fluent controls, readable wrapping and accessible field names were visible at the machine's current scale.
-- Enter advanced Welcome and focused the workspace name. A missing name stayed editable with a useful error.
-- Apps, Folders and Websites screens were inspected. A pending application path survived Next; no configured target application was launched.
-- An incomplete `https://` address was rejected without leaving the website step or clearing its text.
-- Apps/Folders keyboard focus landed on the whole scrolling pane. The step transition now focuses the appropriate input or browse button. The corrected focus behavior still needs a live retest.
+- The actual self-contained launcher, workspace editor, Targets/Layout/Actions pages, settings and workspace menus were inspected through Windows Computer Use screenshots and accessibility trees. The HUD remained readable with native rounded edges and desktop material; supporting windows had Windows title bars and system buttons. Light and dark settings previews were verified live. The DWM backdrop attribute reported **3 (Acrylic)** for the launcher on Windows build 26300, with hardware rendering tier 2 at 125% scale. This does not establish appearance on other Windows versions.
+- Typography scale 1.8 remained readable with scrolling and accessible Apply/Cancel controls. Scrolling was exercised live. Narrow sizes, 1.0/1.4/1.8 text and contrast policy additionally have offscreen coverage; a physical mixed-DPI walkthrough and a screen-reader session were not performed.
+- Setup was retested using the production `SetupWindow` in a temporary host whose configuration service pointed at empty test directories. Enter advanced Welcome and focused the workspace name; Apps focused its input and Folders focused Browse. **Skip worked for Apps, Folders and Websites**, reached review with zero targets, focused Finish and saved schema 2 in the disposable directory. Earlier checks also verified missing-name and incomplete-website errors. This is not the complete standalone first-run dispatch path.
+- A real target launch reached observed window readiness. A second launch reused the same PID without creating a duplicate. Capture matched windows recorded exactly one placement for that test target, and the layout and a 15-second Wait action survived Save/reload. Relaunch exercised the saved placement before the wait. Cancel returned control with an explanation that dispatched work remains open; the target stayed open.
+- A missing executable produced a repairable failure, then returned to Ready with persistent guidance to Workspace menu → Last run details. That native menu was inspected. Computer Use could not activate the popup item outside the HUD bounds and subsequently lost its foreground binding; opening the details dialog itself was not verified live. Dialog content, ownership and appearance have automated coverage.
+- Settings preview changed the live app appearance and text scale; Cancel restored the original system theme/scale and left the saved test configuration unchanged. The final theme choices and action prerequisite names were confirmed readable in the accessibility tree. Remaining internal DataGrid row names were corrected in the same small change and covered by the final build/regression run.
+- Turning off Always on top previously left a window hidden from both taskbar and Alt+Tab. Ordinary launcher windows now appear in the taskbar; floating default behavior is preserved. The ordinary window was retrieved and activated live. Toggle/rollback behavior also has regression checks.
 
-Desktop automation repeatedly detected concurrent user input. The user chose to finish non-GUI checks first. Further GUI actions and visible performance runs are deferred; these observations are not approval of native materials or the whole application.
+The desktop walkthrough was interrupted by concurrent input in earlier sessions. A fresh isolated process resolved the stale-window input failures on this pass. All controlled test windows and helpers were closed afterward.
 
-## Changes covered by regression checks
+## Measured performance
 
-- Skip appears only on the optional Apps, Folders and Websites steps. It keeps added items and excludes unsubmitted text, including an invalid pending website. Name and final review remain required.
-- Next commits a pending application path or valid website exactly once. Invalid website input preserves the draft and step.
-- Enter invokes the visible primary action. Step transitions set useful keyboard focus.
-- Dialog appearance derives from the attached owner surface, including supporting windows.
-- Configuration format, workspace orchestration and cinematic durations are unchanged. No dependencies were added.
+Machine: Intel Core i3-1115G4, four logical processors, Windows 10.0.26300, .NET 10.0.13, hardware WPF tier 2, 125% DPI. Measurements used the self-contained application and a measurement-only startup hook; the hook blocked target dispatch and detached its rendering callback at Ready. No build/test workload ran during collection.
 
-## Automated verification
-
-- 187 regression checks passed on bundled .NET 10.0.13, including 516 offscreen interface states. Those states cover narrow scrolling, text scales 1.0/1.4/1.8, light/dark/custom colors and contrast policy. No launcher HWND or target application was created by the regression runner.
-- Six XAML documents and nine PowerShell scripts passed parsing/resource checks; 14 isolated shortcut preflight cases passed without creating real shortcuts or registering a hotkey.
-- The standalone package passed runtime, product metadata, icon, notice, configuration-schema and development-artifact checks. Its new validation report is included with the documentation.
-- Both native-helper self-test callers now wait for its exit code. A real disposable WinExe returning 42 reproduced the previous false pass and verified rejection after the fix. The artifact regression script also injects a nonzero helper result; all nine negative artifact cases pass.
-- Local restore reported NU1900 because NuGet vulnerability metadata was unreachable. The application has no NuGet package dependencies; this warning is not a successful online vulnerability audit.
-
-The final extracted-ZIP checks and branch CI results are recorded in the completion report. Runtime performance numbers are deliberately absent until live measurement is possible.
-
-## Release gates still open
-
-| Gate | Required evidence |
+| Measurement | Observed result |
 | --- | --- |
-| Final GUI walkthrough | Retest the updated setup, including Skip, then exercise the HUD, settings, editors, menus, dialogs and errors in the final standalone build. |
-| Windows materials and accessibility | Inspect actual Mica/Acrylic and fallbacks, shadows, light/dark appearance, keyboard traversal and assistive navigation. Offscreen renders cannot establish native desktop glass quality. |
-| Real orchestration | Use dedicated disposable target windows to verify launch/reuse, capture/restore, actions, cancellation and recovery without touching personal windows. |
-| Real performance | Measure process-start-to-Ready, idle CPU/RAM, GPU usage, frame presentation/cadence, handles, repeated launches, a sustained session and default zero-background exit. No clean live performance sample has been obtained during this pass. |
-| Hotkey lifecycle | Register a temporary unused combination against an isolated stub, verify activation/conflict/cleanup, then confirm no helper remains. |
-| Clean environment | Exercise the extracted standalone distribution and shortcut creation in a disposable Windows environment. Do not change the host installation or actual shortcuts. |
+| First WPF render callback from process start | 2.02 s initial; 1.41–1.57 s in two warm runs |
+| Ready from process start | 6.45 s initial; 5.95–5.96 s warm, including the preserved cinematic sequence |
+| Boot callback interval p95 | 33.33 ms across three startup runs; 17.24 ms in the later sustained run |
+| Settled idle CPU | 312.5 ms CPU over 21.20 s: 1.47% of one logical processor / **0.37% total machine CPU** |
+| Settled private memory / working set | 86.09–86.35 MiB / 158.60–159.15 MiB |
+| Settled handles | 547 → 540 |
+| ARCYN GPU busiest engine | 0.031–0.068% in the settled interval; excludes shared DWM cost |
+| Repeated launch/close | Three short runs plus one 38-second Ready interval; all four exited with status 0 |
+| After closing | No ARCYN, ARCYN.Hotkey or disposable Target process remained; default mode has no resident helper |
 
-The existing package checks verify bundled runtime files, metadata, icons, notices, example/schema JSON and exclusion of personal configuration/development files. They do not prove first-run installation UX, SmartScreen/signing reputation or the remaining live gates.
+The whole Ready interval includes post-startup/JIT activity and consumes more CPU than the settled interval; both are retained in the [raw measurement report](performance/20261022-live-validation.json). Initial means first in this session, not reboot/cold-cache startup. Callback intervals do **not** measure actual presented frames. This short run cannot prove multi-hour leak freedom, and there is no comparable pre-change live baseline. No unsupported performance improvement claim is made.
 
-Windows integration is judged against [Microsoft's Mica guidance](https://learn.microsoft.com/en-us/windows/apps/design/style/mica) and [FluentFlyout's native desktop integration](https://github.com/unchihugo/FluentFlyout). No visual parity claim is made from source or offscreen renders.
+## Hotkey, distribution and regression checks
+
+- An isolated copy of the native helper registered **Ctrl+Alt+Shift+Q**, beside an ARCYN-named marker stub. The combination was available before testing, a competing registration failed with Windows error 1409 while the helper owned it, one real keyboard activation wrote one marker, `--stop` exited successfully, and a fresh registration succeeded afterward. No helper existed before testing or remained afterward. The helper snapshot used 7.73 MiB working set, 1.32 MiB private memory and 90 handles.
+- A shell shortcut round-tripped executable, arguments and working directory inside the test directory, with the product icon selected. Desktop/Start Menu/Startup shortcuts were untouched. Fourteen isolated shortcut-script preflight cases passed.
+- **192 regression checks** and **516 offscreen interface states** passed on the final source. Six XAML documents and nine PowerShell scripts passed parsing/resource checks. Configuration migration, atomic saves, external-edit protection, add/edit/delete, discovery, ordering, matching, layout geometry, action dependencies, command review, cancellation and ownership safety are included.
+- The standalone ZIP includes its .NET/WPF runtime, product icon, metadata, notices, schema, example and documentation. Package validation rejects personal configuration, development artifacts and incorrect runtime/metadata; all nine negative artifact cases passed on the extracted final ZIP. Native-helper self-tests are awaited, so a nonzero result blocks packaging.
+- The measurement hook now records Ready/end resources and the actual native backdrop attribute, and omits an empty pre-phase label that prevented PowerShell from reading its JSON. It is excluded from the product distribution.
+- Local restore reported NU1900 because online NuGet vulnerability metadata was unreachable. ARCYN has no NuGet package dependencies; this is not a successful online vulnerability audit. Final branch CI is checked separately against the pushed commit.
+
+## Remaining release gates
+
+| Gate | Remaining evidence |
+| --- | --- |
+| Clean Windows first run | Windows Sandbox is unavailable. Fresh ZIP extraction and bundled-runtime checks passed, but a clean Windows VM must still exercise standalone onboarding and the actual shortcut setup script. |
+| Windows/platform acceptance | Physical mixed-DPI/multiple-monitor behavior, Windows 10 opaque fallback, live Windows contrast/reduced-motion settings and assistive navigation need dedicated acceptance testing without changing this user's setup. |
+| Presentation and endurance | Actual GPU frame presentation/pacing and a longer interactive leak/handle soak remain unmeasured. The short settled sample is encouraging, not a substitute. |
+| Dialog completion | Open Last run details through a human or functioning popup automation and verify keyboard return/focus. The automation failure is not evidence of an application crash; the tested process exited normally. |
+| Distribution trust | Executables are unsigned. Signing/SmartScreen reputation and download/install trust have not been validated. |
+
+No master merge or public release was performed. Native integration was judged using [Microsoft's Mica guidance](https://learn.microsoft.com/en-us/windows/apps/design/style/mica) and [FluentFlyout](https://github.com/unchihugo/FluentFlyout), while retaining ARCYN's existing design. No parity claim is made for untested platform combinations.

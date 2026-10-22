@@ -5,6 +5,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Input;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 // Measurement-only startup hook; never included in the application package.
 internal static class StartupHook
@@ -19,6 +21,9 @@ internal static class StartupHook
     private static double? _readyEndAt, _readyEndCpu;
     private static double _ageAtHook;
     private static double _dpiX = 1, _dpiY = 1;
+    private static object? _readyResources, _endResources;
+    private static int? _nativeBackdrop;
+    [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(nint window, int attribute, out int value, int size);
     private static string[] _labels = [];
     private static Window? _window;
     private static TextBlock? _phase;
@@ -46,13 +51,15 @@ internal static class StartupHook
         if (window == null) return;
         if (_window == null) { _window = window; window.Closed += (_, _) => { EndReady(); CompositionTarget.Rendering -= Render; InputManager.Current.PreProcessInput -= BlockInput; if (_phase != null) PhaseDescriptor.RemoveValueChanged(_phase, PhaseChanged); _phase = null; _window = null; }; }
         var dpi = VisualTreeHelper.GetDpi(window); _dpiX = dpi.DpiScaleX; _dpiY = dpi.DpiScaleY;
-        if (window.FindName("PhaseLabel") is TextBlock phase && !Phases.ContainsKey(phase.Text))
+        if (window.FindName("PhaseLabel") is TextBlock phase && !string.IsNullOrEmpty(phase.Text) && !Phases.ContainsKey(phase.Text))
         {
             Phases[phase.Text] = Clock.Elapsed.TotalMilliseconds;
             if (phase.Text == "RDY")
             {
                 using var process = Process.GetCurrentProcess();
                 _readyCpu = process.TotalProcessorTime.TotalMilliseconds;
+                _readyResources = Resources(process);
+                if (DwmGetWindowAttribute(new WindowInteropHelper(window).Handle, 38, out var backdrop, sizeof(int)) == 0) _nativeBackdrop = backdrop;
                 _readyAt = Clock.Elapsed.TotalMilliseconds;
                 if (window.FindName("DashboardGrid") is System.Windows.Controls.Panel panel)
                     _labels = panel.Children.OfType<ContentControl>()
@@ -72,7 +79,10 @@ internal static class StartupHook
         if (_readyAt <= 0 || _readyEndAt != null) return;
         using var process = Process.GetCurrentProcess();
         _readyEndAt = Clock.Elapsed.TotalMilliseconds; _readyEndCpu = process.TotalProcessorTime.TotalMilliseconds;
+        _endResources = Resources(process);
     }
+    private static object Resources(Process process) => new
+    { WorkingSetBytes = process.WorkingSet64, PrivateBytes = process.PrivateMemorySize64, Handles = process.HandleCount };
 
     private static void Save()
     {
@@ -91,6 +101,8 @@ internal static class StartupHook
                 CpuMs = process.TotalProcessorTime.TotalMilliseconds,
                 ReadyCpuMs = _readyAt > 0 ? (_readyEndCpu ?? process.TotalProcessorTime.TotalMilliseconds) - _readyCpu : (double?)null,
                 ReadyDurationMs = _readyAt > 0 ? (_readyEndAt ?? Clock.Elapsed.TotalMilliseconds) - _readyAt : (double?)null,
+                ReadyResources = _readyResources, EndReadyResources = _endResources,
+                NativeBackdropAttribute = _nativeBackdrop,
                 BootFrameCallbackP95Ms = Intervals.Count > 0 ? Intervals[(int)((Intervals.Count - 1) * .95)] : (double?)null,
                 PeakWorkingSetBytes = process.PeakWorkingSet64,
                 RenderTier = RenderCapability.Tier >> 16
