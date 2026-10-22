@@ -1,48 +1,52 @@
 # Contributing to ARCYN
 
-Thanks for your interest! ARCYN is a lightweight project — contributions are welcome but keep it simple.
+Small, focused contributions are welcome: a reproducible bug report, a clearer instruction, an accessibility fix, or a well-tested change to a workspace workflow.
 
-## Getting started
+## Run the project
 
-1. Fork the repo
-2. Create a branch: `git checkout -b feature/your-feature`
-3. Make changes
-4. Build: `cd ARCYN/ARCYN.UI && dotnet build -c Release`
-5. Submit a PR
+Use Windows x64 and the .NET SDK selected by [global.json](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/global.json). The current candidate is developed on `codex/arcyn-lightweight`; `master` still contains the previous version.
 
-## Code conventions
+From a clone of the repository:
 
-- **Language**: C#, .NET 10 LTS, WPF (SDK pinned in global.json)
-- **Style**: Follow existing code — brace positions, naming, patterns
-- **No XML comments** — only `//` when the "why" isn't obvious
-- **No personal paths** — all config must be user-defined in `arcyn.json`
-- **One concern per file** — services for logic, XAML for UI, models for data
-
-## Project structure
-
-```
-ARCYN.UI/
-  Models/        — Data models (no UI code)
-  Services/      — Business logic (no direct UI references)
-  Styles/        — XAML themes and templates
-  Assets/        — Fonts and resources
-  *.xaml(.cs)    — Windows and code-behind
+```powershell
+git switch codex/arcyn-lightweight
+dotnet build ARCYN/ARCYN.UI/ARCYN.UI.csproj -c Release
 ```
 
-## Pull request guidelines
+Use a disposable configuration when running the application. `--config` must point to an existing file; copy the bundled example and replace its targets before launching anything. Don't test against personal workspaces or rearrange someone else's desktop.
 
-- One feature/fix per PR
-- Base changes on master; preserve local work before integrating upstream
-- Ensure `dotnet build -c Release` passes with 0 errors, 0 warnings
-- No breaking changes to `arcyn.json` schema without migration support
-- Run `./ARCYN/tools/Test-Arcyn.ps1` from the repository root (headless, with the bundled servicing runtime)
-- Publish the complete artifact with `./ARCYN/tools/Publish-Arcyn.ps1`; distributing only ARCYN.exe is insufficient
-- Run visible smoke/performance checks only when the desktop is available; keep cinematic timing unchanged
+## Check a change
 
-## Reporting issues
+Run these from the repository root:
 
-Use the [issue templates](.github/ISSUE_TEMPLATE/) — include:
-- ArcYN version / build date
-- Steps to reproduce
-- Expected vs actual behavior
-- Config file (redact personal paths)
+```powershell
+./ARCYN/tools/Test-Arcyn.ps1
+./ARCYN/tools/Test-Scripts.ps1
+```
+
+The regression runner renders interface states offscreen and opens no application windows or targets. Visible tests require an available desktop and safe test applications. Preserve the cinematic timings.
+
+To build the complete standalone ZIP, install the Visual Studio C++ build tools for the optional native hotkey helper, then use a new output directory:
+
+```powershell
+./ARCYN/tools/Publish-Arcyn.ps1 -OutputDirectory .arcyn-local/package-check
+./ARCYN/tools/Test-ArtifactMetadata.ps1 -Directory .arcyn-local/package-check-release
+```
+
+Publishing here builds a local package; it does not create a GitHub release. Distributing only `ARCYN.exe` is insufficient. For runtime servicing, update the bundled runtime and its notices together.
+
+## Send a contribution
+
+Fork the repository and create a branch from the version you're changing. For the 1.6 candidate, target `codex/arcyn-lightweight`. Keep the pull request focused, describe the user-visible result, and include the checks you ran and anything you couldn't verify.
+
+Follow the surrounding C#/XAML style and reuse existing components. Preserve configuration compatibility, validation, command review, cancellation, and user data. Use comments to explain a decision rather than restating the code. Don't commit personal configuration, machine-specific paths, build outputs, or session transcripts.
+
+Report the Windows version, ARCYN version, display scale, and steps to reproduce a bug. Logs are at `%LOCALAPPDATA%\ARCYN\arcyn.log`. Redact personal paths and command arguments before sharing logs or configuration. The [issue templates](https://github.com/bugged-bit/Arcyn/issues/new/choose) provide a starting point.
+
+## Project references
+
+- [User guide](docs/guide.md): configuration, shortcuts, recovery, and troubleshooting.
+- [Live validation](docs/live-validation.md) and [implementation evidence](docs/implementation-validation.md): completed checks and their limits.
+- [Redistribution notices](https://github.com/bugged-bit/Arcyn/tree/codex/arcyn-lightweight/ARCYN/Notices): fonts, Fluent contributions, and bundled runtime licenses.
+
+Earlier design handoffs and session notes remain in Git history. The validated .NET 8 checkpoint is tagged `arcyn-net8-validated`; build outputs are disposable, user configurations are not.

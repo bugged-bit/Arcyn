@@ -21,11 +21,12 @@ What actually happens.
 
 **Environment**
 - Windows version: [e.g. 11 23H2]
-- ARCYN version: [from HUD header or build date]
-- .NET version: `dotnet --info`
+- ARCYN version: [e.g. 1.6.0-rc.1; include the build/run link if available]
+- Display scale and monitor setup: [e.g. 125%, one monitor]
+- Download: [standalone ZIP, test artifact, or source build]
 
 **Screenshots**
 If applicable.
 
 **Logs**
-Check `%APPDATA%\ARCYN\arcyn_launch.log` or the exe directory for logs.
+Check `%LOCALAPPDATA%\ARCYN\arcyn.log`. Redact personal paths and command arguments before sharing logs or configuration.

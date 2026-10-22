@@ -1,77 +1,54 @@
 # ARCYN
 
-ARCYN is a cinematic workspace launcher for Windows 10/11 x64. Its workspace view, editors, setup and settings use Microsoft's Fluent WPF controls, Windows appearance and accent colors, Segoe UI Variable and familiar window behavior. The opening and launch sequences retain ARCYN's personality and deliberate timing. **1.6.0-rc.1 is a locally tested release candidate; clean-Windows and remaining platform acceptance checks are still required before public release.** See [release notes](docs/release-notes.md).
+**A Windows workspace launcher for the apps, folders, and websites you use together.**
 
-Extract the **complete standalone ZIP** to a permanent folder you can write to, then run ARCYN.exe. Keep all runtime files and `Notices` beside it; no separate .NET runtime, AutoHotkey or VC redistributable installation is required. First run opens the setup wizard. For an upgrade, close ARCYN, extract to a separate empty folder and point shortcuts there; AppData configuration stays in place. This candidate is unsigned; no public release is being published by this change.
+[![ARCYN's workspace view, with Code, Research, and Writing workspaces ready to open](docs/images/workspaces.png)](docs/images/workspaces.png)
 
-Setup's Apps, Folders and Websites steps each offer **Skip**. Items already added are kept; pending text is left out when skipping. **Next** adds a pending app path or valid website address before continuing. Enter activates the primary action, and each step focuses its relevant control.
+*ARCYN 1.6 candidate. Interface previews are rendered from the actual application with sample content; native desktop materials are not shown.*
 
-See the [live validation status and remaining release gates](docs/live-validation.md).
+## Start with your workspace
 
-Default mode leaves **zero ARCYN processes** after closing. Ordinary Desktop, Start-menu and pinned Windows shortcuts need no resident ARCYN helper.
+Your editor, a project folder, a few reference pages. Save them as a workspace, then bring them together with a click or a number key. Keep another workspace for research, writing, or whatever comes next.
 
-![ARCYN HUD — offscreen opaque render](docs/previews/hud-offscreen.png)
+- **Open things together.** Group applications, folders, files, and websites around a task.
+- **Use what's already open.** ARCYN can reuse a matching application window instead of launching another copy. You can also choose to always launch a new one.
+- **Put windows in place.** Capture a layout, adjust it visually, and restore it when you open that workspace.
 
-Actual WPF interface rendered offscreen with synthetic workspaces and opaque surfaces. This does not show native desktop glass. [Layout editor](docs/previews/layout-offscreen.png) · [Appearance](docs/previews/appearance-offscreen.png).
+A cinematic opening leads into a keyboard-friendly workspace list, with familiar Windows controls throughout.
 
-- 1–9 launch a workspace; arrows select; Enter launches; Esc cancels or closes.
-- New workspace and Settings are visible on the workspace view. F2 edits a workspace; Ctrl+N adds one. Use a card's ⋯ menu or right-click to edit, duplicate, reorder or delete it. Shift+F10 / the context-menu key opens actions for the focused card.
-- Ctrl+, opens Settings. General, Appearance and Motion group everyday preferences and advanced customization. Appearance follows Windows by default, with Light, Dark and Custom alternatives. Windows accent is the default; custom accent/color/font values remain saved and editable. Windows contrast policy overrides visual preferences without rewriting them. Native materials have an intentional opaque fallback.
-- Live previews are coalesced while the editor is open. Apply saves; Cancel restores. Import/export uses visual JSON only.
-- Reduced effects preserve boot/launch durations and choreography. Cinematic ambient effects stop in the workspace view; disabled idle closing also stops its timer.
-- The workspace editor groups **Targets**, **Layout** and **Actions**. Targets keep exact arguments, working directories, browsing and on-demand discovery. Selected-item controls expose instance policies, window selectors, readiness, timeout and prerequisites.
-- Applications default to **Reuse or launch**; **Reuse only** and **Launch new** are explicit alternatives. Matching uses executable/application identity, optionally narrowed by window class/title. Ambiguous or inaccessible matches report a failure instead of duplicating blindly. Reuse does not send new arguments or open a new document in an existing window. Aliases/brokers may require an explicit matching executable selected from a running window.
-- **Capture matched windows** reads window arrangements into an unsaved editor draft. The monitor map and numeric table edit saved intent without moving windows. Restore scales work-area-relative geometry, retains show state and uses the primary display if a saved monitor is absent; fallback is reported without changing the saved preference.
-- Typed window operations, fixed/window waits and explicitly reviewed commands form small workflows. Dependencies run deterministically; failed prerequisites skip dependents while independent steps continue. Application readiness requires a unique responsive window by default (30-second timeout). This proves window availability, not that a document or network task has finished loading. URLs/files/folders report **Dispatched** unless matching window evidence is configured.
-- Right-click **Windows** to attach running windows, reapply a layout, minimize managed windows, restore windows ARCYN minimized, or release ownership. Switching leaves outgoing windows alone. Ownership lasts only for the current ARCYN process; reopening requires fresh attachment. ARCYN never closes applications or discards unsaved work.
-- Commands and recognized script/interpreter targets require review on every run; configuration cannot grant approval. Elevated commands additionally request UAC. Timeouts/cancellation stop further orchestration, leave dispatched work running, and retain uncertain dispatches to prevent silent retry. **Last run details** keeps failures and focus/placement warnings accessible; automatic closing requires a successful run.
+[![ARCYN's layout editor showing a saved arrangement for an editor and project files](docs/images/layout.png)](docs/images/layout.png)
 
-Run `scripts/Setup-Shortcuts.ps1` to create Desktop and Start-menu shortcuts. This does not start a process or install a helper. Windows also supports assigning Ctrl+Alt combinations in shortcut Properties.
+*The layout editor changes your saved arrangement. Editing the preview doesn't move your windows.*
 
-For dependable Alt+Shift+D, optionally run `ARCYN.Hotkey.exe` beside ARCYN.exe. It uses native RegisterHotKey and a blocking message wait. Change the combination with `--hotkey CTRL+ALT+D`; stop with `--stop`. Conflicts are reported. Win combinations and F12 are reserved. To enable it at the next sign-in, run `scripts/Setup-Shortcuts.ps1 -EnableHotkeyHelper`; remove it with `-DisableHotkeyHelper`. It is never enabled automatically.
+## Try the 1.6 candidate
 
-Configuration uses one selected path for both reads and saves:
+**1.6.0-rc.1 is a test build.** Clean-install and platform acceptance checks are still pending. The [older `.exe` release](https://github.com/bugged-bit/Arcyn/releases/tag/app) is a previous version, not this candidate.
 
-1. Explicit `--config "path/to/arcyn.json"`.
-2. Existing `%APPDATA%\ARCYN\arcyn.json`.
-3. Existing arcyn.json beside the executable.
-4. Legacy protocoll.json beside the executable, in its ARCYN child folder or its parent folder. Legacy data stays intact; subsequent edits save to AppData unless explicitly selected.
+Public releases will be listed on [Releases](https://github.com/bugged-bit/Arcyn/releases). For now, testing builds are available through GitHub Actions: **sign-in is required, artifacts expire, and availability isn't guaranteed.**
 
-An explicit path must already exist. A new installation saves to AppData. The current working directory does not choose a configuration. `--config-path` prints the selected save location. Atomic saves retain the previous file as .bak. Malformed or newer-schema files are preserved and reported, never replaced by setup defaults. Copy a known-good .bak over the damaged file after keeping a copy of the damaged file.
+1. Open [candidate builds](https://github.com/bugged-bit/Arcyn/actions/workflows/dotnet-build.yml?query=branch%3Acodex%2Farcyn-lightweight) and select a successful run for `codex/arcyn-lightweight`.
+2. Download its **ARCYN-win-x64** artifact. Extract the download, then extract the standalone ZIP inside it to a permanent folder you can write to.
+3. Run **ARCYN.exe**. Name your first workspace and add the apps, folders, and websites you want. Optional setup steps have **Skip**.
+4. Choose the workspace or press its number to open it.
 
-Schema 1, legacy workspace arrays and upstream apps/websites/folders remain readable. Ordinary saves write schema 2 with stable IDs, layouts and typed actions; earlier releases reject schema 2. Loading alone does not rewrite configuration. Prefer ordered targets for new work:
+Keep the extracted files together. The ZIP includes its runtime; no separate .NET installation is needed. The build is unsigned, so Windows may warn or block it. Only run a download whose source you trust. [Download guidance and release status →](docs/guide.md#downloads-and-windows-warnings)
 
-Saved workspaces use `label` and `subtitle`. The older `name` and `description` aliases remain readable; if both forms occur, their values must agree.
+## Make it yours
 
-```json
-{
-  "schema_version": 2,
-  "modes": [
-    {
-      "label": "CODE",
-      "subtitle": "Development workspace",
-      "type": "code",
-      "session": "SES 089",
-      "state": "Ready to build",
-      "targets": [
-        { "cmd": "wt.exe", "args": [] },
-        { "cmd": "https://github.com", "args": [] }
-      ]
-    }
-  ]
-}
-```
-Unavailable targets stay saved and can be repaired. Existing literal paths take precedence over command-line parsing. Ambiguous legacy strings require editing; shell metacharacters are not interpreted as a shell script. A command that needs an interpreter must select its executable explicitly. Dispatched targets require a distinct matching window for window readiness; existing browser tabs and document readiness are not inferred. [The example](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/ARCYN/example.arcyn.json) shows typed targets and waits; [the schema](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/ARCYN/arcyn.schema.json) also describes selectors, commands and layouts.
+ARCYN targets **Windows 10/11 x64**. Appearance follows Windows by default, with light, dark, accent, text-size, and motion settings available. Ordinary shortcuts work without a resident helper; a global hotkey is optional.
 
-Use `ARCYN --setup` in a terminal for line-based setup (appends to existing workspaces; EOF exits). Other flags: --help, --version, --config-path, --config. Duplicate startup activates the existing window. Logs are bounded and nonfatal under %LOCALAPPDATA%\ARCYN.
+| Key | Action |
+| --- | --- |
+| `1`–`9` | Open a workspace |
+| Arrow keys, `Enter` | Select and open |
+| `Esc` | Cancel a launch or close ARCYN |
+| `F2` / `Ctrl+N` | Edit / create a workspace |
+| `Ctrl+,` | Open settings |
 
-Development requires the SDK pinned in global.json. C++ build tools are needed only to build the optional native helper. From the repository root:
-```powershell
-./ARCYN/tools/Test-Arcyn.ps1
-./ARCYN/tools/Publish-Arcyn.ps1
-```
-The regression runner opens no windows or target applications. Publishing creates and checks a complete standalone ZIP. CI runs these commands for master, codex/arcyn-lightweight and pull requests targeting master.
+[User guide](docs/guide.md) · [Release notes and testing status](docs/release-notes.md)
 
-See [validation and performance notes](docs/implementation-validation.md). WPF remains the framework; Windows interop stays in the existing services. Linux support and a framework migration are outside this change.
+## Open source
 
-The standalone artifact bundles .NET 10 LTS runtime 10.0.13; the development SDK is pinned to 10.0.402. Updating a self-contained release requires republishing its bundled runtime. The known-good .NET 8 checkpoint is Git tag `arcyn-net8-validated` (`01b75e9`), with one retained local release ZIP. Use Git for source recovery; build outputs are disposable. Keep user configuration and valuable uncommitted files outside cleanup operations.
+Found a rough edge? [Report a problem](https://github.com/bugged-bit/Arcyn/issues/new?template=bug_report.md) or [suggest an improvement](https://github.com/bugged-bit/Arcyn/issues/new?template=feature_request.md). Contributions to code, documentation, and testing are welcome; start with [contributing](CONTRIBUTING.md).
+
+ARCYN is [MIT licensed](LICENSE), built with .NET and WPF, and uses Microsoft's Fluent controls. [Third-party credits and licenses](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/ARCYN/Notices/README.txt) accompany the application.
