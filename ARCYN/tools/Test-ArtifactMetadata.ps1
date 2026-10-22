@@ -25,6 +25,24 @@ try {
     catch { if ($_.Exception.Message -notlike 'Incorrect ARCYN product/version metadata*') { throw } }
 }
 finally { [IO.File]::WriteAllBytes($executable, $originalExe) }
+$icon = [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot '..\ARCYN.UI\Assets\ARCYN.ico'))
+$frameOffset = [BitConverter]::ToInt32($icon, 18)
+$frame = $icon[$frameOffset..($frameOffset + 31)]
+$location = -1
+for ($i = 0; $i -lt $originalExe.Length - $frame.Length; $i++) {
+    if ($originalExe[$i] -ne $frame[0]) { continue }
+    $matches = $true
+    for ($j = 1; $j -lt $frame.Length; $j++) { if ($originalExe[$i + $j] -ne $frame[$j]) { $matches = $false; break } }
+    if ($matches) { $location = $i; break }
+}
+if ($location -lt 0) { throw 'Icon corruption fixture could not locate the first embedded frame.' }
+try {
+    $changedExe = $originalExe.Clone(); $changedExe[$location + 32] = $changedExe[$location + 32] -bxor 1
+    [IO.File]::WriteAllBytes($executable, $changedExe)
+    try { & (Join-Path $PSScriptRoot 'Test-Artifact.ps1') -Directory $Directory; throw 'Changed icon accepted.' }
+    catch { if ($_.Exception.Message -ne 'Missing or changed ARCYN icon frames: ARCYN.exe') { throw } }
+}
+finally { [IO.File]::WriteAllBytes($executable, $originalExe) }
 $notice = Join-Path $Directory 'Notices\JetBrains-Mono-2.304.txt'
 $originalNotice = [IO.File]::ReadAllBytes($notice)
 try {
@@ -57,4 +75,4 @@ finally { [IO.File]::WriteAllBytes($fluent, $originalFluent) }
     }
     catch { if ($_.Exception.Message -ne 'Native helper self-test failed.') { throw } }
 }
-Write-Output 'Nine invalid runtime/product/notice/development-artifact/helper cases rejected; original bytes restored.'
+Write-Output 'Ten invalid runtime/product/icon/notice/development-artifact/helper cases rejected; original bytes restored.'

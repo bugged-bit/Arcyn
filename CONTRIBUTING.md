@@ -45,6 +45,20 @@ Report the Windows version, ARCYN version, display scale, and steps to reproduce
 
 ## Project references
 
+### Identity assets
+
+The editable icon master is [ARCYN.svg](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/ARCYN/ARCYN.UI/Assets/ARCYN.svg). It includes separate optical drawings for 16, 24, and 32 pixels; preserve their wider gaps, pixel alignment, and contrast edges. The launcher, dialogs, native helper, and shortcuts all use its exported `ARCYN.ico`; don't edit the ICO independently. The editable [social composition](docs/images/social-preview.svg) links the exported mark and an untouched production WPF render. Keep sample content free of personal information.
+
+To regenerate the ICO, repository PNGs, size proof, and social preview, use Node.js with `sharp` available on `NODE_PATH`, then run:
+
+```powershell
+node ARCYN/tools/Export-Identity.cjs
+```
+
+This optional artwork tool is independent of application builds. Inspect [the size proof](docs/images/icon-sizes.png) at 100% on light and dark backgrounds, and the [social preview](docs/images/social-preview.png) at full size and as a thumbnail. Rebuild the full ZIP after changing an icon. Upload the social PNG through GitHub's repository settings when publishing the presentation; committing the file alone doesn't change GitHub's sharing image.
+
+### Engineering references
+
 - [User guide](docs/guide.md): configuration, shortcuts, recovery, and troubleshooting.
 - [Live validation](docs/live-validation.md) and [implementation evidence](docs/implementation-validation.md): completed checks and their limits.
 - [Redistribution notices](https://github.com/bugged-bit/Arcyn/tree/codex/arcyn-lightweight/ARCYN/Notices): fonts, Fluent contributions, and bundled runtime licenses.

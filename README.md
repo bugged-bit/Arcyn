@@ -1,10 +1,10 @@
-# ARCYN
+# <img src="docs/images/arcyn-icon.png" width="40" height="40" alt="ARCYN icon"> ARCYN
 
 **A Windows workspace launcher for the apps, folders, and websites you use together.**
 
 [![ARCYN's workspace view, with Code, Research, and Writing workspaces ready to open](docs/images/workspaces.png)](docs/images/workspaces.png)
 
-*ARCYN 1.6 candidate. Interface previews are rendered from the actual application with sample content; native desktop materials are not shown.*
+*Workspaces for coding, research, and writing.*
 
 ## Start with your workspace
 

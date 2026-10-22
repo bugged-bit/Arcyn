@@ -90,6 +90,10 @@ internal static partial class Program
             LaunchChecks().GetAwaiter().GetResult();
             OrchestrationChecks(directory).GetAwaiter().GetResult();
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            using (var icon = Application.GetResourceStream(new Uri("pack://application:,,,/ARCYN;component/Assets/ARCYN.ico"))!.Stream)
+                Check(System.Windows.Media.Imaging.BitmapDecoder.Create(icon, System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                    System.Windows.Media.Imaging.BitmapCacheOption.OnLoad).Frames.Select(frame => frame.PixelWidth).SequenceEqual(new[] { 16,20,24,32,40,48,64,96,128,256 }),
+                    "shared window icon decodes all ten Windows icon sizes from the application resource");
             SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
             using var bindingOutput = new StringWriter();
             using var bindingTrace = new TextWriterTraceListener(bindingOutput);

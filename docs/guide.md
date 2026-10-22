@@ -2,6 +2,8 @@
 
 [← Back to ARCYN](../README.md)
 
+The interface images use ARCYN's production WPF controls with sample workspaces, rendered offscreen without opening applications. They show the real interface; desktop-dependent materials are not represented.
+
 ## Downloads and Windows warnings
 
 **1.6.0-rc.1 is an unsigned test build**, available from successful runs of the [candidate build workflow](https://github.com/bugged-bit/Arcyn/actions/workflows/dotnet-build.yml?query=branch%3Acodex%2Farcyn-lightweight). GitHub requires sign-in to download artifacts. They expire and may be unavailable; they are not a permanent release channel. If no artifact is available, wait for a new build or follow the [build instructions](../CONTRIBUTING.md#run-the-project).

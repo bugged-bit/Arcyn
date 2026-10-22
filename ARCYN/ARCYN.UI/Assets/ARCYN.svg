@@ -1,1 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect x="32" y="32" width="960" height="960" rx="236" fill="#171C26" stroke="#3E495C" stroke-width="8"/><path d="M258 746 457 288H567L766 746M342 574H681" fill="none" stroke="#E8EEF5" stroke-width="76" stroke-linejoin="round"/><rect x="464" y="654" width="96" height="196" rx="48" fill="#F08080"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>ARCYN</title>
+  <desc>Opposing workspace panes with a shared diagonal opening. Optically adjusted drawings for 16, 24, and 32 pixels are included.</desc>
+  <defs>
+    <symbol id="icon-64" viewBox="0 0 64 64">
+      <g stroke="#202229" stroke-width="1.25" stroke-linejoin="round">
+        <path d="M10 6h28a4 4 0 0 1 4 4v8H28L18 28v14h-8a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4Z" fill="#EF8076"/>
+        <path d="M54 58H26a4 4 0 0 1-4-4v-8h14l10-10V22h8a4 4 0 0 1 4 4v28a4 4 0 0 1-4 4Z" fill="#F4F0EA"/>
+      </g>
+    </symbol>
+    <symbol id="icon-32" viewBox="0 0 32 32">
+      <g stroke="#202229" stroke-width="1" stroke-linejoin="round">
+        <path d="M5.5 3.5h13a2 2 0 0 1 2 2v3h-6l-5 5v7h-4a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" fill="#EF8076"/>
+        <path d="M26.5 28.5h-13a2 2 0 0 1-2-2v-3h6l5-5v-7h4a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2Z" fill="#F4F0EA"/>
+      </g>
+    </symbol>
+    <symbol id="icon-24" viewBox="0 0 24 24">
+      <g stroke="#202229" stroke-width="1" stroke-linejoin="round">
+        <path d="M4 2.5h9a1.5 1.5 0 0 1 1.5 1.5v3.5h-4l-3 3v4H4A1.5 1.5 0 0 1 2.5 13V4A1.5 1.5 0 0 1 4 2.5Z" fill="#EF8076"/>
+        <path d="M20 21.5h-9A1.5 1.5 0 0 1 9.5 20v-3.5h4l3-3v-4H20A1.5 1.5 0 0 1 21.5 11v9a1.5 1.5 0 0 1-1.5 1.5Z" fill="#F4F0EA"/>
+      </g>
+    </symbol>
+    <symbol id="icon-16" viewBox="0 0 16 16">
+      <g stroke="#202229" stroke-width="1" stroke-linejoin="round">
+        <path d="M2.5 1.5h6a1 1 0 0 1 1 1v2h-3l-2 2v3h-2a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Z" fill="#EF8076"/>
+        <path d="M13.5 14.5h-6a1 1 0 0 1-1-1v-2h3l2-2v-3h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1Z" fill="#F4F0EA"/>
+      </g>
+    </symbol>
+  </defs>
+  <use href="#icon-64" width="64" height="64"/>
+</svg>
