@@ -20,7 +20,7 @@ $icon = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\ARCYN.UI\Assets\ARCY
 FILEVERSION $($version.Replace('.',','))
 PRODUCTVERSION $($version.Replace('.',','))
 FILEFLAGSMASK 0x3fL
-FILEFLAGS VS_FF_PRERELEASE
+FILEFLAGS 0x0L
 FILEOS VOS_NT_WINDOWS32
 FILETYPE VFT_APP
 BEGIN

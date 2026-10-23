@@ -53,14 +53,17 @@ $icon = [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot '..\ARCYN.UI\Assets\ARC
 foreach ($binary in @('ARCYN.exe', 'ARCYN.dll', 'ARCYN.Hotkey.exe')) {
     $path = [IO.Path]::GetFullPath((Join-Path $Directory $binary))
     $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($path)
-    if ($version.ProductName -ne 'ARCYN' -or $version.FileVersion -ne $metadata.FileVersion -or $version.ProductVersion -notlike ($metadata.Version + '*')) { throw "Incorrect ARCYN product/version metadata: $binary" }
+    if ($version.ProductName -cne 'ARCYN' -or $version.FileVersion -cne $metadata.FileVersion -or $version.ProductVersion -cne $metadata.Version -or
+        "$($version.ProductMajorPart).$($version.ProductMinorPart).$($version.ProductBuildPart).$($version.ProductPrivatePart)" -ne $metadata.AssemblyVersion) { throw "Incorrect ARCYN product/version metadata: $binary" }
+    if ($version.IsPreRelease -or $version.IsDebug -or $version.IsPatched -or $version.IsPrivateBuild -or $version.IsSpecialBuild) { throw "Unstable ARCYN version flags: $binary" }
     if ($binary -ne 'ARCYN.dll' -and ![ArcynArtifactResources]::MatchesIcon($path, $icon)) { throw "Missing or changed ARCYN icon frames: $binary" }
 }
+if ([Reflection.AssemblyName]::GetAssemblyName([IO.Path]::GetFullPath((Join-Path $Directory 'ARCYN.dll'))).Version.ToString() -ne $metadata.AssemblyVersion) { throw 'Incorrect ARCYN assembly version.' }
 foreach ($notice in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot '..\Notices') -File) {
     $copy = Join-Path $Directory ('Notices\' + $notice.Name)
     if (!(Test-Path -LiteralPath $copy) -or (Get-FileHash -LiteralPath $copy).Hash -ne (Get-FileHash -LiteralPath $notice.FullName).Hash) { throw ('Missing or changed redistribution notice: ' + $notice.Name) }
 }
-$excluded = Get-ChildItem -LiteralPath $Directory -Recurse -File | Where-Object { $_.Extension -in @('.pdb','.ahk','.mp4','.obj','.res') -or $_.Name -match '^(Probe|ARCYN.Tests|session-ses_)' -or $_.Name -in @('hotkey.c','hotkey.rc','build.cmd') }
+$excluded = Get-ChildItem -LiteralPath $Directory -Recurse -File | Where-Object { $_.Extension -in @('.pdb','.dbg','.dmp','.ilk','.exp','.lib','.map','.ahk','.mp4','.obj','.res') -or $_.Name -match '^(Probe|ARCYN.Tests|session-ses_)' -or $_.Name -in @('hotkey.c','hotkey.rc','build.cmd') }
 if ($excluded) { throw ('Development artifacts in release: ' + ($excluded.Name -join ', ')) }
 foreach ($configFile in @('example.arcyn.json', 'arcyn.schema.json')) {
     $configPath = Join-Path $Directory $configFile
@@ -83,9 +86,11 @@ if ($frameworks | Where-Object version -ne $metadata.RuntimeFrameworkVersion) { 
 $dependencies = Get-Content -LiteralPath (Join-Path $Directory 'ARCYN.deps.json') -Raw | ConvertFrom-Json
 $packages = $dependencies.libraries.PSObject.Properties | Where-Object { $_.Value.type -eq 'package' }
 if ($packages) { throw ('Unexpected application packages: ' + ($packages.Name -join ', ')) }
-foreach ($personal in @('protocoll.json','arcyn.json')) {
-    if (Test-Path -LiteralPath (Join-Path $Directory $personal)) { throw 'Do not ship personal configuration.' }
+foreach ($script in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot '..\scripts') -File) {
+    $copy = Join-Path $Directory ('scripts\' + $script.Name)
+    if (!(Test-Path -LiteralPath $copy) -or (Get-FileHash -LiteralPath $copy).Hash -ne (Get-FileHash -LiteralPath $script.FullName).Hash) { throw ('Missing or changed setup script: ' + $script.Name) }
 }
+if (Get-ChildItem -LiteralPath $Directory -Recurse -File | Where-Object Name -In @('protocoll.json','arcyn.json')) { throw 'Do not ship personal configuration.' }
 if (Get-ChildItem -LiteralPath $Directory -Recurse -Filter '*.ahk') { throw 'AutoHotkey dependency remains.' }
 if ((Start-Process -FilePath (Join-Path $Directory 'ARCYN.Hotkey.exe') -ArgumentList '--self-test' -WindowStyle Hidden -Wait -PassThru).ExitCode) { throw 'Native helper self-test failed.' }
 Write-Output 'Complete standalone runtime and package-free application verified without opening ARCYN.'

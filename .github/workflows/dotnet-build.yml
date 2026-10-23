@@ -26,10 +26,12 @@ jobs:
       - name: Publish and validate complete standalone artifact
         run: ./ARCYN/tools/Publish-Arcyn.ps1
       - name: Reject incorrect standalone runtime metadata
-        run: ./ARCYN/tools/Test-ArtifactMetadata.ps1 -Directory publish/ARCYN-win-x64-release
+        run: ./ARCYN/tools/Test-ArtifactMetadata.ps1 -Directory publish/ARCYN-v1.6.0-win-x64
       - uses: actions/upload-artifact@v6
         with:
-          name: ARCYN-win-x64
-          path: publish/*-release.zip
+          name: ARCYN-v1.6.0-win-x64
+          path: |
+            publish/ARCYN-v1.6.0-win-x64.zip
+            publish/ARCYN-v1.6.0-win-x64.zip.sha256
           if-no-files-found: error
 

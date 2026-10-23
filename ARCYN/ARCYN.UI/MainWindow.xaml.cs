@@ -230,7 +230,8 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
         await TypeText(BootTitle, "A R C Y N", 25, ct);
         if (ct.IsCancellationRequested) return;
 
-        await TypeText(BootSubtitle, "ARCYN WORKSPACE  · " + App.ProductVersion, 15, ct);
+        await TypeText(BootSubtitle, "ARCYN WORKSPACE  · " + App.ProductVersion, BootSubtitleIntervalMs, ct);
+        await DelaySafe(BootSubtitleHoldMs, ct);
         if (ct.IsCancellationRequested) return;
 
         var progressAnim = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900))
@@ -765,6 +766,9 @@ public partial class MainWindow : Window, IDisposable, RenderService.ISubscriber
 
         return null;
     }
+
+    internal const int BootSubtitleIntervalMs = 15;
+    internal const int BootSubtitleHoldMs = 75; // Retain the original 435 ms subtitle phase after removing "-rc.1".
 
     private static async Task TypeText(TextBlock target, string text, int intervalMs, CancellationToken ct = default)
     {

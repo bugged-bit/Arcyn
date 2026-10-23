@@ -21,7 +21,7 @@ What actually happens.
 
 **Environment**
 - Windows version: [e.g. 11 23H2]
-- ARCYN version: [e.g. 1.6.0-rc.1; include the build/run link if available]
+- ARCYN version: [e.g. 1.6.0; include the build/run link if available]
 - Display scale and monitor setup: [e.g. 125%, one monitor]
 - Download: [standalone ZIP, test artifact, or source build]
 

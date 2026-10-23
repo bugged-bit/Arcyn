@@ -4,7 +4,7 @@ Small, focused contributions are welcome: a reproducible bug report, a clearer i
 
 ## Run the project
 
-Use Windows x64 and the .NET SDK selected by [global.json](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/global.json). The current candidate is developed on `codex/arcyn-lightweight`; `master` still contains the previous version.
+Use Windows x64 and the .NET SDK selected by [global.json](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/global.json). Stable v1.6.0 is prepared on `codex/arcyn-lightweight` but is not published; `master` still contains the previous version.
 
 From a clone of the repository:
 
@@ -29,15 +29,15 @@ The regression runner renders interface states offscreen and opens no applicatio
 To build the complete standalone ZIP, install the Visual Studio C++ build tools for the optional native hotkey helper, then use a new output directory:
 
 ```powershell
-./ARCYN/tools/Publish-Arcyn.ps1 -OutputDirectory .arcyn-local/package-check
-./ARCYN/tools/Test-ArtifactMetadata.ps1 -Directory .arcyn-local/package-check-release
+./ARCYN/tools/Publish-Arcyn.ps1 -OutputDirectory .arcyn-local/package-check/build
+./ARCYN/tools/Test-ArtifactMetadata.ps1 -Directory .arcyn-local/package-check/ARCYN-v1.6.0-win-x64
 ```
 
-Publishing here builds a local package; it does not create a GitHub release. Distributing only `ARCYN.exe` is insufficient. For runtime servicing, update the bundled runtime and its notices together.
+This creates `ARCYN-v1.6.0-win-x64.zip` and `.zip.sha256` in `.arcyn-local/package-check`, verifies every archived file against staging, and does not create a GitHub release. Distributing only `ARCYN.exe` is insufficient. For runtime servicing, update the bundled runtime and its notices together.
 
 ## Send a contribution
 
-Fork the repository and create a branch from the version you're changing. For the 1.6 candidate, target `codex/arcyn-lightweight`. Keep the pull request focused, describe the user-visible result, and include the checks you ran and anything you couldn't verify.
+Fork the repository and create a branch from the version you're changing. For v1.6.0, target `codex/arcyn-lightweight`. Keep the pull request focused, describe the user-visible result, and include the checks you ran and anything you couldn't verify.
 
 Follow the surrounding C#/XAML style and reuse existing components. Preserve configuration compatibility, validation, command review, cancellation, and user data. Use comments to explain a decision rather than restating the code. Don't commit personal configuration, machine-specific paths, build outputs, or session transcripts.
 

@@ -14,7 +14,12 @@ internal static partial class Program
     private static void ReleaseCandidateChecks(ConfigService service)
     {
         var theme = new ThemeConfig();
-        Check(App.ProductVersion == "1.6.0-rc.1" && ("ARCYN WORKSPACE  · " + App.ProductVersion).Length == 29, "release identity appears consistently without changing boot typing duration");
+        Check(App.ProductVersion == "1.6.0" && typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion == "1.6.0" &&
+            typeof(App).Assembly.GetName().Version == new Version(1, 6, 0, 0) && typeof(App).Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()!.Version == "1.6.0.0",
+            "stable product and informational versions are 1.6.0; assembly and file versions remain 1.6.0.0");
+        Check(MainWindow.BootSubtitleIntervalMs == 15 && MainWindow.BootSubtitleHoldMs == 75 &&
+            ("ARCYN WORKSPACE  · " + App.ProductVersion).Length * MainWindow.BootSubtitleIntervalMs + MainWindow.BootSubtitleHoldMs == 435,
+            "stable subtitle typing plus remaining hold preserves the original 435 ms phase");
         Check(WindowSurface.PreferredMaterial(theme, SurfaceRole.Launcher, false, true) == MaterialMode.Acrylic &&
             WindowSurface.PreferredMaterial(theme, SurfaceRole.Workspace, false, true) == MaterialMode.Mica,
             "supported material roles distinguish transient HUD from long-lived editor");

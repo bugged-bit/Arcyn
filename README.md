@@ -20,14 +20,14 @@ A cinematic opening leads into a keyboard-friendly workspace list, with familiar
 
 *The layout editor changes your saved arrangement. Editing the preview doesn't move your windows.*
 
-## Try the 1.6 candidate
+## Get v1.6.0
 
-**1.6.0-rc.1 is a test build.** Clean-install and platform acceptance checks are still pending. The [older `.exe` release](https://github.com/bugged-bit/Arcyn/releases/tag/app) is a previous version, not this candidate.
+**The stable v1.6.0 package is prepared but has not been published.** Final release acceptance checks remain open. The [older `.exe` release](https://github.com/bugged-bit/Arcyn/releases/tag/app) is a previous version, not v1.6.0.
 
-Public releases will be listed on [Releases](https://github.com/bugged-bit/Arcyn/releases). For now, testing builds are available through GitHub Actions: **sign-in is required, artifacts expire, and availability isn't guaranteed.**
+Public packages will be listed on [Releases](https://github.com/bugged-bit/Arcyn/releases). Until publication, review builds are available through GitHub Actions: **sign-in is required, artifacts expire, and availability isn't guaranteed.**
 
-1. Open [candidate builds](https://github.com/bugged-bit/Arcyn/actions/workflows/dotnet-build.yml?query=branch%3Acodex%2Farcyn-lightweight) and select a successful run for `codex/arcyn-lightweight`.
-2. Download its **ARCYN-win-x64** artifact. Extract the download, then extract the standalone ZIP inside it to a permanent folder you can write to.
+1. Open [branch builds](https://github.com/bugged-bit/Arcyn/actions/workflows/dotnet-build.yml?query=branch%3Acodex%2Farcyn-lightweight) and select a successful v1.6.0 run for `codex/arcyn-lightweight`.
+2. Download **ARCYN-v1.6.0-win-x64**. Extract the artifact download, then extract the enclosed **ARCYN-v1.6.0-win-x64.zip** to a permanent folder you can write to. A SHA-256 file accompanies the inner ZIP; [verification instructions](docs/guide.md#verify-the-archive) are in the guide.
 3. Run **ARCYN.exe**. Name your first workspace and add the apps, folders, and websites you want. Optional setup steps have **Skip**.
 4. Choose the workspace or press its number to open it.
 

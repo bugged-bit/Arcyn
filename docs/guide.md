@@ -6,15 +6,27 @@ The interface images use ARCYN's production WPF controls with sample workspaces,
 
 ## Downloads and Windows warnings
 
-**1.6.0-rc.1 is an unsigned test build**, available from successful runs of the [candidate build workflow](https://github.com/bugged-bit/Arcyn/actions/workflows/dotnet-build.yml?query=branch%3Acodex%2Farcyn-lightweight). GitHub requires sign-in to download artifacts. They expire and may be unavailable; they are not a permanent release channel. If no artifact is available, wait for a new build or follow the [build instructions](../CONTRIBUTING.md#run-the-project).
+**The unsigned stable v1.6.0 package is prepared but not yet published.** Successful v1.6.0 runs of the [branch build workflow](https://github.com/bugged-bit/Arcyn/actions/workflows/dotnet-build.yml?query=branch%3Acodex%2Farcyn-lightweight) provide review artifacts. GitHub requires sign-in to download them. They expire and may be unavailable; they are not a permanent release channel. If no artifact is available, follow the [build instructions](../CONTRIBUTING.md#run-the-project).
 
-The artifact named **ARCYN-win-x64** contains a standalone release ZIP. Extract that inner ZIP, including its top-level folder, and keep everything inside together. It includes the .NET runtime and `Notices`; you don't need to install .NET, AutoHotkey, or a VC redistributable separately.
+Download the **ARCYN-v1.6.0-win-x64** artifact and extract GitHub's wrapper ZIP first. Inside are the application archive, **ARCYN-v1.6.0-win-x64.zip**, and its **.zip.sha256** file. Verify the inner ZIP below, then extract it, including its top-level folder, and keep everything together. It includes the .NET/WPF runtime and `Notices`; you don't need to install .NET, AutoHotkey, or a VC redistributable separately.
 
-Future public ZIPs will be listed on [Releases](https://github.com/bugged-bit/Arcyn/releases). The existing release tagged `app` is an older `.exe` build and does not contain this candidate. GitHub's automatic source-code archives are not runnable application packages.
+Future public ZIPs will be listed on [Releases](https://github.com/bugged-bit/Arcyn/releases). The existing release tagged `app` is an older `.exe` build and does not contain v1.6.0. GitHub's automatic source-code archives are not runnable application packages.
 
-Unsigned builds have no verified publisher identity. Windows SmartScreen may show an unrecognized-app warning, and Smart App Control or managed-device policy may block execution. Download only from this repository, confirm the build you intended to test, and follow your device's security policy. ARCYN makes no claim of signing or established SmartScreen reputation. See [Microsoft's explanation](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation).
+Unsigned builds have no verified publisher identity. Windows SmartScreen may show an unrecognized-app warning, and Smart App Control or managed-device policy may block execution. Download only from this repository, confirm the intended build, and follow your device's security policy. ARCYN makes no claim of signing or established SmartScreen reputation. See [Microsoft's explanation](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation).
 
 Clean Windows installation, broader Windows-version, mixed-DPI, and assistive-technology acceptance checks remain outstanding. Consult the [release notes](release-notes.md) for the detailed testing status.
+
+### Verify the archive
+
+Run this in the folder containing the inner application ZIP and its checksum file:
+
+```powershell
+$expected = (Get-Content -LiteralPath './ARCYN-v1.6.0-win-x64.zip.sha256').Split(' ')[0]
+$actual = (Get-FileHash -LiteralPath './ARCYN-v1.6.0-win-x64.zip' -Algorithm SHA256).Hash
+if ($actual -ine $expected) { throw 'Archive checksum mismatch; do not run this download.' }
+```
+
+A match confirms that the archive agrees with the accompanying checksum. It does not establish a publisher identity or replace signing. Each CI build records its own checksum; don't compare archives from different runs.
 
 ## Your first workspace
 
