@@ -1,286 +1,151 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using System.Linq;
+using System.Text.Json.Serialization.Metadata;
+using System.Security.Cryptography;
 using ARCYN.UI.Models;
-
 namespace ARCYN.UI.Services;
 
 public sealed class ConfigService
 {
-    private const string ConfigFileName = "arcyn.json";
-    private const string OldConfigFileName = "protocoll.json";
-    private const string AppDataFolder = "ARCYN";
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
+    public static readonly JsonSerializerOptions JsonOptions = new() {
+        WriteIndented = true, PropertyNameCaseInsensitive = true, AllowOutOfOrderMetadataProperties = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower, allowIntegerValues: false) },
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { static type => {
+            if (type.Type != typeof(ModeConfig)) return;
+            // Read both generations of field names; write each value only once.
+            foreach (var property in type.Properties)
+                if (property.Name is "name" or "description") property.ShouldSerialize = static (_, _) => false;
+        } } } };
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
+    private readonly string _userPath, _exeDirectory;
+    private readonly string? _explicitPath;
+    private string? _activePath, _sourcePath;
+    private byte[]? _expectedHash;
+    public string? SourcePath => _sourcePath;
+    public ConfigService(string? explicitPath = null, string? userDirectory = null, string? executableDirectory = null)
+    {
+        _exeDirectory = executableDirectory ?? Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+        _userPath = Path.Combine(userDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ARCYN"), "arcyn.json");
+        _explicitPath = explicitPath == null ? null : Path.GetFullPath(explicitPath);
+    }
+    public string? ResolvePath()
+    {
+        if (_activePath != null) return _sourcePath;
+        var candidates = new[] { _userPath, Path.Combine(_exeDirectory, "arcyn.json"),
+            Path.Combine(_exeDirectory, "protocoll.json"), Path.Combine(_exeDirectory, "ARCYN", "protocoll.json"),
+            Path.GetFullPath(Path.Combine(_exeDirectory, "..", "protocoll.json")) };
+        _sourcePath = _explicitPath ?? candidates.FirstOrDefault(File.Exists);
+        _activePath = _explicitPath ?? (_sourcePath?.EndsWith("protocoll.json", StringComparison.OrdinalIgnoreCase) == true ? _userPath : _sourcePath) ?? _userPath;
+        return _sourcePath;
+    }
+    public string GetOrCreatePath() { ResolvePath(); return _activePath!; }
     public ArcynConfig? Load()
     {
         var path = ResolvePath();
-        if (path == null)
-            return null;
-
+        if (path == null) return null;
+        if (!File.Exists(path)) throw new FileNotFoundException("Selected configuration does not exist.", path);
         try
         {
-            var json = File.ReadAllText(path);
-            var config = JsonSerializer.Deserialize<ArcynConfig>(json, JsonOptions);
-            if (config == null) return null;
-
-            // Validate and sanitize configuration – removes corrupt entries and enforces defaults
-            var sanitized = ValidateAndSanitize(config);
-            if (sanitized == null)
-            {
-                LogService.WriteStatic("Config validation failed – using empty configuration.");
-                return null;
-            }
-            return sanitized;
+            if (new FileInfo(path).Length > 4 * 1024 * 1024) throw new InvalidDataException("Configuration exceeds 4 MiB.");
+            var bytes = File.ReadAllBytes(path);
+            using var reader = new StreamReader(new MemoryStream(bytes), detectEncodingFromByteOrderMarks: true);
+            var json = reader.ReadToEnd();
+            using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip });
+            RejectConflictingAliases(doc.RootElement);
+            var config = doc.RootElement.ValueKind == JsonValueKind.Array
+                ? new ArcynConfig { Modes = JsonSerializer.Deserialize<List<ModeConfig>>(json, JsonOptions)! }
+                : JsonSerializer.Deserialize<ArcynConfig>(json, JsonOptions) ?? throw new InvalidDataException("Empty configuration.");
+            Validate(config);
+            _expectedHash = string.Equals(path, _activePath, StringComparison.OrdinalIgnoreCase) ? SHA256.HashData(bytes) : null;
+            LogService.WriteStatic("Configuration read: {0}; saves: {1}", path, _activePath);
+            return config;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is JsonException or InvalidDataException or ArgumentException)
+        { throw new InvalidDataException($"Cannot read {path}. Your file was preserved. Previous save: {path}.bak. {ex.Message}", ex); }
+    }
+    private static void RejectConflictingAliases(JsonElement root)
+    {
+        var modes = root.ValueKind == JsonValueKind.Array ? root : root.ValueKind == JsonValueKind.Object
+            ? root.EnumerateObject().FirstOrDefault(p => p.Name.Equals("modes", StringComparison.OrdinalIgnoreCase)).Value : default;
+        if (modes.ValueKind != JsonValueKind.Array) return;
+        foreach (var mode in modes.EnumerateArray())
         {
-            LogService.WriteStatic("Config load error: {0}", ex.Message);
-            return null;
+            if (mode.ValueKind != JsonValueKind.Object) continue;
+            foreach (var (alias, canonical) in new[] { ("name", "label"), ("description", "subtitle") })
+            {
+                string? first = null, second = null;
+                foreach (var property in mode.EnumerateObject())
+                {
+                    if (property.Value.ValueKind != JsonValueKind.String) continue;
+                    if (property.Name.Equals(alias, StringComparison.OrdinalIgnoreCase)) first = property.Value.GetString();
+                    if (property.Name.Equals(canonical, StringComparison.OrdinalIgnoreCase)) second = property.Value.GetString();
+                }
+                if (first != null && second != null && first != second)
+                    throw new InvalidDataException($"Conflicting {alias}/{canonical} values. Keep one field or make their values match.");
+            }
         }
     }
-
-    public string? ResolvePath()
+    public static void Validate(ArcynConfig config)
     {
-        var appData = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            AppDataFolder,
-            ConfigFileName);
-
-        if (File.Exists(appData))
-            return appData;
-
-        var local = Path.Combine(AppContext.BaseDirectory, ConfigFileName);
-        if (File.Exists(local))
-            return local;
-
-        return TryMigrateOldConfig();
+        if (config.SchemaVersion is not (1 or 2)) throw new InvalidDataException("Unsupported configuration schema version. This file was preserved.");
+        if (config.Modes == null || config.Modes.Any(m => m == null)) throw new InvalidDataException("Modes must be a list of objects.");
+        config.Theme ??= new(); config.Behavior ??= new();
+        ThemeService.Validate(config.Theme);
+        if (config.Behavior.IdleTimeoutSeconds is < 0 or > 86400) throw new InvalidDataException("Idle timeout must be 0–86400 seconds.");
+        for (var i = 0; i < config.Modes.Count; i++)
+        {
+            var mode = config.Modes[i];
+            if (mode.Label == null || mode.Subtitle == null) throw new InvalidDataException("Workspace names and descriptions must be strings.");
+            mode.Targets ??= []; mode.Apps ??= []; mode.Folders ??= []; mode.Websites ??= [];
+            if (mode.Targets.Any(t => t == null || t.Cmd == null || t.Args == null || t.Args.Any(a => a == null)) ||
+                mode.Apps.Any(a => a == null) || mode.Websites.Any(a => a == null) || mode.Folders.Any(a => a == null))
+                throw new InvalidDataException("Targets and arguments must contain valid objects and strings.");
+            mode.Index = i + 1;
+            WorkspaceDefinition.Validate(mode);
+        }
+        if (config.Modes.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() != config.Modes.Count) throw new InvalidDataException("Workspace IDs must be unique.");
+        // Availability is a launch concern; offline drives, duplicates and empty workspaces remain editable.
     }
-
-    public string GetOrCreatePath()
-    {
-        var local = Path.Combine(AppContext.BaseDirectory, ConfigFileName);
-        var appData = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            AppDataFolder,
-            ConfigFileName);
-
-        if (File.Exists(local))
-            return local;
-
-        return appData;
-    }
-
-    public void Save(ArcynConfig config)
-    {
-        var path = GetOrCreatePath();
-        var dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-
-        // Re‑index before persisting
-        for (int i = 0; i < config.Modes.Count; i++)
-            config.Modes[i].Index = i + 1;
-
-        var json = JsonSerializer.Serialize(config, JsonOptions);
-        // Write to a temporary file then replace atomically to avoid corruption on crash
-        var tempPath = path + ".tmp";
-        File.WriteAllText(tempPath, json);
-        if (File.Exists(path))
-            File.Replace(tempPath, path, null);
-        else
-            File.Move(tempPath, path);
-    }
-
+    public void Save(ArcynConfig config) => SaveAsync(config).GetAwaiter().GetResult();
     public async Task SaveAsync(ArcynConfig config)
     {
-        var path = GetOrCreatePath();
-        var dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-
-        // Re‑index before persisting
-        for (int i = 0; i < config.Modes.Count; i++)
-            config.Modes[i].Index = i + 1;
-
-        var json = JsonSerializer.Serialize(config, JsonOptions);
-        // Write to temp then atomically replace
-        var tempPath = path + ".tmp";
-        await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
-        if (File.Exists(path))
-            File.Replace(tempPath, path, null);
-        else
-            File.Move(tempPath, path);
-    }
-
-    private string? TryMigrateOldConfig()
-    {
-        string[] candidates =
-        [
-            Path.Combine(AppContext.BaseDirectory, OldConfigFileName),
-            Path.Combine(AppContext.BaseDirectory, "..", OldConfigFileName),
-            Path.Combine(Environment.CurrentDirectory, OldConfigFileName)
-        ];
-
-        foreach (var oldPath in candidates)
+        Validate(config);
+        config.SchemaVersion = 2;
+        var json = JsonSerializer.SerializeToUtf8Bytes(config, JsonOptions);
+        if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("Configuration exceeds 4 MiB; previous file was retained.");
+        await _saveLock.WaitAsync().ConfigureAwait(false);
+        string? temporary = null;
+        try
         {
-            if (!File.Exists(oldPath))
-                continue;
-
-            try
+            var path = GetOrCreatePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
             {
-                var json = File.ReadAllText(oldPath);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                if (root.ValueKind != JsonValueKind.Array)
-                    continue;
-
-                var config = new ArcynConfig();
-
-                foreach (var modeEl in root.EnumerateArray())
-                {
-                    var mode = new ModeConfig
-                    {
-                        Name = GetString(modeEl, "label") ?? "MODE",
-                        Description = GetString(modeEl, "subtitle") ?? string.Empty,
-                        Accent = "#D64545"
-                    };
-
-                    if (modeEl.TryGetProperty("targets", out var targets))
-                    {
-                        foreach (var t in targets.EnumerateArray())
-                        {
-                            var cmd = GetString(t, "cmd") ?? string.Empty;
-                            var args = GetStringArray(t, "args");
-
-                            if (string.IsNullOrWhiteSpace(cmd))
-                                continue;
-
-                            if (cmd.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) && args.Count > 0)
-                            {
-                                mode.Folders.Add(args[0]);
-                            }
-                            else if (cmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                                     cmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                            {
-                                mode.Websites.Add(cmd);
-                            }
-                            else
-                            {
-                                mode.Apps.Add(cmd);
-                            }
-                        }
-                    }
-
-                    if (mode.Apps.Count > 0 || mode.Websites.Count > 0 || mode.Folders.Count > 0)
-                        config.Modes.Add(mode);
-                }
-
-                if (config.Modes.Count > 0)
-                {
-                    var newPath = GetOrCreatePath();
-                    var dir = Path.GetDirectoryName(newPath);
-                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                        Directory.CreateDirectory(dir);
-
-                    Save(config);
-
-                    LogService.WriteStatic("Migrated config from {0} → {1}", oldPath, newPath);
-                    return newPath;
-                }
+                await stream.WriteAsync(json).ConfigureAwait(false);
+                stream.Flush(flushToDisk: true);
             }
-            catch
+            if (File.Exists(path))
             {
-                // ignore migration failures
+                if (_expectedHash == null || !SHA256.HashData(File.ReadAllBytes(path)).SequenceEqual(_expectedHash))
+                    throw new InvalidDataException("Configuration changed on disk. Reopen ARCYN before saving; the external changes were preserved.");
+                File.Replace(temporary, path, path + ".bak");
             }
+            else
+            {
+                if (_expectedHash != null) throw new InvalidDataException("Configuration was removed externally. Reopen ARCYN before saving.");
+                File.Move(temporary, path);
+            }
+            _sourcePath = path;
+            _expectedHash = SHA256.HashData(json);
         }
-
-        return null;
-    }
-
-    private static string GetString(JsonElement el, string key)
-    {
-        return el.TryGetProperty(key, out var prop) && prop.ValueKind == JsonValueKind.String
-            ? prop.GetString() ?? string.Empty
-            : string.Empty;
-    }
-
-    private static List<string> GetStringArray(JsonElement el, string key)
-    {
-        var result = new List<string>();
-        if (el.TryGetProperty(key, out var prop) && prop.ValueKind == JsonValueKind.Array)
+        finally
         {
-            foreach (var item in prop.EnumerateArray())
-            {
-                if (item.ValueKind == JsonValueKind.String)
-                    result.Add(item.GetString() ?? string.Empty);
-            }
+            try { if (temporary != null && File.Exists(temporary)) File.Delete(temporary); }
+            finally { _saveLock.Release(); }
         }
-        return result;
-    }
-
-    // ---------------------------------------------------------------------
-    // Validation & sanitization ------------------------------------------------
-    // ---------------------------------------------------------------------
-    private ArcynConfig? ValidateAndSanitize(ArcynConfig config)
-    {
-        if (config == null) return null;
-        // Ensure modes list exists
-        if (config.Modes == null) config.Modes = [];
-
-        var validModes = new List<ModeConfig>();
-        var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var mode in config.Modes)
-        {
-            // Basic name check – skip if empty or duplicate
-            if (string.IsNullOrWhiteSpace(mode.Name)) continue;
-            var nameKey = mode.Name.Trim();
-            if (!seenNames.Add(nameKey)) continue; // duplicate name – skip
-
-            // Ensure collection properties are not null
-            mode.Apps ??= [];
-            mode.Websites ??= [];
-            mode.Folders ??= [];
-
-            // Sanitize app entries – trim whitespace, remove empty entries
-            mode.Apps = mode.Apps.Select(a => a.Trim()).Where(a => !string.IsNullOrWhiteSpace(a)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            // Sanitize folder entries – keep only existing directories
-            mode.Folders = mode.Folders.Select(f => f.Trim()).Where(f => Directory.Exists(f)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            // Sanitize website entries – keep only well‑formed http/https URLs
-            mode.Websites = mode.Websites.Select(u => u.Trim()).Where(u =>
-            {
-                if (Uri.TryCreate(u, UriKind.Absolute, out var uri))
-                    return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
-                return false;
-            }).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
-            // If mode has no targets after sanitization, drop it
-            if (mode.Apps.Count == 0 && mode.Websites.Count == 0 && mode.Folders.Count == 0)
-                continue;
-
-            validModes.Add(mode);
-        }
-        // If no valid modes remain, configuration is unusable
-        if (validModes.Count == 0) return null;
-
-        // Re‑index sequentially
-        for (int i = 0; i < validModes.Count; i++)
-            validModes[i].Index = i + 1;
-
-        config.Modes = validModes;
-        // Ensure Theme and Behavior sections have defaults (they are already instantiated by default ctor)
-        config.Theme ??= new ThemeConfig();
-        config.Behavior ??= new BehaviorConfig();
-        return config;
     }
 }

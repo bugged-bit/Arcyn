@@ -4,31 +4,35 @@
     <OutputType>WinExe</OutputType>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <PublishSelfContained>true</PublishSelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon />
+    <ApplicationIcon>Assets\ARCYN.ico</ApplicationIcon>
+    <Version>1.6.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <FileVersion>1.6.0.0</FileVersion>
+    <Product>ARCYN</Product>
+    <Title>ARCYN</Title>
+    <Description>Cinematic Windows workspace launcher</Description>
     <StartupObject>ARCYN.UI.App</StartupObject>
     <AssemblyName>ARCYN</AssemblyName>
     <RootNamespace>ARCYN.UI</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.1" />
-    <PackageReference Include="System.Management" Version="9.0.0" />
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
-  </ItemGroup>
-
-  <ItemGroup>
+<ItemGroup>
     <Resource Include="Assets\Fonts\*" />
+    <Resource Include="Assets\ARCYN.ico" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\example.arcyn.json" Link="example.arcyn.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\arcyn.schema.json" Link="arcyn.schema.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 

@@ -1,0 +1,227 @@
+{
+  "recordedOn": "2026-10-22",
+  "candidate": "1.6.0-rc.1",
+  "assemblySHA256": "EC1A01FA52DB8ED88BBD2EF3FE6FA714D15581C99C0AA35EC4BBE022B6C05F5E",
+  "machine": {
+    "os": "Microsoft Windows NT 10.0.26300.0",
+    "cpu": "11th Gen Intel(R) Core(TM) i3-1115G4 @ 3.00GHz",
+    "logicalProcessors": 4,
+    "dpiScale": 1.25,
+    "renderTier": 2,
+    "runtime": "10.0.13"
+  },
+  "method": "Three sequential self-contained launches, then one 30-second idle-timeout run. Isolated empty workspace configuration; input dispatch blocked by measurement-only startup hook. No target apps or helper included in launcher measurements. No other build/test load during measurement.",
+  "runs": [
+    {
+      "kind": "initial",
+      "exitCode": 0,
+      "firstRenderCallbackFromProcessMs": 2019.9828,
+      "readyFromProcessMs": 6447.9645,
+      "bootCallbackP95Ms": 33.327000000000226,
+      "readyDurationMs": 15015.639600000002,
+      "readyCpuMs": 2843.75,
+      "readyResources": {
+        "WorkingSetBytes": 152416256,
+        "PrivateBytes": 83808256,
+        "Handles": 558
+      },
+      "endReadyResources": {
+        "WorkingSetBytes": 160874496,
+        "PrivateBytes": 88055808,
+        "Handles": 560
+      },
+      "nativeBackdropAttribute": 3,
+      "peakHandles": 560,
+      "privatePeakBytes": 88055808,
+      "workingPeakBytes": 161017856
+    },
+    {
+      "kind": "warm",
+      "exitCode": 0,
+      "firstRenderCallbackFromProcessMs": 1570.4775,
+      "readyFromProcessMs": 5945.5504,
+      "bootCallbackP95Ms": 33.32719999999972,
+      "readyDurationMs": 8286.3642,
+      "readyCpuMs": 1562.5,
+      "readyResources": {
+        "WorkingSetBytes": 153653248,
+        "PrivateBytes": 83329024,
+        "Handles": 553
+      },
+      "endReadyResources": {
+        "WorkingSetBytes": 161243136,
+        "PrivateBytes": 87994368,
+        "Handles": 555
+      },
+      "nativeBackdropAttribute": 3,
+      "peakHandles": 557,
+      "privatePeakBytes": 89460736,
+      "workingPeakBytes": 162078720
+    },
+    {
+      "kind": "warm",
+      "exitCode": 0,
+      "firstRenderCallbackFromProcessMs": 1407.2932,
+      "readyFromProcessMs": 5960.1975,
+      "bootCallbackP95Ms": 33.33040000000028,
+      "readyDurationMs": 9022.2971,
+      "readyCpuMs": 2437.5,
+      "readyResources": {
+        "WorkingSetBytes": 153108480,
+        "PrivateBytes": 85028864,
+        "Handles": 530
+      },
+      "endReadyResources": {
+        "WorkingSetBytes": 169631744,
+        "PrivateBytes": 94601216,
+        "Handles": 549
+      },
+      "nativeBackdropAttribute": 3,
+      "peakHandles": 553,
+      "privatePeakBytes": 94601216,
+      "workingPeakBytes": 169615360
+    }
+  ],
+  "sustained": {
+    "exitCode": 0,
+    "readyDurationMs": 37998.643000000004,
+    "wholeReadyCpuMs": 2390.625,
+    "settledWindowStartProcessAgeMs": 20284.9063,
+    "settledWindowEndProcessAgeMs": 41485.2572,
+    "settledCpuMs": 312.5,
+    "settledCpuPercentOneCore": 1.4740322057593866,
+    "settledCpuPercentMachine": 0.36850805143984666,
+    "privateMinBytes": 90275840.0,
+    "privateMaxBytes": 90546176.0,
+    "workingMinBytes": 166305792.0,
+    "workingMaxBytes": 166879232.0,
+    "initialHandles": 547,
+    "finalHandles": 540,
+    "gpuBusiestEnginePercentMin": 0.03065533328005965,
+    "gpuBusiestEnginePercentMax": 0.06779510441063576,
+    "gpuEngineInstancesPerSample": 13,
+    "samples": [
+      {
+        "AgeMs": 20284.9063,
+        "CpuMs": 5218.75,
+        "WorkingBytes": 166305792,
+        "PrivateBytes": 90300416,
+        "Handles": 547,
+        "GpuEngineTotalPercent": 0.0384752297225268,
+        "GpuEngineMaxPercent": 0.0384752297225268,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 22629.8423,
+        "CpuMs": 5250.0,
+        "WorkingBytes": 166408192,
+        "PrivateBytes": 90300416,
+        "Handles": 547,
+        "GpuEngineTotalPercent": 0.04555963498854231,
+        "GpuEngineMaxPercent": 0.04555963498854231,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 24957.9124,
+        "CpuMs": 5328.125,
+        "WorkingBytes": 166432768,
+        "PrivateBytes": 90296320,
+        "Handles": 545,
+        "GpuEngineTotalPercent": 0.042855442244355384,
+        "GpuEngineMaxPercent": 0.042855442244355384,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 27311.1831,
+        "CpuMs": 5375.0,
+        "WorkingBytes": 166473728,
+        "PrivateBytes": 90275840,
+        "Handles": 541,
+        "GpuEngineTotalPercent": 0.06779510441063576,
+        "GpuEngineMaxPercent": 0.06779510441063576,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 29630.0009,
+        "CpuMs": 5453.125,
+        "WorkingBytes": 166539264,
+        "PrivateBytes": 90275840,
+        "Handles": 541,
+        "GpuEngineTotalPercent": 0.05545836009668582,
+        "GpuEngineMaxPercent": 0.05545836009668582,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 31945.3766,
+        "CpuMs": 5484.375,
+        "WorkingBytes": 166576128,
+        "PrivateBytes": 90341376,
+        "Handles": 540,
+        "GpuEngineTotalPercent": 0.0314747273711292,
+        "GpuEngineMaxPercent": 0.0314747273711292,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 34288.1323,
+        "CpuMs": 5484.375,
+        "WorkingBytes": 166707200,
+        "PrivateBytes": 90406912,
+        "Handles": 540,
+        "GpuEngineTotalPercent": 0.05259601125342845,
+        "GpuEngineMaxPercent": 0.05259601125342845,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 36570.1453,
+        "CpuMs": 5515.625,
+        "WorkingBytes": 166653952,
+        "PrivateBytes": 90472448,
+        "Handles": 540,
+        "GpuEngineTotalPercent": 0.05042629931582082,
+        "GpuEngineMaxPercent": 0.05042629931582082,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 38880.817,
+        "CpuMs": 5531.25,
+        "WorkingBytes": 166817792,
+        "PrivateBytes": 90546176,
+        "Handles": 540,
+        "GpuEngineTotalPercent": 0.03244865608896796,
+        "GpuEngineMaxPercent": 0.03244865608896796,
+        "GpuEngineSamples": 13
+      },
+      {
+        "AgeMs": 41485.2572,
+        "CpuMs": 5531.25,
+        "WorkingBytes": 166879232,
+        "PrivateBytes": 90546176,
+        "Handles": 540,
+        "GpuEngineTotalPercent": 0.03065533328005965,
+        "GpuEngineMaxPercent": 0.03065533328005965,
+        "GpuEngineSamples": 13
+      }
+    ]
+  },
+  "hotkey": {
+    "combination": "CTRL+ALT+SHIFT+Q",
+    "registrationAvailableBefore": true,
+    "competingRegistrationError": 1409,
+    "markerActivations": 1,
+    "exitCode": 0,
+    "registrationAvailableAfter": true,
+    "workingBytes": 8105984,
+    "privateBytes": 1380352,
+    "handles": 90
+  },
+  "cleanup": "All four measured ARCYN processes exited with status 0. No ARCYN, ARCYN.Hotkey or disposable Target process remained after testing.",
+  "limitations": [
+    "Small shared-desktop sample; initial means first in this session, not a reboot/cold start.",
+    "First render is a WPF callback, not first visible presentation. Process times add process age at hook entry to hook-relative times.",
+    "Boot p95 is rendering callback cadence, not GPU presented-frame pacing.",
+    "GPU counters are per ARCYN PID, not shared DWM composition cost or total adapter load.",
+    "Ready-phase totals include post-boot/JIT work; settled interval is reported separately.",
+    "Short memory/handle observation cannot establish a multi-hour leak-free session.",
+    "No pre-change whole-app comparison, clean VM, Windows 10 host or physical mixed-DPI test."
+  ]
+}

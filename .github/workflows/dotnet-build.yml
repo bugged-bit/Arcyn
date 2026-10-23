@@ -1,34 +1,37 @@
-name: Build
-
+name: Windows build and headless regression checks
 on:
   push:
-    branches: [main]
+    branches: [master, codex/arcyn-lightweight]
   pull_request:
-    branches: [main]
-
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8.0.x
-
-      - name: Restore
-        run: dotnet restore ARCYN\ARCYN.UI\ARCYN.UI.csproj
-
-      - name: Build
-        run: dotnet build ARCYN\ARCYN.UI\ARCYN.UI.csproj -c Release --no-restore
-
-      - name: Publish
-        run: dotnet publish ARCYN\ARCYN.UI\ARCYN.UI.csproj -c Release --no-build -o publish
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          global-json-file: global.json
+      - name: Restore tests and application
+        run: dotnet restore ARCYN/ARCYN.Tests/ARCYN.Tests.csproj --interactive false
+      - name: Build and run regression checks (no windows)
+        run: ./ARCYN/tools/Test-Arcyn.ps1
+      - name: Validate scripts without desktop changes
+        run: ./ARCYN/tools/Test-Scripts.ps1
+      - name: Build the performance probe without running it
+        run: dotnet build ARCYN/tools/Probe/Probe.csproj -c Release --interactive false
+      - name: Publish and validate complete standalone artifact
+        run: ./ARCYN/tools/Publish-Arcyn.ps1
+      - name: Reject incorrect standalone runtime metadata
+        run: ./ARCYN/tools/Test-ArtifactMetadata.ps1 -Directory publish/ARCYN-v1.6.0-win-x64
+      - uses: actions/upload-artifact@v6
         with:
-          name: ARCYN
-          path: publish\ARCYN.exe
+          name: ARCYN-v1.6.0-win-x64
+          path: |
+            publish/ARCYN-v1.6.0-win-x64.zip
+            publish/ARCYN-v1.6.0-win-x64.zip.sha256
+          if-no-files-found: error
+

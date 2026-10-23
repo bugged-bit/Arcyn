@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="640" viewBox="0 0 1280 640">
+  <title>ARCYN — Open your workspace.</title>
+  <desc>ARCYN's production workspace interface, with Code, Research, and Writing workspaces.</desc>
+  <rect width="1280" height="640" fill="#ECECE9"/>
+  <image x="32" y="30" width="64" height="64" xlink:href="arcyn.svg"/>
+  <text x="111" y="75" fill="#202229" font-family="Segoe UI, sans-serif" font-size="36" font-weight="600" letter-spacing="1.5">ARCYN</text>
+  <text x="1248" y="76" text-anchor="end" fill="#202229" font-family="Segoe UI, sans-serif" font-size="44" font-weight="600" letter-spacing="-1">Open your workspace.</text>
+  <image x="32" y="120" width="1216" height="496.533333" xlink:href="social-workspaces.png"/>
+</svg>

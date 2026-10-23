@@ -4,91 +4,44 @@ namespace ARCYN.UI;
 
 internal static class NativeMethods
 {
-    [DllImport("user32.dll")]
-    internal static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    internal static extern IntPtr FindWindow(string? className, string title);
+    [DllImport("user32.dll")] internal static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool AllowSetForegroundWindow(uint process);
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct WindowCompositionAttributeData
+    [StructLayout(LayoutKind.Sequential)] private struct Margins { public int Left, Right, Top, Bottom; }
+    [DllImport("dwmapi.dll")] private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref Margins margins);
+    [DllImport("dwmapi.dll")] private static extern int DwmIsCompositionEnabled([MarshalAs(UnmanagedType.Bool)] out bool enabled);
+
+    internal static bool SetBackdrop(IntPtr hwnd, int material, bool dark)
     {
-        public WindowCompositionAttribute Attribute;
-        public IntPtr Data;
-        public int SizeOfData;
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621)) return false;
+        var darkMode = dark ? 1 : 0;
+        DwmSetWindowAttribute(hwnd, 20, ref darkMode, sizeof(int));
+        var margins = new Margins { Left = material == 1 ? 0 : -1 };
+        var available = DwmIsCompositionEnabled(out var enabled) == 0 && enabled;
+        return available && DwmSetWindowAttribute(hwnd, 38, ref material, sizeof(int)) == 0 && DwmExtendFrameIntoClientArea(hwnd, ref margins) == 0;
+    }
+    internal static void RoundWindow(IntPtr hwnd, bool rounded)
+    {
+        var preference = rounded ? 2 : 1;
+        DwmSetWindowAttribute(hwnd, 33, ref preference, sizeof(int));
     }
 
-    internal enum WindowCompositionAttribute
-    {
-        WCA_ACCENT_POLICY = 19
-    }
 
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct AccentPolicy
-    {
-        public AccentState AccentState;
-        public int AccentFlags;
-        public int GradientColor;
-        public int AnimationId;
-    }
-
-    internal enum AccentState
-    {
-        ACCENT_DISABLED = 0,
-        ACCENT_ENABLE_GRADIENT = 1,
-        ACCENT_ENABLE_TRANSPARENTGRADIENT = 2,
-        ACCENT_ENABLE_BLURBEHIND = 3,
-        ACCENT_ENABLE_ACRYLICBLURBEHIND = 4
-    }
-
-    internal static void EnableAcrylic(IntPtr hwnd, uint opacityColor = 0xEB000000)
-    {
-        var accent = new AccentPolicy
-        {
-            AccentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND,
-            GradientColor = (int)opacityColor
-        };
-
-        var accentStructSize = Marshal.SizeOf(accent);
-        var accentPtr = Marshal.AllocHGlobal(accentStructSize);
-        Marshal.StructureToPtr(accent, accentPtr, false);
-
-        var data = new WindowCompositionAttributeData
-        {
-            Attribute = WindowCompositionAttribute.WCA_ACCENT_POLICY,
-            Data = accentPtr,
-            SizeOfData = accentStructSize
-        };
-
-        SetWindowCompositionAttribute(hwnd, ref data);
-        Marshal.FreeHGlobal(accentPtr);
-    }
-
-    internal const int WS_EX_TRANSPARENT = 0x00000020;
     internal const int WS_EX_TOOLWINDOW = 0x00000080;
-    internal const int WS_EX_LAYERED = 0x00080000;
     internal const int GWL_EXSTYLE = -20;
-    internal const int SW_SHOW = 5;
-    internal const int SW_HIDE = 0;
-
     [DllImport("user32.dll")]
     internal static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
     [DllImport("user32.dll")]
     internal static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-    [DllImport("user32.dll")]
-    internal static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
     [DllImport("user32.dll")]
     internal static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-
-    internal static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
-    internal static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
+    internal static readonly IntPtr HWND_TOPMOST = new(-1);
     internal const uint SWP_NOMOVE = 0x0002;
     internal const uint SWP_NOSIZE = 0x0001;
     internal const uint SWP_SHOWWINDOW = 0x0040;
-
-    [DllImport("kernel32.dll")]
-    internal static extern IntPtr GetConsoleWindow();
-
-    [DllImport("user32.dll")]
-    internal static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 }

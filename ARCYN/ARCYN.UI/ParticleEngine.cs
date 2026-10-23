@@ -11,7 +11,8 @@ public sealed class ParticleEngine : IDisposable
     private readonly Random _rng = new();
     private readonly List<Particle> _particles = [];
     private readonly Stack<Ellipse> _pool = [];
-    private const int Count = 60;
+    private int _count = 60;
+    private Color _color = Color.FromRgb(0xE8, 0x60, 0x60);
     private bool _running;
     private bool _disposed;
     private double _w, _h;
@@ -25,6 +26,13 @@ public sealed class ParticleEngine : IDisposable
 
     public ParticleEngine(Canvas canvas) => _canvas = canvas;
 
+    public void Configure(int count, Color color)
+    {
+        if (_count == count && _color == color) return;
+        var running = _running; Stop(); _pool.Clear(); _count = count; _color = color;
+        if (running) Start();
+    }
+
     public void Start()
     {
         if (_running) return;
@@ -32,7 +40,7 @@ public sealed class ParticleEngine : IDisposable
         _w = Math.Max(_canvas.ActualWidth, 800);
         _h = Math.Max(_canvas.ActualHeight, 480);
 
-        for (int i = 0; i < Count; i++)
+        for (int i = 0; i < _count; i++)
         {
             var p = new Particle
             {
@@ -45,8 +53,7 @@ public sealed class ParticleEngine : IDisposable
                 DriftAmp = _rng.NextDouble() * 0.5 + 0.15,
                 Alive = true
             };
-            Canvas.SetLeft(p.Shape, _rng.NextDouble() * 800);
-            Canvas.SetTop(p.Shape, _rng.NextDouble() * 480);
+            p.Shape.RenderTransform = new TranslateTransform(_rng.NextDouble() * 800, _rng.NextDouble() * 480);
             _canvas.Children.Add(p.Shape);
             _particles.Add(p);
         }
@@ -69,9 +76,9 @@ public sealed class ParticleEngine : IDisposable
         _particles.Clear();
     }
 
-    public void Tick()
+    public void Tick(double motion = 1)
     {
-        if (!_running || _disposed || !_canvas.IsVisible) return;
+        if (!_running || _disposed) return;
         _w = Math.Max(_canvas.ActualWidth, 800);
         _h = Math.Max(_canvas.ActualHeight, 480);
 
@@ -91,14 +98,15 @@ public sealed class ParticleEngine : IDisposable
             shape.Opacity = ratio < 0.08 ? ratio / 0.08 :
                             ratio > 0.75 ? (1 - ratio) / 0.25 : 1;
 
-            var x = Canvas.GetLeft(shape) + p.Vx;
-            var y = Canvas.GetTop(shape) + p.Vy;
-            x += Math.Sin(p.Life * 0.02 + p.DriftPhase) * p.DriftAmp;
+            var position = (TranslateTransform)shape.RenderTransform;
+            var x = position.X + p.Vx * motion;
+            var y = position.Y + p.Vy * motion;
+            x += Math.Sin(p.Life * 0.02 + p.DriftPhase) * p.DriftAmp * motion;
 
             if (y < -10 || x < -10 || x > _w + 10 || p.Life > p.MaxLife)
             {
-                Canvas.SetLeft(shape, _rng.NextDouble() * _w);
-                Canvas.SetTop(shape, _h + 5);
+                position.X = _rng.NextDouble() * _w;
+                position.Y = _h + 5;
                 p.Vx = (_rng.NextDouble() - 0.5) * 0.8;
                 p.Vy = -(_rng.NextDouble() * 0.5 + 0.12);
                 p.Life = 0;
@@ -106,21 +114,22 @@ public sealed class ParticleEngine : IDisposable
                 continue;
             }
 
-            Canvas.SetLeft(shape, x);
-            Canvas.SetTop(shape, y);
+            position.X = x;
+            position.Y = y;
         }
     }
 
     private Ellipse RentShape()
     {
         if (_pool.Count > 0) return _pool.Pop();
+        var brush = new SolidColorBrush(Color.FromArgb((byte)_rng.Next(60, 210), _color.R, _color.G, _color.B));
+        brush.Freeze();
         return new Ellipse
         {
             Width = _rng.Next(2, 5),
             Height = _rng.Next(2, 5),
             IsHitTestVisible = false,
-            Fill = new SolidColorBrush(Color.FromArgb(
-                (byte)_rng.Next(60, 210), 0xE8, 0x60, 0x60))
+            Fill = brush
         };
     }
 

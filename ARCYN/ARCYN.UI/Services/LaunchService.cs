@@ -1,185 +1,77 @@
-using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using ARCYN.UI.Models;
-
 namespace ARCYN.UI.Services;
 
 public static class LaunchService
 {
-    // New robust creation – validates and normalizes before building ProcessStartInfo.
-    public static bool TryPrepare(TargetItem target, out ProcessStartInfo psi, out string? error)
+    public static bool TryPrepare(TargetConfig target, out ProcessStartInfo psi, out string? error)
     {
-        psi = null!;
-        error = null;
-        // Expand environment variables first
-        var cmd = Environment.ExpandEnvironmentVariables(target.LaunchCmd ?? string.Empty).Trim();
-        var workingDir = ResolveWorkingDir(target, cmd);
-
-        // Folder launch – ensure folder exists
-        if (target.Kind == TargetKind.Folder)
+        psi = null!; error = null;
+        try
         {
-            var folderPath = Environment.ExpandEnvironmentVariables(target.LaunchArg ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            var (cmd, arguments) = ParseTarget(target);
+            cmd = Environment.ExpandEnvironmentVariables(cmd);
+            var directory = Environment.ExpandEnvironmentVariables(target.WorkingDirectory ?? "");
+            if (directory.Length > 0 && !Directory.Exists(directory)) throw new DirectoryNotFoundException("Working directory is unavailable.");
+            if (Directory.Exists(cmd)) { arguments.Insert(0, cmd); cmd = "explorer.exe"; }
+            if (cmd.Equals("explorer.exe", StringComparison.OrdinalIgnoreCase) && arguments.Count > 0 && !arguments[0].StartsWith('/') && !arguments[0].StartsWith('-'))
             {
-                error = "Folder does not exist";
-                return false;
+                var folder = Environment.ExpandEnvironmentVariables(arguments[0]);
+                if (Path.IsPathRooted(folder) && !Directory.Exists(folder) && !File.Exists(folder))
+                    throw new DirectoryNotFoundException("Folder is unavailable. It remains saved for repair.");
+                arguments[0] = folder;
             }
-            psi = new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = QuotePath(folderPath),
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = folderPath
-            };
+            if (Path.IsPathRooted(cmd) && !File.Exists(cmd)) throw new FileNotFoundException("Target is unavailable.", cmd);
+            psi = new ProcessStartInfo(cmd) { UseShellExecute = true, WorkingDirectory = directory.Length > 0 ? directory :
+                File.Exists(cmd) ? Path.GetDirectoryName(Path.GetFullPath(cmd))! : Path.GetDirectoryName(Environment.ProcessPath)! };
+            foreach (var argument in arguments) psi.ArgumentList.Add(argument);
             return true;
         }
-
-        // Website launch – validate URL
-        if (target.Kind == TargetKind.Website)
-        {
-            if (!Uri.TryCreate(cmd, UriKind.Absolute, out var uri) ||
-                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-            {
-                error = "Invalid URL";
-                return false;
-            }
-            psi = new ProcessStartInfo
-            {
-                FileName = cmd,
-                Arguments = string.Empty,
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = AppContext.BaseDirectory
-            };
-            return true;
-        }
-
-        // Guard against empty command for non‑folder/website targets
-        if (string.IsNullOrWhiteSpace(cmd))
-        {
-            error = "Empty command";
-            return false;
-        }
-        // Path ending with slash – treat as folder launch via explorer
-        if (cmd.Length >= 3 && cmd[1] == ':' && (cmd.EndsWith("\\") || cmd.EndsWith("/")))
-        {
-            if (!Directory.Exists(cmd))
-            {
-                error = "Folder path does not exist";
-                return false;
-            }
-            psi = new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = QuotePath(cmd),
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = cmd
-            };
-            return true;
-        }
-
-        // Directories – open in explorer
-        if (Directory.Exists(cmd))
-        {
-            psi = new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = QuotePath(cmd),
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = cmd
-            };
-            return true;
-        }
-
-        // Shortcut (.lnk) – ensure file exists
-        var ext = System.IO.Path.GetExtension(cmd);
-        if (ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase))
-        {
-            if (!File.Exists(cmd))
-            {
-                error = ".lnk file not found";
-                return false;
-            }
-            psi = new ProcessStartInfo
-            {
-                FileName = cmd,
-                Arguments = string.Empty,
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Normal,
-                WorkingDirectory = workingDir
-            };
-            return true;
-        }
-
-        // Executable or shell command handling
-        // Separate executable part from arguments to support commands like "git status".
-        string exePart = cmd;
-        string argsPart = string.Empty;
-        if (cmd.Contains(' '))
-        {
-            // Handle quoted executable paths
-            if (cmd.StartsWith('"'))
-            {
-                var endQuoteIdx = cmd.IndexOf('"', 1);
-                if (endQuoteIdx > 1)
-                {
-                    exePart = cmd.Substring(1, endQuoteIdx - 1);
-                    argsPart = cmd.Substring(endQuoteIdx + 1).Trim();
-                }
-            }
-            else
-            {
-                var split = cmd.Split(new[] { ' ' }, 2);
-                exePart = split[0];
-                if (split.Length > 1)
-                    argsPart = split[1];
-            }
-        }
-
-        // If we have a rooted executable path, verify it exists.
-        if (Path.IsPathRooted(exePart))
-        {
-            if (!File.Exists(exePart))
-            {
-                error = "Executable not found";
-                return false;
-            }
-        }
-        // For non‑rooted executables we rely on OS PATH resolution.
-        // Build ProcessStartInfo using separated parts.
-        psi = new ProcessStartInfo
-        {
-            FileName = exePart,
-            Arguments = argsPart,
-            UseShellExecute = true,
-            WindowStyle = ProcessWindowStyle.Normal,
-            WorkingDirectory = workingDir
-        };
-        return true;
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        { error = ex.Message; return false; }
     }
-
-    private static string ResolveWorkingDir(TargetItem target, string expandedCmd)
+    internal static (string Command, List<string> Arguments) ParseTarget(TargetConfig target)
     {
-        // Folder kind – use folder itself
-        if (target.Kind == TargetKind.Folder && !string.IsNullOrWhiteSpace(target.LaunchArg))
-            return Environment.ExpandEnvironmentVariables(target.LaunchArg).Trim();
-
-        // App kind – use directory of executable if absolute path exists
-        if (target.Kind == TargetKind.App)
+        var cmd = target.Cmd.Trim();
+        var arguments = target.Args.ToList();
+        if (cmd.Length == 0) throw new ArgumentException("Empty command. Edit this target.");
+        if (cmd.Length >= 2 && cmd.StartsWith('"') && cmd.EndsWith('"')) cmd = cmd[1..^1];
+        if (cmd.Length == 0) throw new ArgumentException("Empty command. Edit this target.");
+        var expanded = Environment.ExpandEnvironmentVariables(cmd);
+        if (target.LegacyCommandLine && !File.Exists(expanded) && !Directory.Exists(expanded) && !IsProtocol(expanded))
         {
-            if (Path.IsPathRooted(expandedCmd) && File.Exists(expandedCmd))
-                return System.IO.Path.GetDirectoryName(expandedCmd) ?? AppContext.BaseDirectory;
+            // Parse the original quoting even when an application is temporarily unavailable.
+            if (Path.IsPathRooted(expanded) && !target.Cmd.TrimStart().StartsWith('"') && cmd.Contains(' '))
+                throw new ArgumentException("Ambiguous path. Select an executable and enter its arguments separately.");
+            var parts = SplitCommandLine(target.Cmd.Trim());
+            cmd = parts[0]; arguments.InsertRange(0, parts.Skip(1));
         }
-        // Default – application base directory
-        return AppContext.BaseDirectory;
+        return (cmd, arguments);
     }
-
-    public static string QuotePath(string path)
+    private static bool IsProtocol(string cmd) => Uri.TryCreate(cmd, UriKind.Absolute, out var uri) && !uri.IsFile;
+    public static string QuoteArgument(string value)
     {
-        return path.Contains(' ') ? $"\"{path}\"" : path;
+        var result = new System.Text.StringBuilder("\"");
+        var slashes = 0;
+        foreach (var c in value)
+        {
+            if (c == '\\') { slashes++; continue; }
+            result.Append('\\', c == '"' ? slashes * 2 + 1 : slashes);
+            result.Append(c); slashes = 0;
+        }
+        result.Append('\\', slashes * 2); result.Append('"');
+        return result.ToString();
     }
+    public static string[] SplitCommandLine(string command)
+    {
+        var pointer = CommandLineToArgvW(command, out var count);
+        if (pointer == IntPtr.Zero) throw new ArgumentException("Invalid command line.");
+        try { return Enumerable.Range(0, count).Select(i => Marshal.PtrToStringUni(Marshal.ReadIntPtr(pointer, i * IntPtr.Size))!).ToArray(); }
+        finally { LocalFree(pointer); }
+    }
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr CommandLineToArgvW(string command, out int count);
+    [DllImport("kernel32.dll")] private static extern IntPtr LocalFree(IntPtr memory);
 }

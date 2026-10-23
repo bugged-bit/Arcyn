@@ -4,8 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Interop;
-using System.Windows.Threading;
 using ARCYN.UI.Models;
 using ARCYN.UI.Services;
 
@@ -14,63 +12,24 @@ namespace ARCYN.UI;
 
 public partial class SetupWindow : Window
 {
-    private readonly ConfigService _config = new();
+    private readonly ConfigService _config;
     private readonly List<ModeConfig> _modes = [];
     private ModeConfig? _currentMode;
     private int _step;
-    private ParticleEngine? _particles;
-    private DispatcherTimer? _particleTimer;
-    private static readonly string[] StepTitles = ["Welcome", "Mode", "Apps", "Folders", "Websites", "Review"];
+    private bool _finishing;
+    private static readonly string[] StepTitles = ["Welcome", "Workspace", "Apps", "Folders", "Websites", "Review"];
 
-    private static readonly Dictionary<string, string> ColorMap = new()
-    {
-        ["ColorRed"] = "#D64545",
-        ["ColorBlue"] = "#4580D6",
-        ["ColorGreen"] = "#45D680",
-        ["ColorOrange"] = "#D6A045",
-        ["ColorPurple"] = "#A045D6"
-    };
-
-        public SetupWindow()
+        public SetupWindow(ConfigService? service = null)
         {
+            _config = service ?? new ConfigService();
             InitializeComponent();
-            Loaded += OnLoaded;
+            RefreshSystemTheme();
+            WindowSurface.Prepare(this, new());
             _currentMode = NewMode();
             ShowStep(0);
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
-        {
-            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            try { NativeMethods.EnableAcrylic(hwnd, 0xE20A0A0A); } catch { }
-
-            _particles = new ParticleEngine(ParticleCanvas);
-            _particles.Start();
-            _particleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
-            _particleTimer.Tick += (_, _) => _particles?.Tick();
-            _particleTimer.Start();
-        }
-
-        private void RootGrid_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            var pos = e.GetPosition(MainBorder);
-            if (pos.X < 0 || pos.Y < 0 || pos.X > MainBorder.ActualWidth || pos.Y > MainBorder.ActualHeight)
-                Close();
-        }
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            _particleTimer?.Stop();
-            _particles?.Dispose();
-            System.Windows.Application.Current.Shutdown();
-        }
-
-        protected override void OnClosed(EventArgs e)
-        {
-            _particleTimer?.Stop();
-            _particles?.Dispose();
-            base.OnClosed(e);
-        }
+        internal void RefreshSystemTheme() => ThemeService.Apply(this, new());
 
     private static ModeConfig NewMode()
     {
@@ -99,7 +58,7 @@ public partial class SetupWindow : Window
                 BackButton.Visibility = Visibility.Collapsed;
                 NextButton.Visibility = Visibility.Visible;
                 FinishButton.Visibility = Visibility.Collapsed;
-                NextButton.Content = "Start Setup";
+                NextButton.Content = "Get started";
                 StatusBar.Text = "Begin configuration";
                 break;
             case 1:
@@ -108,7 +67,7 @@ public partial class SetupWindow : Window
                 NextButton.Visibility = Visibility.Visible;
                 FinishButton.Visibility = Visibility.Collapsed;
                 NextButton.Content = "Next";
-                StatusBar.Text = "Name your workspace mode";
+                StatusBar.Text = "Name your workspace";
                 break;
             case 2:
                 StepApps.Visibility = Visibility.Visible;
@@ -139,12 +98,17 @@ public partial class SetupWindow : Window
                 BackButton.Visibility = Visibility.Visible;
                 NextButton.Visibility = Visibility.Collapsed;
                 FinishButton.Visibility = Visibility.Visible;
-                StatusBar.Text = _modes.Count == 1 ? "1 mode configured" : $"{_modes.Count} modes configured";
+                StatusBar.Text = _modes.Count == 1 ? "1 workspace configured" : $"{_modes.Count} workspaces configured";
                 RefreshReview();
                 break;
         }
 
         StepCounter.Text = $"{step + 1} / {StepTitles.Length}";
+        SkipButton.Visibility = step is 2 or 3 or 4 ? Visibility.Visible : Visibility.Collapsed;
+        Keyboard.Focus(step switch {
+            1 => ModeNameInput, 2 => AppQuickInput, 3 => FolderBrowseButton,
+            4 => WebsiteInput, 5 => FinishButton, _ => NextButton
+        });
     }
 
     private void Next_Click(object sender, RoutedEventArgs e)
@@ -154,7 +118,6 @@ public partial class SetupWindow : Window
             case 0:
                 // Welcome → Mode creation
                 ShowStep(1);
-                Keyboard.Focus(ModeNameInput);
                 break;
 
             case 1:
@@ -165,6 +128,7 @@ public partial class SetupWindow : Window
 
             case 2:
                 // Save apps → Folders
+                if (sender != SkipButton) AddAppQuick_Click(sender, e);
                 SaveCurrentApps();
                 ShowStep(3);
                 break;
@@ -173,11 +137,11 @@ public partial class SetupWindow : Window
                 // Save folders → Websites
                 SaveCurrentFolders();
                 ShowStep(4);
-                Keyboard.Focus(WebsiteInput);
                 break;
 
             case 4:
                 // Save websites → Review
+                if (sender != SkipButton && !TryAddWebsite()) return;
                 SaveCurrentWebsites();
                 FinalizeCurrentMode();
                 ShowStep(5);
@@ -214,7 +178,7 @@ public partial class SetupWindow : Window
         }
 
         _currentMode ??= NewMode();
-        _currentMode.Name = name.ToUpperInvariant();
+        _currentMode.Name = name;
         _currentMode.Description = ModeDescInput.Text.Trim();
         _currentMode.Accent = GetSelectedAccent();
 
@@ -343,19 +307,11 @@ public partial class SetupWindow : Window
 
     private void AddFolder_Click(object sender, RoutedEventArgs e)
     {
-        // Use native WPF folder picker via OpenFileDialog workaround
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Select a folder",
-            ValidateNames = false,
-            CheckFileExists = false,
-            CheckPathExists = true,
-            FileName = "Select"
-        };
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Select a folder" };
 
         if (dialog.ShowDialog() == true)
         {
-            var dir = System.IO.Path.GetDirectoryName(dialog.FileName);
+            var dir = dialog.FolderName;
             if (!string.IsNullOrEmpty(dir))
                 FoldersList.Items.Add(dir);
         }
@@ -367,20 +323,24 @@ public partial class SetupWindow : Window
             FoldersList.Items.Remove(folder);
     }
 
-    private void AddWebsite_Click(object sender, RoutedEventArgs e)
+    private void AddWebsite_Click(object sender, RoutedEventArgs e) => TryAddWebsite();
+
+    private bool TryAddWebsite()
     {
         var text = WebsiteInput.Text.Trim();
-        if (string.IsNullOrWhiteSpace(text)) return;
+        if (string.IsNullOrWhiteSpace(text)) return true;
 
-        if (!text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !text.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var address) ||
+            address.Scheme is not ("http" or "https") || string.IsNullOrEmpty(address.Host))
         {
-            StatusBar.Text = "URL must start with http:// or https://";
-            return;
+            StatusBar.Text = "Enter a complete website address starting with http:// or https://";
+            Keyboard.Focus(WebsiteInput);
+            return false;
         }
 
         WebsitesList.Items.Add(text);
         WebsiteInput.Clear();
+        return true;
     }
 
     private void RemoveWebsite_Click(object sender, RoutedEventArgs e)
@@ -398,17 +358,17 @@ public partial class SetupWindow : Window
         AppsList.Items.Clear();
         FoldersList.Items.Clear();
         WebsitesList.Items.Clear();
-        ColorRed.IsChecked = true;
+        ColorBlue.IsChecked = true;
 
         ShowStep(1);
-        Keyboard.Focus(ModeNameInput);
     }
 
     private async void Finish_Click(object sender, RoutedEventArgs e)
     {
+        if (_finishing) return;
         if (_modes.Count == 0)
         {
-            StatusBar.Text = "Create at least one mode to continue";
+            StatusBar.Text = "Create at least one workspace to continue";
             return;
         }
 
@@ -420,16 +380,19 @@ public partial class SetupWindow : Window
         for (int i = 0; i < config.Modes.Count; i++)
             config.Modes[i].Index = i + 1;
 
-        await _config.SaveAsync(config);
+        _finishing = true;
+        IsEnabled = false;
+        try { await _config.SaveAsync(config); }
+        catch (Exception ex) { StatusBar.Text = "Save failed: " + ex.Message; _finishing = false; IsEnabled = true; return; }
 
         StatusBar.Text = "Config saved. Launching ARCYN...";
 
         await Task.Delay(300);
+        if (!IsLoaded) return;
 
-        _particleTimer?.Stop();
-        _particles?.Dispose();
 
-        var mainWindow = new MainWindow();
+        var mainWindow = new MainWindow(_config, config);
+        Application.Current.MainWindow = mainWindow;
         mainWindow.Show();
 
         Close();

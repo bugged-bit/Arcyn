@@ -1,5 +1,6 @@
 bin/
 obj/
+ARCYN/native/bin/
 *.user
 *.suo
 *.pdb

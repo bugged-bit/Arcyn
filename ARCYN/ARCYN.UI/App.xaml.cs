@@ -1,174 +1,92 @@
-﻿using System.IO;
-using System.Linq;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
+using ARCYN.UI.Models;
 using ARCYN.UI.Services;
-
 namespace ARCYN.UI;
 
 public partial class App : Application
 {
+    internal static string ProductVersion => typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
+    private SingleInstance? _instance;
     private void Application_Startup(object sender, StartupEventArgs e)
     {
-        var logPath = Path.Combine(AppContext.BaseDirectory, "arcyn_launch.log");
-
-        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
-        {
-            var ex = args.ExceptionObject as Exception;
-            try
-            {
-                File.AppendAllText(logPath,
-                    $"[{DateTime.Now:HH:mm:ss.fff}] FATAL: {ex?.Message}{Environment.NewLine}{ex?.StackTrace}{Environment.NewLine}");
-            }
-            catch { }
-        };
-
-        DispatcherUnhandledException += (_, args) =>
-        {
-            try
-            {
-                File.AppendAllText(logPath,
-                    $"[{DateTime.Now:HH:mm:ss.fff}] DISPATCHER: {args.Exception.Message}{Environment.NewLine}{args.Exception.StackTrace}{Environment.NewLine}");
-            }
-            catch { }
-
-            System.Windows.MessageBox.Show(
-                $"ARCYN encountered an unexpected error.\n\n{args.Exception.Message}",
-                "ARCYN",
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Error);
-
-            args.Handled = true;
-            Current.Shutdown(-1);
-        };
-
-        var consoleWnd = NativeMethods.GetConsoleWindow();
-        if (consoleWnd != IntPtr.Zero)
-            NativeMethods.ShowWindowAsync(consoleWnd, NativeMethods.SW_HIDE);
-
-        // CLI flags
-        var cliArgs = e.Args;
-        if (cliArgs.Contains("--help"))
-        {
-            ShowHelp();
-            return;
-        }
-        if (cliArgs.Contains("--version"))
-        {
-            System.Console.WriteLine("ARCYN v1.0.0");
-            System.Console.WriteLine("Tactical workspace launcher");
-            System.Console.WriteLine("MIT License - https://github.com/bugged-bit/ARCYN");
-            return;
-        }
-        if (cliArgs.Contains("--config-path"))
-        {
-            var cfg = new ConfigService();
-            var path = cfg.ResolvePath();
-            System.Console.WriteLine(path ?? "No config found");
-            return;
-        }
-        if (cliArgs.Contains("--setup"))
-        {
-            RunCliSetup();
-            return;
-        }
-
-        // Detect first-run: no config exists
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        var terminalCommand = e.Args.Any(a => a is "--help" or "--version" or "--config-path" or "--setup");
         try
         {
-            var config = new ConfigService();
-            var existing = config.Load();
-
-            if (existing == null)
+            string? explicitPath = null;
+            var args = e.Args;
+            for (var i = 0; i < args.Length; i++)
+                if (args[i] == "--config")
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--config needs a file path.");
+                    explicitPath = args[i];
+                }
+                else if (args[i] is not ("--help" or "--version" or "--config-path" or "--setup"))
+                    throw new ArgumentException("Unknown option: " + args[i]);
+            var service = new ConfigService(explicitPath);
+            if (args.Any(a => a is "--help" or "--version" or "--config-path" or "--setup"))
             {
-                LogService.WriteStatic("First-run detected — launching setup wizard");
-                var setup = new SetupWindow();
-                setup.Show();
+                AttachConsole(unchecked((uint)-1));
+                if (args.Contains("--help")) Console.WriteLine("ARCYN: --help | --version | --config-path | --config <file> | --setup (terminal setup)");
+                else if (args.Contains("--version")) Console.WriteLine("ARCYN " + ProductVersion);
+                else if (args.Contains("--config-path")) Console.WriteLine(service.GetOrCreatePath());
+                else
+                {
+                    using var setupInstance = new SingleInstance(() => { });
+                    if (!setupInstance.IsFirst) { Console.Error.WriteLine("Close ARCYN before terminal setup to preserve active edits."); Shutdown(1); return; }
+                    RunCliSetup(service);
+                }
+                Shutdown(); return;
             }
-            else
-            {
-                var main = new MainWindow();
-                main.Show();
-            }
+            _instance = new SingleInstance(() => Dispatcher.BeginInvoke(() => {
+                if (MainWindow is not { IsLoaded: true } window || Dispatcher.HasShutdownStarted) return;
+                if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                while (window.OwnedWindows.Cast<Window>().LastOrDefault(w => w.IsVisible) is { } child) window = child;
+                window.Activate(); window.Focus();
+            }));
+            if (!_instance.IsFirst) { Shutdown(); return; }
+            AppDomain.CurrentDomain.UnhandledException += (_, a) => LogService.WriteStatic("Fatal: {0}", a.ExceptionObject);
+            DispatcherUnhandledException += (_, a) => {
+                LogService.WriteStatic("Dispatcher: {0}", a.Exception);
+                WindowSurface.Show(MainWindow, "Something needs attention", a.Exception.Message);
+                a.Handled = true; Shutdown(-1);
+            };
+            var config = service.Load();
+            ShutdownMode = ShutdownMode.OnLastWindowClose;
+            MainWindow = config == null ? new SetupWindow(service) : new MainWindow(service, config);
+            MainWindow.Title = "ARCYN";
+            MainWindow.Show();
         }
         catch (Exception ex)
         {
-            LogService.WriteStatic("Startup error: {0}", ex.Message);
-            System.Windows.MessageBox.Show(
-                $"ARCYN encountered an error during startup.\n\n{ex.Message}",
-                "ARCYN",
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Error);
-            Current.Shutdown(-1);
+            LogService.WriteStatic("Startup: {0}", ex);
+            if (terminalCommand) { AttachConsole(unchecked((uint)-1)); Console.Error.WriteLine(ex.Message); }
+            else WindowSurface.Show(null, "Configuration preserved", ex.Message);
+            Shutdown(-1);
         }
     }
+    protected override void OnExit(ExitEventArgs e) { _instance?.Dispose(); base.OnExit(e); }
+    [DllImport("kernel32.dll", SetLastError = true)] private static extern bool AttachConsole(uint process);
 
-    private static void ShowHelp()
+    private static void RunCliSetup(ConfigService service)
     {
-        System.Console.WriteLine("ARCYN v1.0.0 — Tactical workspace launcher");
-        System.Console.WriteLine();
-        System.Console.WriteLine("Usage: ARCYN [options]");
-        System.Console.WriteLine();
-        System.Console.WriteLine("Options:");
-        System.Console.WriteLine("  --help         Show this help");
-        System.Console.WriteLine("  --version      Show version info");
-        System.Console.WriteLine("  --config-path  Show resolved config path");
-        System.Console.WriteLine("  --setup        Run CLI setup wizard");
-    }
-
-    private static void RunCliSetup()
-    {
-        // Headless CLI setup for terminal users
-        System.Console.WriteLine("=== ARCYN Setup (CLI) ===");
-
-        var config = new Services.ConfigService();
-        var arcynConfig = new Models.ArcynConfig();
-
-        System.Console.WriteLine("Create your workspace modes.");
-        System.Console.WriteLine("Press Enter with empty name to finish.\n");
-
+        var config = service.Load() ?? new ArcynConfig();
+        Console.WriteLine("ARCYN terminal setup. Existing workspaces are retained. Blank name finishes.");
+        var added = false;
         while (true)
         {
-            System.Console.Write($"Mode {arcynConfig.Modes.Count + 1} name (e.g. CODE): ");
-            var name = System.Console.ReadLine()?.Trim().ToUpperInvariant() ?? "";
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                if (arcynConfig.Modes.Count == 0)
-                {
-                    System.Console.WriteLine("Need at least one mode.");
-                    continue;
-                }
-                break;
-            }
-
-            var mode = new Models.ModeConfig { Name = name };
-
-            System.Console.Write("  Description: ");
-            mode.Description = System.Console.ReadLine()?.Trim() ?? "";
-
-            System.Console.Write("  Apps (comma-separated, e.g. wt.exe,code): ");
-            var apps = System.Console.ReadLine() ?? "";
-            foreach (var a in apps.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-                mode.Apps.Add(a);
-
-            System.Console.Write("  Folders (comma-separated): ");
-            var folders = System.Console.ReadLine() ?? "";
-            foreach (var f in folders.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-                mode.Folders.Add(f);
-
-            System.Console.Write("  Websites (comma-separated, e.g. https://github.com): ");
-            var sites = System.Console.ReadLine() ?? "";
-            foreach (var s in sites.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-                mode.Websites.Add(s);
-
-            arcynConfig.Modes.Add(mode);
-            System.Console.WriteLine($"  ✓ Mode '{name}' added\n");
+            Console.Write("Workspace name: ");
+            var name = Console.ReadLine()?.Trim();
+            if (string.IsNullOrEmpty(name)) break;
+            var mode = new ModeConfig { Name = name };
+            Console.Write("Description: "); mode.Description = Console.ReadLine() ?? "";
+            Console.WriteLine("Enter one executable, shortcut, folder, URL or protocol per line. Blank line finishes.");
+            while (Console.ReadLine() is { Length: > 0 } cmd) mode.Targets.Add(new TargetConfig { Cmd = cmd.Trim() });
+            config.Modes.Add(mode); added = true;
         }
-
-        for (int i = 0; i < arcynConfig.Modes.Count; i++)
-            arcynConfig.Modes[i].Index = i + 1;
-
-        config.Save(arcynConfig);
-        System.Console.WriteLine($"Config saved with {arcynConfig.Modes.Count} modes.");
-        System.Console.WriteLine("Run ARCYN without --setup to launch the HUD.");
+        if (added) { service.Save(config); Console.WriteLine("Saved: " + service.GetOrCreatePath()); }
     }
 }
