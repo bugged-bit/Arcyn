@@ -32,7 +32,19 @@ Keep the extracted files together. The ZIP includes its runtime; no separate .NE
 
 ## Make it yours
 
-ARCYN targets **Windows 10/11 x64**. Appearance follows Windows by default, with light, dark, accent, text-size, and motion settings available. Ordinary shortcuts work without a resident helper; a global hotkey is optional.
+ARCYN targets **Windows 10/11 x64**. Appearance follows Windows by default, with light, dark, accent, text-size, and motion settings available.
+
+**Alt + Shift + D launches ARCYN from anywhere** when the optional helper is running. The helper is **disabled by default**. To activate it for your current session, open **ARCYN.Hotkey.exe** from the extracted application folder.
+
+To start the helper automatically at your next Windows sign-in, open PowerShell in that folder and run:
+
+```powershell
+./scripts/Setup-Shortcuts.ps1 -EnableHotkeyHelper
+```
+
+See the [user guide for custom shortcuts and disabling the helper](docs/guide.md#appearance-and-shortcuts).
+
+The shortcuts below work **inside ARCYN**:
 
 | Key | Action |
 | --- | --- |
@@ -48,4 +60,4 @@ ARCYN targets **Windows 10/11 x64**. Appearance follows Windows by default, with
 
 Found a rough edge? [Report a problem](https://github.com/bugged-bit/Arcyn/issues/new?template=bug_report.md) or [suggest an improvement](https://github.com/bugged-bit/Arcyn/issues/new?template=feature_request.md). Contributions to code, documentation, and testing are welcome; start with [contributing](CONTRIBUTING.md).
 
-ARCYN is [MIT licensed](LICENSE), built with .NET and WPF, and uses Microsoft's Fluent controls. [Third-party credits and licenses](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/ARCYN/Notices/README.txt) accompany the application.
+ARCYN is [MIT licensed](LICENSE), built with .NET and WPF, and uses Microsoft's Fluent controls. [Third-party credits and licenses](https://github.com/bugged-bit/Arcyn/blob/master/ARCYN/Notices/README.txt) accompany the application.
