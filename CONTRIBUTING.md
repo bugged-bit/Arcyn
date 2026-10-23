@@ -4,12 +4,12 @@ Small, focused contributions are welcome: a reproducible bug report, a clearer i
 
 ## Run the project
 
-Use Windows x64 and the .NET SDK selected by [global.json](https://github.com/bugged-bit/Arcyn/blob/codex/arcyn-lightweight/global.json). Stable v1.6.0 is prepared on `codex/arcyn-lightweight` but is not published; `master` still contains the previous version.
+Use Windows x64 and the .NET SDK selected by [global.json](https://github.com/bugged-bit/Arcyn/blob/master/global.json). The current application is on `master`; published builds are on [Releases](https://github.com/bugged-bit/Arcyn/releases).
 
 From a clone of the repository:
 
 ```powershell
-git switch codex/arcyn-lightweight
+git switch master
 dotnet build ARCYN/ARCYN.UI/ARCYN.UI.csproj -c Release
 ```
 
@@ -37,7 +37,7 @@ This creates `ARCYN-v1.6.0-win-x64.zip` and `.zip.sha256` in `.arcyn-local/packa
 
 ## Send a contribution
 
-Fork the repository and create a branch from the version you're changing. For v1.6.0, target `codex/arcyn-lightweight`. Keep the pull request focused, describe the user-visible result, and include the checks you ran and anything you couldn't verify.
+Fork the repository and create a branch from `master`. Keep the pull request focused, describe the user-visible result, and include the checks you ran and anything you couldn't verify.
 
 Follow the surrounding C#/XAML style and reuse existing components. Preserve configuration compatibility, validation, command review, cancellation, and user data. Use comments to explain a decision rather than restating the code. Don't commit personal configuration, machine-specific paths, build outputs, or session transcripts.
 

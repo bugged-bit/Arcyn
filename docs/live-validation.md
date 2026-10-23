@@ -1,6 +1,6 @@
 # ARCYN live validation — 22 October 2026
 
-Status: locally validated release candidate on `codex/arcyn-lightweight`. Do not merge or publish until the remaining platform and acceptance checks below are completed. Product identity, configuration compatibility and cinematic timing are preserved.
+Historical record: locally validated release candidate on `codex/arcyn-lightweight` as of 22 October 2026. The later v1.6.0 packaged smoke and the limitations carried into the published release are recorded in the [release notes](release-notes.md). Product identity, configuration compatibility and cinematic timing are preserved.
 
 ## Live GUI and workflows
 
@@ -43,7 +43,7 @@ The whole Ready interval includes post-startup/JIT activity and consumes more CP
 - The measurement hook now records Ready/end resources and the actual native backdrop attribute, and omits an empty pre-phase label that prevented PowerShell from reading its JSON. It is excluded from the product distribution.
 - Local restore reported NU1900 because online NuGet vulnerability metadata was unreachable. ARCYN has no NuGet package dependencies; this is not a successful online vulnerability audit. Final branch CI is checked separately against the pushed commit.
 
-## Remaining release gates
+## Checks still open on 22 October
 
 | Gate | Remaining evidence |
 | --- | --- |

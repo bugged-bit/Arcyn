@@ -22,14 +22,11 @@ A cinematic opening leads into a keyboard-friendly workspace list, with familiar
 
 ## Get v1.6.0
 
-**The stable v1.6.0 package is prepared but has not been published.** Final release acceptance checks remain open. The [older `.exe` release](https://github.com/bugged-bit/Arcyn/releases/tag/app) is a previous version, not v1.6.0.
+**[Download ARCYN v1.6.0 for Windows x64](https://github.com/bugged-bit/Arcyn/releases/download/v1.6.0/ARCYN-v1.6.0-win-x64.zip)** · [Release notes](https://github.com/bugged-bit/Arcyn/releases/tag/v1.6.0)
 
-Public packages will be listed on [Releases](https://github.com/bugged-bit/Arcyn/releases). Until publication, review builds are available through GitHub Actions: **sign-in is required, artifacts expire, and availability isn't guaranteed.**
-
-1. Open [branch builds](https://github.com/bugged-bit/Arcyn/actions/workflows/dotnet-build.yml?query=branch%3Acodex%2Farcyn-lightweight) and select a successful v1.6.0 run for `codex/arcyn-lightweight`.
-2. Download **ARCYN-v1.6.0-win-x64**. Extract the artifact download, then extract the enclosed **ARCYN-v1.6.0-win-x64.zip** to a permanent folder you can write to. A SHA-256 file accompanies the inner ZIP; [verification instructions](docs/guide.md#verify-the-archive) are in the guide.
-3. Run **ARCYN.exe**. Name your first workspace and add the apps, folders, and websites you want. Optional setup steps have **Skip**.
-4. Choose the workspace or press its number to open it.
+1. Extract **ARCYN-v1.6.0-win-x64.zip** to a permanent folder you can write to. A [SHA-256 file](https://github.com/bugged-bit/Arcyn/releases/download/v1.6.0/ARCYN-v1.6.0-win-x64.zip.sha256) accompanies the download; [verification instructions](docs/guide.md#verify-the-archive) are in the guide.
+2. Run **ARCYN.exe**. Name your first workspace and add the apps, folders, and websites you want. Optional setup steps have **Skip**.
+3. Choose the workspace or press its number to open it.
 
 Keep the extracted files together. The ZIP includes its runtime; no separate .NET installation is needed. The build is unsigned, so Windows may warn or block it. Only run a download whose source you trust. [Download guidance and release status →](docs/guide.md#downloads-and-windows-warnings)
 
